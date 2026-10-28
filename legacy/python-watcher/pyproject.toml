@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snu-slot-watcher"
+version = "0.1.0"
+description = "A conservative, notification-only watcher for public SNU course capacity counts"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "beautifulsoup4>=4.12,<5",
+  "requests>=2.32,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "coverage>=7.6,<8",
+]
+
+[project.scripts]
+snu-slot-watcher = "snu_slot_watcher.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

@@ -1,0 +1,26 @@
+[watcher]
+# SNU is a shared university service. The program refuses intervals below 30s.
+poll_interval_seconds = 60
+request_spacing_seconds = 2
+desktop_notifications = true
+state_database = "watcher-state.sqlite3"
+
+# Optional Discord/Slack-compatible webhook. Store the URL in the environment,
+# never in this file, then uncomment the next line.
+# webhook_url_environment_variable = "SNU_WATCHER_WEBHOOK_URL"
+
+# Replace these examples with the exact code and section shown in SNU course search.
+[[courses]]
+year = 2026
+semester_code = "U000200002"
+course_code = "4190.412"
+section = "001"
+label = "컴퓨터모델링"
+
+[[courses]]
+year = 2026
+semester_code = "U000200002"
+course_code = "208.231A"
+section = "001"
+label = "컴퓨터 지도학"
+
