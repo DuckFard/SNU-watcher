@@ -1,8 +1,8 @@
 # SNU Course Watcher desktop implementation plan
 
-Status: proposed implementation contract. Planning only; no desktop application has been built. Evidence reviewed on 2026-10-28, Asia/Seoul. Revised on the same date to remove PDF import and adopt the owner's repository and MIT license. Existing CLI runtime configuration, state, and running processes remain unchanged.
+Status: implementation authorized on 2026-10-28, Asia/Seoul. M1 source contracts and M2 native feasibility are in progress; completion and evidence are recorded in `docs/PROGRESS.md`. The full student desktop application and production installer are not complete. Existing CLI runtime configuration, state, and running processes remain unchanged.
 
-Canonical repository: [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher). Project license: MIT, copyright 2026 DuckFard. The repository contains this plan and the existing Python prototype as a legacy reference; it does not contain a desktop build yet.
+Canonical repository: [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher). Project license: MIT, copyright 2026 DuckFard. The repository preserves the Python prototype as a legacy reference alongside the new foundation work. Development candidates are not production releases.
 
 ## 1. Capability and decisions
 
@@ -45,7 +45,7 @@ WPF is Windows-only [S1]. Microsoft documents local notifications and activation
 | Tests | xUnit, fake HTTP/clock, Coverlet; Windows UI automation such as FlaUI | Domain tests offline; installer/notification checks on Windows |
 | Installer | Inno Setup | Carry the complete publish folder; review licenses for selected versions |
 
-Pin supported stable versions when implementation begins. Record license/redistribution obligations and lock dependencies. Do not install packages or generate a project during this planning phase.
+Pin supported stable versions for implementation, record license/redistribution obligations, and lock dependencies. The owner has authorized development; package restore and foundation projects are now in scope.
 
 ## 2. Evidence and what it establishes
 
@@ -147,7 +147,7 @@ docs/                         product contract, adapter notes, decisions, runboo
 legacy/                       reference or provenance for the old CLI
 ```
 
-These are planned modules; do not scaffold them until implementation is authorized. Keep the existing CLI intact until migration and desktop acceptance pass.
+These are the target modules; implement them in the gated milestone order below. Keep the existing CLI intact until migration and desktop acceptance pass.
 
 Core interface responsibilities:
 
@@ -300,11 +300,11 @@ Performance targets to measure on a documented reference PC: first usable window
 
 ## 11. Ordered implementation milestones
 
-M0 is partially complete: the owner selected DuckFard/SNU-watcher, authorized saving planning progress, chose MIT, and removed PDF import. Implementation milestones remain unstarted. After M0 review, M1 source discovery and M2 native feasibility can run in parallel. Both exit gates must pass before M3; native installation/notification feasibility is a stack-defining gate, not a late packaging check. M3 then precedes M4; UI and alerts can progress against stable contracts with assigned file ownership. Review at each exit gate; do not hide a failed gate by proceeding to visual polish.
+M0 is complete: the owner selected DuckFard/SNU-watcher and MIT, removed PDF import, and authorized development according to this plan on 2026-10-28. M1 source discovery and M2 native feasibility can run in parallel. Both exit gates must pass before M3; native installation/notification feasibility is a stack-defining gate, not a late packaging check. M3 then precedes M4; UI and alerts can progress against stable contracts with assigned file ownership. Review at each exit gate; do not hide a failed gate by proceeding to visual polish. See `docs/PROGRESS.md` for measured results and open gates.
 
 | Milestone | Work and concrete deliverables | Exit gate |
 | --- | --- | --- |
-| M0 Confirm contract and repository | Repository/public visibility and MIT confirmed; save revised planning docs and sanitized legacy reference. Owner reviews remaining Windows scope and release intent | Planning progress saved; implementation still requires authorization |
+| M0 Confirm contract and repository | Repository/public visibility and MIT confirmed; revised plan and sanitized legacy reference saved; development authorized | Complete; public binary release and signing remain separately gated |
 | M1 Source contracts | Bounded SNU form/search/detail/term tests; canonical ID and alias rules; sanitized fixtures; link/Genie fallback matrix | T01-T04; all unsupported fields documented; source behavior or fallback explicitly established |
 | M2 Native install and notification spike | Minimal WPF shell, stable identity, single instance, handler/Register/activation ordering, local native banner, self-contained publish and draft installer | T15-T16/T18 smoke on clean VM with runtime inventory; visible notification and foreground/tray/exited/post-reboot clicks confirmed; no elevated launch or undeclared runtime install. Failed profile triggers deployment redecision before M3 |
 | M3 Domain and persistence | Immutable models, watch/group/expiry state, opening policy, SQLite schema/migrations/outbox, legacy migration | T02/T05-T08/T13-T14/T19 pass offline; crash/retry semantics recorded |
@@ -335,10 +335,10 @@ Public interfaces get XML documentation describing inputs, outputs, cancellation
 
 ### Owner choices
 
-Confirmed: public repository [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher), MIT license, and no PDF import. Saving planning progress and the existing legacy prototype is authorized; building the desktop app and publishing binaries are not yet authorized.
+Confirmed: public repository [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher), MIT license, no PDF import, and authorization to develop according to this plan. Development source/candidates may be saved to the repository; a signed public binary release remains gated by M7/M8.
 
-1. Final app/publisher display identity. The repository name is fixed; the Windows signing/activation identity still needs a stable choice.
-2. Confirm Windows 11 x64 and Korean/English launch scope; if macOS is required at launch, revisit the framework before implementation.
+1. Default development identity: display name `SNU Watcher`, publisher `DuckFard`, internal identity `DuckFard.SnuWatcher`. Freeze signing/installer identity before release.
+2. Proceed with Windows 11 x64 and Korean/English launch scope under the accepted plan; macOS is outside v1.
 3. Signing budget/publisher certificate for release. MIT applies to original project code/docs; dependencies and external SNU assets retain their own terms.
 
 These choices can be reviewed with this concrete plan. No additional plugin is required for planning. Use the existing GitHub connector or Git for the confirmed repository, within the owner's granted scope. Saving source/planning progress does not authorize an installer release.
@@ -353,7 +353,7 @@ These choices can be reviewed with this concrete plan. No additional plugin is r
 
 When building is authorized, attach DuckFard/SNU-watcher as a Codex project, keep this plan and ADRs in it, and implement milestone-sized branches/PRs. Use isolated worktrees for independent UI/domain work after contracts stabilize. Use the existing agents for code/security review. A clean interactive Windows VM/account is more useful than another cloud plugin for the release gates. Figma is optional if the owner wants a separate visual design review; it is not needed to implement WPF.
 
-Handoff: save this revised planning contract and the sanitized legacy reference in the confirmed repository under MIT. Then wait for implementation authorization before M1/M2 execution, new application code, dependencies, installers, or changes to the old watcher's runtime.
+Handoff: development is authorized. Complete M1/M2 evidence first; do not mark clean-machine native validation passed from a developer PC with preinstalled runtimes. Continue into M3 only after the exit gates pass, preserving the old watcher's runtime throughout.
 
 ## 14. Sources and reference projects
 

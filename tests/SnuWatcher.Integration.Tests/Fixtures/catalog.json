@@ -1,0 +1,11 @@
+{
+  "currSchyy":"2026", "currShtmFg":"U000200002", "currDetaShtmFg":"U000300002",
+  "SHTM":[
+    {"cmmnCd":"U000200001U000300001","korNm":"1학기","engNm":"1st Semester"},
+    {"cmmnCd":"U000200002U000300001","korNm":"2학기","engNm":"2nd Semester"},
+    {"cmmnCd":"U000200001U000300002","korNm":"여름학기","engNm":"Summer Semester"},
+    {"cmmnCd":"U000200002U000300002","korNm":"겨울학기","engNm":"Winter Semester"}
+  ],
+  "UP_DEPT":[{"deptCd":"300","deptKorNm":"자연과학대학","deptEngNm":"College of Natural Sciences"}],
+  "DEPT":[{"deptCd":"326","deptKorNm":"통계학과","deptEngNm":"Department of Statistics"}]
+}

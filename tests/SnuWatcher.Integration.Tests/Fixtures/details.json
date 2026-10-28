@@ -1,0 +1,6 @@
+{
+  "openSchyy":"2026", "openShtmFg":"U000200002", "openDetaShtmFg":"U000300001", "sbjtCd":"F32.102", "ltNo":"012", "sbjtSubhCd":"000",
+  "MISC":{"isLogin":false,"isBusyTime":false},
+  "ltTime":["월(14:00~15:15)","수(14:00~15:15)"], "ltType":["이론","이론"], "ltRoom":["26-B102","26-B102"],
+  "LISTTAB01":{"openSchyy":"2026","openShtmFg":"U000200002","openDetaShtmFg":"U000300001","sbjtCd":"F32.102","ltNo":"012","sbjtSubhCd":"000","sbjtNm":"통계학","sbjtEngNm":"Statistics","profNm":"예시 교수","profEngNm":"Example Instructor","departmentKorNm":"통계학과","openPnt":3,"tlsnAplyCapaCnt":40,"lsnProgLang":"한국어","openLtRemk":"선수과목 확인"}
+}
