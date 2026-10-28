@@ -1,5 +1,6 @@
 using System;
 using System.Security.Principal;
+using System.Threading.Tasks;
 using Microsoft.Windows.AppNotifications;
 using SnuWatcher.Windows;
 
@@ -64,11 +65,16 @@ internal sealed class NativeNotificationService : IDisposable
         catch (ArgumentException) { Diagnostic?.Invoke("Unrecognized notification activation was ignored."); }
     }
 
-    public void RemoveRegistration()
+    public async Task RemoveRegistrationAsync()
     {
-        AppNotificationManager.Default.UnregisterAll();
+        // UnregisterAll removes registration data; clearing retained toasts is a separate API.
+        // Await completion before the installer is allowed to remove this executable.
+        await NotificationCleanupPolicy.ClearAndUnregisterAsync(_registered,
+            () => AppNotificationManager.Default.RemoveAllAsync().AsTask(),
+            () => AppNotificationManager.Default.UnregisterAll(),
+            NotificationCleanupPolicy.MaximumRemovalWait);
         _registered = false;
-        Status = "Notification registration removed";
+        Status = "Retained notifications and notification registration removed";
     }
 
     public void Dispose()

@@ -11,6 +11,8 @@ dotnet restore SnuWatcher.slnx
 
 If the SDK is installed outside PATH, pass its executable to `-Dotnet`. The script performs a Release build, runs both offline suites, writes TRX and Cobertura reports under ignored `artifacts/test-results`, and requires at least 80% line and branch coverage for each foundation suite. `-SkipCoverageGate` is diagnostic only; it does not satisfy the milestone gate.
 
+Keep async state machines in the measured logic. Excluding `CompilerGeneratedAttribute` removes async implementations as well as generated scaffolding; the shared settings exclude explicit generated code instead.
+
 Dependency versions are pinned in project files and `packages.lock.json`. CI uses locked restore, commit-pinned GitHub actions, and no SNU requests. An audit listing is evidence for review, not an assertion that the command automatically fails on every advisory.
 
 Run `./tests/scripts/Test-NativeBuildOutput.ps1` for the standalone packaging regression. Fake tools verify that a stale SDK file from a prior build cannot enter a new installer, prior outputs are preserved, paths with spaces work, skip mode works and tool failures propagate. It performs no real publish, installer execution or native display. CI runs this alongside the foundation suites.

@@ -95,7 +95,7 @@ public partial class App : Application
             }
             if (e.Args.Contains("--unregister-notifications", StringComparer.Ordinal))
             {
-                _notifications.RemoveRegistration();
+                await _notifications.RemoveRegistrationAsync();
                 NativeDiagnostics.Write("unregistered", _notifications.Status, _owner);
                 Shutdown();
                 return;
