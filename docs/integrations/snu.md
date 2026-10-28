@@ -1,6 +1,6 @@
 # SNU public source adapter
 
-M1 source-contract foundation, reviewed 2026-10-28 (Asia/Seoul). The C# adapter is in `src/SnuWatcher.Infrastructure/Snu`. It is an anonymous reader of SNU's existing website interfaces, not an authorized developer API or a registration client. There is no login, student-cookie import, registration endpoint, or PDF feature.
+M1 source-contract foundation, reviewed 2026-10-29 (Asia/Seoul). The C# adapter is in `src/SnuWatcher.Infrastructure/Snu`. It is an anonymous reader of SNU's existing website interfaces, not an authorized developer API or a registration client. There is no login, student-cookie import, registration endpoint, or PDF feature.
 
 ## Verified website contracts
 
@@ -39,7 +39,19 @@ Legacy short-term migration and canonical alias policy belong to M3. Current evi
 
 Three subsequent bounded queries using a deliberately nonmatching title, a deliberately nonmatching instructor, and a different valid department produced pages with no course cards. The initial parser correctly failed closed but did not recognize the site's empty-result convention. One additional inspected nonmatching-title response established HTTP 200, the expected search-result title, an empty `.course-info-list`, and the banner `0 건의 교과목이 검색되었습니다.`. Its minimized fixture was run RED before adding an explicit empty-result branch, then GREEN. A missing course-list container still fails closed.
 
-The live negative pages were received before this parser fix and were not rerun afterward; offline regression verifies the inspected empty-page shape. These observations support combined positive filters, major-option discovery, and a confirmed title-negative empty result. They do not independently prove every instructor/department/major filter semantic or establish a supported API.
+Those initial negative pages preceded the parser fix. The title-only negative was not separately rerun; its inspected empty-page shape is covered by offline regression. Instructor and ordinary department filters were then checked independently through the corrected compiled adapter on 2026-10-29.
+
+That follow-up used exactly eight HTTP requests: one catalog request, two baseline pages, and the five filtered pages below. It used the production `SnuCourseSource` with a fresh anonymous transport matching `Create()`, the default two-second pacing setting, a two-page result bound, and an additional handler that prevented a ninth network request. The selected term was source-confirmed regular second semester 2026 (`U000200002U000300001`). No raw response dump or instructor name is committed.
+
+| Query within the `F32.102` cohort | Complete result | Pages | Identity comparison |
+| --- | --- | --- | --- |
+| Course code baseline | 12 sections | 2 | Sections `001`-`012` |
+| Code plus one instructor reported by the baseline | 1 section | 1 | Section `003`, exactly that instructor's baseline identity set |
+| Code plus deliberately nonmatching instructor | 0 sections | 1 | Corrected empty-result parser accepted a complete empty result |
+| Code plus college `300`, department `326` | 12 sections | 2 | Exactly the same full raw identities as the baseline |
+| Code plus college `300`, sibling department `322` | 0 sections | 1 | `322` was a valid option returned by the fresh source catalog |
+
+These observations verify the tested instructor and ordinary department filters separately from the earlier combined-positive query, including their negative results. They do not establish every keyword, alternate-script name, union-department or major-filter semantic, or establish an authorized API. Major-option discovery remains distinct from verifying a major-filtered search.
 
 Search rows retain the displayed `수강신청인원/정원(재학생)` or `Enrollment/Quota` label and separate total-enrollment value. Only a complete, nonnegative integer ratio token with an optional parenthesized count is accepted. Missing, negative, fractional, comma-formatted, overflow, or changed count text yields unknown counts, never inferred openings. Capacity zero and over-capacity enrollment remain representable without negative apparent seats. The adapter does not decide student eligibility or emit alerts.
 
@@ -65,7 +77,7 @@ Run this project's offline suite using the repository's workspace SDK wrapper or
 
 ## Remaining M1 evidence before broader integration
 
-- Individually verify remaining instructor/department/major filtering semantics with bounded live checks when needed; do not describe combined-positive evidence and major-option discovery as a separate test of every filter.
+- Major-filtered searches remain unverified; confirm them with bounded live checks before enabling a major-specific UI. The separately verified instructor/ordinary-department cases above cover the tested `F32.102` cohort, not every alternate-script name, union department, or catalog category.
 - Add fixtures before enabling new layouts, count labels, quota categories, or pagination helpers. Unknown source changes must remain visible, not broaden a count regex.
 - Full raw identities are the deliberate M1 baseline and do not require alias merging. If M3 later proposes cross-term aliases, obtain corresponding offering/subsubject evidence first; do not equate the four selector labels with alias proof.
 - Exact course registration/syllabus links and Genie deep links remain behind compatibility checks. External-browser homepage links are the fallback.

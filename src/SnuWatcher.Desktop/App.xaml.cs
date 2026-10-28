@@ -81,9 +81,11 @@ public partial class App : Application
             catch (Exception error)
             {
                 _status = $"Native {notificationStartupStage} failed: {error.GetType().Name} (0x{error.HResult:X8}). " +
-                    (error is NativeShortcutRegistrationException shortcutError
-                        ? shortcutError.Diagnostic
-                        : "Inspect the native validation guide. Registration success alone does not establish banner visibility.");
+                    (error is UnsupportedNotificationElevationException
+                        ? NotificationElevationPolicy.Guidance
+                        : error is NativeShortcutRegistrationException shortcutError
+                            ? shortcutError.Diagnostic
+                            : "Inspect the native validation guide. Registration success alone does not establish banner visibility.");
                 NativeDiagnostics.Write(notificationStartupStage + "-failed", _status, _owner);
                 if (e.Args.Contains("--diagnostics", StringComparer.Ordinal))
                 {

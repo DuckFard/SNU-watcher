@@ -1,9 +1,9 @@
 ; M2 unsigned feasibility candidate. Sign only in an approved release workflow.
 #ifndef SourceDir
-  #define SourceDir "..\artifacts\native\publish"
+  #error SourceDir must be supplied explicitly; run scripts/Build-Native.ps1.
 #endif
 #ifndef OutputDir
-  #define OutputDir "..\artifacts\native\installer"
+  #error OutputDir must be supplied explicitly; run scripts/Build-Native.ps1.
 #endif
 #define AppExe "SnuWatcher.Desktop.exe"
 

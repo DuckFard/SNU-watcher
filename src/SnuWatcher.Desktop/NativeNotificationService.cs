@@ -16,8 +16,9 @@ internal sealed class NativeNotificationService : IDisposable
 
     public void Initialize()
     {
-        if (new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
-            throw new InvalidOperationException("Notifications are unavailable when elevated. Launch the installed app normally.");
+        using var identity = WindowsIdentity.GetCurrent();
+        NotificationElevationPolicy.EnsureUnelevated(
+            new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator));
         NativeAppIdentity.Initialize();
         // Handler -> Register -> inspect lifecycle activation in App.OnStartup.
         AppNotificationManager.Default.NotificationInvoked += OnInvoked;

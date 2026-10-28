@@ -2,9 +2,11 @@
 
 Status: implementation candidate with a protocol activation redecision on 2026-10-28. The clean-PC release gate is pending.
 
-The M2 shell uses WPF on .NET 10, with the supported Windows App SDK 1.8 servicing line. The Windows helper library contains notification argument validation and same-user instance coordination; only the desktop executable references the notification runtime. This allows tests of the trust boundary without initializing COM or displaying a banner.
+The M2 shell uses WPF on .NET 10, with Windows App SDK pinned to current stable 2.6.4 after a servicing review on 2026-10-29. The original 1.8.260921001 candidate is historical: Microsoft's table lists its servicing end as 2026-09-24 despite retaining a Maintenance label. The Windows helper library contains notification argument validation and same-user instance coordination; only the desktop executable references the notification runtime. This allows tests of the trust boundary without initializing COM or displaying a banner.
 
 The application has a stable executable name (`SnuWatcher.Desktop.exe`), installer ID, and publisher identity (`DuckFard.SnuWatcher`). Installed files live under the current user's local application directory. The installer carries a complete self-contained publish folder, including .NET and native Windows App SDK files. It does not ask the student to install an SDK or run terminal commands.
+
+Native builds use a fresh GUID output directory, preserving old evidence and preventing removed dependency files from surviving an overlay publish. The supported-SDK upgrade required no API rewrite and passed locked build/tests/audit. Native behavior must be retested on its own binary; 1.8 click evidence does not prove 2.6.4 behavior. Relevant 2.x release fixes are not presumed to explain the earlier COM failure.
 
 The native sender explicitly sets its own `DuckFard.SnuWatcher` process AppUserModelID before resolving `AppNotificationManager.Default`, and diagnostics read it back. Without an explicit process identity, the SDK generates a path-based GUID; a published-folder test after uninstall is therefore not the same identity as a stable installed-path test. Never borrow PowerShell's or another application's identity. Test only one stable candidate installation at a time: SDK 1.8 can reuse an existing COM registration without refreshing its executable path, so another copy is not valid installed-path evidence.
 
@@ -38,3 +40,4 @@ References:
 - [Microsoft app notification content schema: protocol activation](https://learn.microsoft.com/en-us/windows/apps/design/shell/tiles-and-notifications/toast-schema)
 - [Microsoft protocol button API](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.windows.appnotifications.builder.appnotificationbutton.setinvokeuri?view=windows-app-sdk-1.8)
 - [SDK 1.8 COM registration source](https://raw.githubusercontent.com/microsoft/WindowsAppSDK/release/1.8-stable/dev/AppNotifications/AppNotificationUtility.cpp)
+- [Microsoft SDK lifecycle](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-channels), [stable 2.x release notes](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-2-0), and [pinned NuGet 2.6.4](https://www.nuget.org/packages/Microsoft.WindowsAppSDK/2.6.4)

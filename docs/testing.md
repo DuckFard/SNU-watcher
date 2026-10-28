@@ -13,6 +13,8 @@ If the SDK is installed outside PATH, pass its executable to `-Dotnet`. The scri
 
 Dependency versions are pinned in project files and `packages.lock.json`. CI uses locked restore, commit-pinned GitHub actions, and no SNU requests. An audit listing is evidence for review, not an assertion that the command automatically fails on every advisory.
 
+Run `./tests/scripts/Test-NativeBuildOutput.ps1` for the standalone packaging regression. Fake tools verify that a stale SDK file from a prior build cannot enter a new installer, prior outputs are preserved, paths with spaces work, skip mode works and tool failures propagate. It performs no real publish, installer execution or native display. CI runs this alongside the foundation suites.
+
 ## Windows acceptance boundary
 
 See [native validation](native-validation.md) for interactive installer and notification steps. A passing unit test or successful notification API return does not establish that a banner was visible. Each native evidence record must distinguish OS accepted, banner seen, action handled, and whether the machine was clean of separately installed runtime dependencies.

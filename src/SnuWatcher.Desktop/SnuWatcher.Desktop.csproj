@@ -21,7 +21,7 @@
     <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
     <ProjectReference Include="../SnuWatcher.Windows/SnuWatcher.Windows.csproj" />
   </ItemGroup>
 </Project>
