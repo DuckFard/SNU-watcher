@@ -42,6 +42,8 @@ The first restore creates/validates pinned dependency graphs; the verification s
 
 Read [architecture](docs/architecture.md), [testing](docs/testing.md), [SNU contracts](docs/integrations/snu.md), and [native validation](docs/native-validation.md) before changing integration or lifecycle behavior. The native shell is for installation/notification validation; it does not yet implement the planned monitoring engine. PDF import remains excluded.
 
+The [clean Windows VM guide](docs/clean-windows-validation.md) covers setup and the installer acceptance checks. Developer-PC notification body/button clicks now work; the independent clean-machine gate remains open.
+
 ## License
 
 Original project code and documentation are licensed under the [MIT License](LICENSE), copyright 2026 DuckFard. Third-party dependencies, SNU data, branding, and other external content retain their respective terms.

@@ -1,7 +1,6 @@
 using System;
 using System.Security.Principal;
 using Microsoft.Windows.AppNotifications;
-using Microsoft.Windows.AppNotifications.Builder;
 using SnuWatcher.Windows;
 
 namespace SnuWatcher.Desktop;
@@ -47,13 +46,9 @@ internal sealed class NativeNotificationService : IDisposable
         var setting = AppNotificationManager.Default.Setting;
         if (setting != AppNotificationSetting.Enabled)
             throw new InvalidOperationException("Windows notifications are disabled: " + setting);
-        var notification = new AppNotificationBuilder()
-            .AddArgument("action", "open-registration")
-            .AddText("SNU Watcher - notification test")
-            .AddText("This is a test, not a seat opening. Click to open official SNU registration.")
-            .AddButton(new AppNotificationButton("Open registration").AddArgument("action", "open-registration"))
-            .AddButton(new AppNotificationButton("View app").AddArgument("action", "view-section"))
-            .BuildNotification();
+        // Windows opens the fixed HTTPS target directly, including when this process has exited.
+        // Keep SDK display registration, but do not depend on the currently unverified COM callback for registration clicks.
+        var notification = new AppNotification(RegistrationNotificationPayload.CreateTest());
         notification.Tag = "native-test";
         notification.Group = "feasibility";
         AppNotificationManager.Default.Show(notification);
