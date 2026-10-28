@@ -23,6 +23,14 @@ jobs:
       - name: Native packaging output isolation regression
         shell: pwsh
         run: ./tests/scripts/Test-NativeBuildOutput.ps1
+      - name: Installer recovery policy and native process probe
+        shell: pwsh
+        run: |
+          $command = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          $compiler = if ($command) { $command.Source } else { Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe' }
+          if (!(Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'The Windows runner needs the Inno Setup 6 compiler.' }
+          Write-Output ('Inno Setup compiler: ' + (Get-Item -LiteralPath $compiler).VersionInfo.ProductVersion)
+          ./tests/scripts/Test-InstallerRecovery.ps1 -IsccPath $compiler
       - name: Locked restore, build, offline tests and coverage
         shell: pwsh
         run: ./scripts/Test-Foundation.ps1
@@ -47,6 +55,7 @@ jobs:
           name: windows-foundation-evidence
           path: |
             artifacts/test-results
+            artifacts/installer-recovery-tests
             artifacts/publish
           retention-days: 14
 

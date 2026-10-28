@@ -17,6 +17,7 @@ public partial class MainWindow : Window, IDisposable
     public MainWindow(Action sendTest, Action quit)
     {
         InitializeComponent();
+        FitInitialWindowToPrimaryWorkArea();
         _sendTest = sendTest;
         _quit = quit;
         var menu = new Forms.ContextMenuStrip();
@@ -32,6 +33,22 @@ public partial class MainWindow : Window, IDisposable
         };
         _tray.DoubleClick += (_, _) => ShowFromTray();
         Closing += OnClosing;
+    }
+
+    private void FitInitialWindowToPrimaryWorkArea()
+    {
+        var workArea = SystemParameters.WorkArea;
+        var size = WindowSizePolicy.FitToWorkArea(workArea.Width, workArea.Height,
+            Width, Height, MinWidth, MinHeight);
+        MinWidth = size.MinimumWidth;
+        MinHeight = size.MinimumHeight;
+        Width = size.Width;
+        Height = size.Height;
+        // WorkArea uses primary-display DIPs; center in that same rectangle,
+        // rather than CenterScreen's potentially different cursor display.
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = workArea.Left + (workArea.Width - size.Width) / 2;
+        Top = workArea.Top + (workArea.Height - size.Height) / 2;
     }
 
     public void SetStatus(string message) => StatusText.Text = message;
