@@ -29,6 +29,16 @@ public partial class App : Application
             _coldLaunch = ActivationRequest.IsNotificationLaunch(e.Args);
             _instance = new SingleInstanceCoordinator("DuckFard.SnuWatcher");
             _owner = _instance.TryAcquire();
+            if (!_owner)
+                _instance.Diagnostic += message =>
+                {
+                    try { NativeDiagnostics.Write("instance-forward-limited", message, false); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                    {
+                        // Local diagnostics must not prevent delivery of the user's Show request.
+                        Debug.WriteLine("SNU Watcher could not save its local foreground-permission diagnostic.");
+                    }
+                };
             if (e.Args.Contains("--quit", StringComparer.Ordinal))
             {
                 if (!_owner)
@@ -182,13 +192,14 @@ public partial class App : Application
             if (_coldLaunch && _window is null) Shutdown();
             return;
         }
-        ShowWindow();
+        var activated = ShowWindow();
         UpdateStatus(request.Action == ActivationAction.ViewSection
             ? "Notification activation received. Section views arrive after the M2 gate."
-            : "Existing instance brought to foreground.");
+            : activated ? "Existing instance brought to foreground."
+                : "Existing instance shown. Select SNU Watcher on the taskbar to focus it.");
     }
 
-    private void ShowWindow()
+    private bool ShowWindow()
     {
         if (_window is null)
         {
@@ -198,7 +209,7 @@ public partial class App : Application
         _window.SetStatus(_status);
         _window.Show();
         if (_window.WindowState == WindowState.Minimized) _window.WindowState = WindowState.Normal;
-        _window.Activate();
+        return _window.Activate();
     }
 
     private void SendTestNotification()

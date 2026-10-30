@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Win32.SafeHandles;
 
 namespace SnuWatcher.Windows;
 
@@ -14,6 +15,7 @@ namespace SnuWatcher.Windows;
 public sealed partial class SingleInstanceCoordinator : IAsyncDisposable
 {
     private readonly string _key;
+    private readonly Func<SafePipeHandle, bool> _tryForegroundTransfer;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly ManualResetEventSlim _ready = new();
     private readonly ManualResetEventSlim _release = new();
@@ -25,9 +27,16 @@ public sealed partial class SingleInstanceCoordinator : IAsyncDisposable
 
     /// <summary>Creates coordination names scoped to the current user and Windows session.</summary>
     public SingleInstanceCoordinator(string applicationId)
+        : this(applicationId, ForegroundPermissionTransfer.TryAllow)
     {
+    }
+
+    internal SingleInstanceCoordinator(string applicationId, Func<SafePipeHandle, bool> tryForegroundTransfer)
+    {
+        ArgumentNullException.ThrowIfNull(tryForegroundTransfer);
         if (string.IsNullOrEmpty(applicationId) || applicationId.Length > 100 || !ApplicationIdPattern().IsMatch(applicationId))
             throw new ArgumentException("Application ID must contain letters, digits, periods or hyphens.", nameof(applicationId));
+        _tryForegroundTransfer = tryForegroundTransfer;
         var sid = WindowsIdentity.GetCurrent().User?.Value
             ?? throw new InvalidOperationException("Windows user identity is unavailable.");
         var suffix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sid)))[..24];
@@ -130,6 +139,9 @@ public sealed partial class SingleInstanceCoordinator : IAsyncDisposable
         await using var pipe = new NamedPipeClientStream(".", _key, PipeDirection.InOut,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         await pipe.ConnectAsync(deadline.Token).ConfigureAwait(false);
+        // The owner may dispatch as soon as bytes arrive. Transfer rights first, without changing the wire format.
+        if (ForegroundPermissionPolicy.RequiresForeground(request.Action) && !_tryForegroundTransfer(pipe.SafePipeHandle))
+            Diagnostic?.Invoke("Windows did not grant foreground permission; select SNU Watcher on the taskbar if needed.");
         var bytes = Encoding.UTF8.GetBytes(request.Encode() + "\n");
         await pipe.WriteAsync(bytes, deadline.Token).ConfigureAwait(false);
         await pipe.FlushAsync(deadline.Token).ConfigureAwait(false);
