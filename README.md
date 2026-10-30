@@ -4,7 +4,7 @@
 
 SNU Watcher is a Windows desktop app being built for Seoul National University students who are waiting for a place in a full class. It is designed to check the sections you choose, alert you when a seat becomes available, and take you to the official SNU registration page so you can try to register.
 
-**Currently in development:** the desktop build is an installation and notification test app. Course search, watchlists, and automatic availability checks are still being developed. A public desktop release is not available yet. Follow the [development progress](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/PROGRESS.md) for the current status.
+**Currently in development:** the desktop build is an installation and notification test app. Course search, watchlists, and automatic availability checks are still being developed. A public desktop release is not available yet. Follow the [development progress](docs/PROGRESS.md) for the current status.
 
 ## Planned features
 
@@ -41,7 +41,7 @@ The earlier command-line prototype is preserved in [legacy/python-watcher](legac
 
 The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications. SQLite is planned for storing watches and alert history locally.
 
-Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/global.json), then run:
+Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](global.json), then run:
 
 ```powershell
 git clone --branch development/windows-foundation https://github.com/DuckFard/SNU-watcher.git
@@ -51,15 +51,15 @@ cd SNU-watcher
 
 The script restores locked dependencies, builds the solution, and runs the offline foundation tests with an 80% line and branch coverage requirement. These tests do not log into SNU, submit registrations, or send Windows notifications.
 
-See [native validation](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/native-validation.md) for instructions to build the current test app and installer. Installer builds also require Inno Setup.
+See [native validation](docs/native-validation.md) for instructions to build the current test app and installer. Installer builds also require Inno Setup.
 
 ## Project documentation
 
-- [Development progress](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/PROGRESS.md) — implemented work, test evidence, and open milestones.
-- [Implementation plan](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/DESKTOP_APP_PLAN.md) — feature scope, monitoring behavior, and release requirements.
-- [Architecture](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/architecture.md) — application structure and design decisions.
-- [SNU integration](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/integrations/snu.md) — data sources, verified behavior, and limitations.
-- [Testing](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/testing.md) — automated checks and coverage requirements.
+- [Development progress](docs/PROGRESS.md) — implemented work, test evidence, and open milestones.
+- [Implementation plan](docs/DESKTOP_APP_PLAN.md) — feature scope, monitoring behavior, and release requirements.
+- [Architecture](docs/architecture.md) — application structure and design decisions.
+- [SNU integration](docs/integrations/snu.md) — data sources, verified behavior, and limitations.
+- [Testing](docs/testing.md) — automated checks and coverage requirements.
 
 ## License
 

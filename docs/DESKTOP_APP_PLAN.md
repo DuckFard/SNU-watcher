@@ -1,8 +1,8 @@
 # SNU Course Watcher desktop implementation plan
 
-Status: proposed implementation contract. Planning only; no desktop application has been built. Evidence reviewed on 2026-10-28, Asia/Seoul. Revised on the same date to remove PDF import and adopt the owner's repository and MIT license. Existing CLI runtime configuration, state, and running processes remain unchanged.
+Status: implementation authorized on 2026-10-28, Asia/Seoul. M1 source contracts and M2 native feasibility are in progress; completion and evidence are recorded in `docs/PROGRESS.md`. The full student desktop application and production installer are not complete. Existing CLI runtime configuration, state, and running processes remain unchanged.
 
-Canonical repository: [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher). Project license: MIT, copyright 2026 DuckFard. The repository contains this plan and the existing Python prototype as a legacy reference; it does not contain a desktop build yet.
+Canonical repository: [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher). Project license: MIT, copyright 2026 DuckFard. The repository preserves the Python prototype as a legacy reference alongside the new foundation work. Development candidates are not production releases.
 
 ## 1. Capability and decisions
 
@@ -26,7 +26,7 @@ Public release remains subject to the source-access and release decisions in sec
 
 | Option | Advantages for this application | Tradeoff | Decision |
 | --- | --- | --- | --- |
-| C# / .NET 10 / WPF | One application language for UI, parsing, persistence, and scheduler; direct Windows notification activation; mature binding, localization, and accessibility | Windows only; port the small Python engine | Recommended for the requested Windows EXE |
+| C# / .NET 10 / WPF | One application language for UI, parsing, persistence, and scheduler; native Windows notifications; mature binding, localization, and accessibility | Windows only; port the small Python engine | Recommended for the requested Windows EXE |
 | Tauri 2 / React / TypeScript / Rust | Strong web UI ecosystem and smaller shell than a bundled browser engine; attractive if macOS becomes a requirement | More languages; Windows notification action support needs additional validation/native work | Alternative if cross-platform becomes a launch requirement |
 | PySide6 / Python | Most direct source reuse; strong desktop widgets | Packaging and native notification/click integration still need platform work; assess Qt distribution obligations | Good prototype route, less compelling than C# for this Windows release |
 | Electron / TypeScript | Convenient web UI and desktop ecosystem | Bundled browser/runtime increases distribution and update surface; existing Python still needs a bridge or port | No product advantage sufficient to select it here |
@@ -45,7 +45,7 @@ WPF is Windows-only [S1]. Microsoft documents local notifications and activation
 | Tests | xUnit, fake HTTP/clock, Coverlet; Windows UI automation such as FlaUI | Domain tests offline; installer/notification checks on Windows |
 | Installer | Inno Setup | Carry the complete publish folder; review licenses for selected versions |
 
-Pin supported stable versions when implementation begins. Record license/redistribution obligations and lock dependencies. Do not install packages or generate a project during this planning phase.
+Pin supported stable versions for implementation, record license/redistribution obligations, and lock dependencies. The owner has authorized development; package restore and foundation projects are now in scope.
 
 ## 2. Evidence and what it establishes
 
@@ -86,7 +86,7 @@ SNU's misconduct notice concerns macro-assisted registration attempts and course
 | 3. Availability | Registered/quota and derived apparent seats, full/available badge, separate total enrollment where present | Correct source-label mapping; no eligibility claim |
 | 4. Watch exact section | Watch action stores confirmed term and section; scheduler updates it while active | Exact identity survives restart and page-two lookup |
 | 5. Popup alert | Native Windows popup and optional sound; in-app history; failed delivery visibly retryable | Installed clean-PC banner, sound, and failure tests |
-| 6. Register from alert | Body click/Open registration opens approved official URL in default browser; View section opens app detail; Copy identifier button in app | Activation works with window visible, in tray, and after process exit |
+| 6. Register from alert | Body click/Open registration opens the fixed official HTTPS URL directly in the default browser; course details and Copy identifier remain in the app | Browser action works with window visible, in tray, and after process exit |
 | 7. Manage watches | Add, pause, resume, remove; bulk operations on a confirmed selection | Changes apply immediately and survive restart |
 | 8 and 12. Freshness | Last attempt, last successful check, age, next estimated check, delayed/unavailable indicators | Failed attempts never advance last-success time |
 | 9. No reservation | Inline message: an alert does not reserve a seat; availability may change before registration | Present in onboarding, course detail, and notification context |
@@ -147,7 +147,7 @@ docs/                         product contract, adapter notes, decisions, runboo
 legacy/                       reference or provenance for the old CLI
 ```
 
-These are planned modules; do not scaffold them until implementation is authorized. Keep the existing CLI intact until migration and desktop acceptance pass.
+These are the target modules; implement them in the gated milestone order below. Keep the existing CLI intact until migration and desktop acceptance pass.
 
 Core interface responsibilities:
 
@@ -247,11 +247,13 @@ Source health and per-section health are distinct. Group coverage uses successfu
 
 Use the app's own stable identity and the Windows App SDK `AppNotificationManager`, not a PowerShell subprocess or another app's identity. Register the notification handler, call `Register()`, then read activation arguments in the documented order [S3]. Run the app unelevated; diagnose administrator launch explicitly rather than silently claiming notification readiness.
 
-Popup content: title/course code/section/term, apparent seats and count, observed time, short no-reservation wording. Body click and Open registration open the official registration destination; View section opens the app. Include a copy-identifier action in the course panel. Do not promise SNU preselects a section until verified. Safe fallback opens the official homepage and makes the exact identifier easy to copy. Opening a browser never submits registration.
+Popup content: title/course code/section/term, apparent seats and count, observed time, short no-reservation wording. Body click and the single Open registration button use Windows HTTPS protocol activation to open the fixed official registration destination directly [S14]. Include course details and a copy-identifier action in the app. Do not promise SNU preselects a section until verified. Safe fallback opens the official homepage and makes the exact identifier easy to copy. Opening a browser never submits registration.
 
-Persist an event before attempting delivery. Track Pending, OS accepted, Failed, Suppressed/Disabled when detectable, Superseded, and Activated per channel. A successful file/log write cannot acknowledge desktop delivery. Windows API success does not prove the user saw the banner. Keep in-app history and a first-run visible test. DND/system settings remain under user control; do not forcibly change them.
+Persist an event before attempting delivery. Track Pending, OS accepted, Failed, Suppressed/Disabled when detectable, and Superseded per channel. Direct browser protocol activation has no reliable app click receipt; do not infer Activated, student visibility, or successful registration from OS acceptance. A successful file/log write cannot acknowledge desktop delivery. Keep in-app history and a first-run visible test. DND/system settings remain under user control; do not forcibly change them.
 
-Clicking an existing notification after process exit must handle activation without creating duplicate polling. If the previous session explicitly quit, an action-only activation opens the destination and exits; normal user launch resumes active watches. Clicking an old alert indicates its observation age and does not imply that the opening still exists. Ordinary exit calls `Unregister()` to release the process handler; uninstall calls `UnregisterAll()` before removing binaries to clean up registration. These have different purposes [S13].
+Clicking an existing notification after process exit opens the browser directly and must not restart monitoring. Normal app launch resumes active watches. An old alert retains its observation time and does not imply that the opening still exists. Ordinary exit calls `Unregister()` to release the process handler; uninstall calls `UnregisterAll()` before removing binaries to clean up registration. These have different purposes [S13].
+
+M2 redecision on 2026-10-28: the developer's installed banner became visible after own shortcut-identity correction, but both app callback actions still failed after a separately verified cold-lifecycle payload fix. A direct probe returned Class not registered before app launch despite the expected merged per-user COM server entry. Registration alerts therefore use supported protocol activation rather than depending on that unproven callback. The optional View app notification button is removed from v1. This does not pass the clean-machine or interactive click gates; see ADR 0001 and the progress log for current evidence.
 
 ## 9. GitHub and Windows release contract
 
@@ -261,7 +263,7 @@ The proposed deployment profile is an unpackaged WPF application with self-conta
 
 Package the whole publish directory in Inno Setup, not just its main EXE. Keep a stable Inno `AppId`, executable name, per-user x64 install path, and start-menu shortcut. Support a rerunnable installer, upgrade, and uninstall; a custom repair mode is not promised. Do not launch the app elevated from setup; if setup elevation is ever needed, relaunch in the original user's unelevated context or ask the student to launch the installed shortcut. No `PublishSingleFile` dependency for v1. An installer is a single download while installed DLLs remain ordinary implementation files. Inno supports single-EXE and non-admin installs [S12].
 
-Gate on a clean Windows 11 x64 VM without developer PowerShell, .NET SDK, or preinstalled Windows App Runtime packages; inventory packages before and after install. Test running, tray, exited, and post-reboot notification activation plus single-instance forwarding. If the selected stable SDK cannot satisfy the app-local profile, stop M3 for an explicit deployment redecision with recorded evidence. The defined alternative is the same C#/WPF app with a signed setup that carries Microsoft's documented runtime prerequisites; test it in a separately named profile and update the ADR/contract before proceeding. Never silently mix deployment profiles or hand students manual dependency commands.
+Gate on a clean Windows 11 x64 VM without developer PowerShell, .NET SDK, or preinstalled Windows App Runtime packages; inventory packages before and after install. Test running, tray, exited, and post-reboot notification body/button HTTPS actions plus ordinary single-instance forwarding. A browser action must not restart monitoring. If the selected stable SDK cannot satisfy the app-local display profile, stop M3 for an explicit deployment redecision with recorded evidence. The defined alternative is the same C#/WPF app with a signed setup that carries Microsoft's documented runtime prerequisites; test it in a separately named profile and update the ADR/contract before proceeding. Never silently mix deployment profiles or hand students manual dependency commands.
 
 CI: restore pinned packages; format/analyze; run offline unit/integration tests and coverage; build/publish; scan dependencies/secrets; generate MIT and third-party license notices, SBOM, and SHA-256 checksums; produce a candidate installer. Windows desktop/installation tests use an interactive VM, not an assumption that a headless CI runner displays banners.
 
@@ -289,10 +291,10 @@ Use test-first development for domain and integration behaviors; target at least
 | T12 | Large group exceeds target interval: displayed estimates reflect queue delay; no overlapping runs or unbounded work |
 | T13 | Pause/remove/expire during an in-flight request prevents delivery to that subscription; resuming a group sharing a section with an active individual watch never resets the active watch's baseline or suppresses its event |
 | T14 | Midnight expiry, timezone changes, sleep/wake, restart and sign-in work without catch-up bursts |
-| T15 | Second application launch focuses first instance; tray close continues, Quit stops; notification activation does not duplicate polling |
+| T15 | Second application launch focuses first instance; tray close continues, Quit stops; notification browser actions do not start or duplicate polling |
 | T16 | Native installed banner/sound/click works in foreground/tray/exited state; permission disabled/DND shows honest diagnostics/history |
 | T17 | Browser action opens approved HTTPS SNU/Genie only; malicious source text or URL never executes commands or becomes trusted navigation |
-| T18 | Clean Windows account, Unicode/spaced path, no developer dependencies: inventory runtime packages before/after install; verify unelevated launch, no unplanned runtime install, reboot/cold activation, upgrade with tray shutdown, stable identity/path, and uninstall with no stale COM/notification registration |
+| T18 | Independent clean Windows 11 system, Unicode/spaced path, no developer dependencies: inventory runtime packages before/after install; verify unelevated launch, no unplanned runtime install, post-reboot browser protocol actions, upgrade with tray shutdown, stable identity/path, and uninstall with no stale COM/notification registration |
 | T19 | Legacy migration idempotent, read-only to originals; transaction/migration interruption is recoverable |
 | T20 | Keyboard-only flow, screen reader labels, high contrast, 100/150/200% scaling, Korean/English text do not hide core controls |
 
@@ -300,11 +302,11 @@ Performance targets to measure on a documented reference PC: first usable window
 
 ## 11. Ordered implementation milestones
 
-M0 is partially complete: the owner selected DuckFard/SNU-watcher, authorized saving planning progress, chose MIT, and removed PDF import. Implementation milestones remain unstarted. After M0 review, M1 source discovery and M2 native feasibility can run in parallel. Both exit gates must pass before M3; native installation/notification feasibility is a stack-defining gate, not a late packaging check. M3 then precedes M4; UI and alerts can progress against stable contracts with assigned file ownership. Review at each exit gate; do not hide a failed gate by proceeding to visual polish.
+M0 is complete: the owner selected DuckFard/SNU-watcher and MIT, removed PDF import, and authorized development according to this plan on 2026-10-28. M1 source discovery and M2 native feasibility can run in parallel. Both exit gates must pass before M3; native installation/notification feasibility is a stack-defining gate, not a late packaging check. M3 then precedes M4; UI and alerts can progress against stable contracts with assigned file ownership. Review at each exit gate; do not hide a failed gate by proceeding to visual polish. See `docs/PROGRESS.md` for measured results and open gates.
 
 | Milestone | Work and concrete deliverables | Exit gate |
 | --- | --- | --- |
-| M0 Confirm contract and repository | Repository/public visibility and MIT confirmed; save revised planning docs and sanitized legacy reference. Owner reviews remaining Windows scope and release intent | Planning progress saved; implementation still requires authorization |
+| M0 Confirm contract and repository | Repository/public visibility and MIT confirmed; revised plan and sanitized legacy reference saved; development authorized | Complete; public binary release and signing remain separately gated |
 | M1 Source contracts | Bounded SNU form/search/detail/term tests; canonical ID and alias rules; sanitized fixtures; link/Genie fallback matrix | T01-T04; all unsupported fields documented; source behavior or fallback explicitly established |
 | M2 Native install and notification spike | Minimal WPF shell, stable identity, single instance, handler/Register/activation ordering, local native banner, self-contained publish and draft installer | T15-T16/T18 smoke on clean VM with runtime inventory; visible notification and foreground/tray/exited/post-reboot clicks confirmed; no elevated launch or undeclared runtime install. Failed profile triggers deployment redecision before M3 |
 | M3 Domain and persistence | Immutable models, watch/group/expiry state, opening policy, SQLite schema/migrations/outbox, legacy migration | T02/T05-T08/T13-T14/T19 pass offline; crash/retry semantics recorded |
@@ -335,10 +337,10 @@ Public interfaces get XML documentation describing inputs, outputs, cancellation
 
 ### Owner choices
 
-Confirmed: public repository [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher), MIT license, and no PDF import. Saving planning progress and the existing legacy prototype is authorized; building the desktop app and publishing binaries are not yet authorized.
+Confirmed: public repository [DuckFard/SNU-watcher](https://github.com/DuckFard/SNU-watcher), MIT license, no PDF import, and authorization to develop according to this plan. Development source/candidates may be saved to the repository; a signed public binary release remains gated by M7/M8.
 
-1. Final app/publisher display identity. The repository name is fixed; the Windows signing/activation identity still needs a stable choice.
-2. Confirm Windows 11 x64 and Korean/English launch scope; if macOS is required at launch, revisit the framework before implementation.
+1. Default development identity: display name `SNU Watcher`, publisher `DuckFard`, internal identity `DuckFard.SnuWatcher`. Freeze signing/installer identity before release.
+2. Proceed with Windows 11 x64 and Korean/English launch scope under the accepted plan; macOS is outside v1.
 3. Signing budget/publisher certificate for release. MIT applies to original project code/docs; dependencies and external SNU assets retain their own terms.
 
 These choices can be reviewed with this concrete plan. No additional plugin is required for planning. Use the existing GitHub connector or Git for the confirmed repository, within the owner's granted scope. Saving source/planning progress does not authorize an installer release.
@@ -351,9 +353,9 @@ These choices can be reviewed with this concrete plan. No additional plugin is r
 
 ### Useful working setup
 
-When building is authorized, attach DuckFard/SNU-watcher as a Codex project, keep this plan and ADRs in it, and implement milestone-sized branches/PRs. Use isolated worktrees for independent UI/domain work after contracts stabilize. Use the existing agents for code/security review. A clean interactive Windows VM/account is more useful than another cloud plugin for the release gates. Figma is optional if the owner wants a separate visual design review; it is not needed to implement WPF.
+When building is authorized, attach DuckFard/SNU-watcher as a Codex project, keep this plan and ADRs in it, and implement milestone-sized branches/PRs. Use isolated worktrees for independent UI/domain work after contracts stabilize. Use the existing agents for code/security review. An independent clean interactive Windows VM or system is more useful than another cloud plugin for the release gates; a fresh account on this developer PC is insufficient. Figma is optional if the owner wants a separate visual design review; it is not needed to implement WPF.
 
-Handoff: save this revised planning contract and the sanitized legacy reference in the confirmed repository under MIT. Then wait for implementation authorization before M1/M2 execution, new application code, dependencies, installers, or changes to the old watcher's runtime.
+Handoff: development is authorized. Complete M1/M2 evidence first; do not mark clean-machine native validation passed from a developer PC with preinstalled runtimes. Continue into M3 only after the exit gates pass, preserving the old watcher's runtime throughout.
 
 ## 14. Sources and reference projects
 
@@ -371,6 +373,7 @@ Sources support factual capabilities and constraints; chosen defaults, budgets a
 - S11: [Microsoft Windows App SDK self-contained deployment](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps). Use the self-contained profile; framework-dependent deployment is a distinct configuration with different prerequisite handling.
 - S12: [Inno Setup official features](https://jrsoftware.org/isinfo.php).
 - S13: [AppNotificationManager.Unregister API reference](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.windows.appnotifications.appnotificationmanager.unregister?view=windows-app-sdk-1.8) and [UnregisterAll API reference](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.windows.appnotifications.appnotificationmanager.unregisterall?view=windows-app-sdk-1.8). These references retain a Singleton-dependency note differing from S11; M2 must establish behavior for the pinned SDK.
+- S14: [Microsoft app notification content schema](https://learn.microsoft.com/en-us/windows/apps/design/shell/tiles-and-notifications/toast-schema) and [protocol action XML schema](https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-action). Registration body/button URIs are fixed official HTTPS values; protocol activation does not provide a reliable click receipt to the sender.
 - [Wafflestudio SNUTT](https://github.com/wafflestudio/snutt): SNU catalog/timetable modeling and UX reference, with maintainers' load/crawling cautions. It is not proof of permission or an approved polling rate.
 - [Wafflestudio snutt-proxy](https://github.com/wafflestudio/snutt-proxy): reference for restricted syllabus routes, cookie isolation, and link compatibility pitfalls; do not silently depend on its public service.
 - [Historical Snu-sugang app](https://github.com/kgwangrae/Snu-sugang): historical UI reference only; not a current endpoint or reliability foundation. Existing auto-registration scripts are unsuitable foundations for this notification product.
