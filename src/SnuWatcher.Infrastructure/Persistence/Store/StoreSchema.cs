@@ -6,7 +6,7 @@ namespace SnuWatcher.Infrastructure.Persistence;
 public sealed partial class SqliteWatchStore
 {
     private const long ApplicationId = 0x534E5557;
-    private const long SchemaVersion = 3;
+    private const long SchemaVersion = 4;
 
     private void Initialize(SqliteConnection connection, CancellationToken cancellationToken)
     {
@@ -31,10 +31,11 @@ public sealed partial class SqliteWatchStore
                 Run(connection, transaction, SchemaSql);
                 Run(connection, transaction, LegacyImportSchemaSql);
                 Run(connection, transaction, BatchSchemaSql);
-                Run(connection, transaction, "PRAGMA application_id=1397642583; PRAGMA user_version=3;");
+                Run(connection, transaction, UiSchemaSql);
+                Run(connection, transaction, "PRAGMA application_id=1397642583; PRAGMA user_version=4;");
                 Checkpoint(SqliteStoreWriteStage.SchemaCreated);
             }
-            else if (reservedVersion is 1 or 2)
+            else if (reservedVersion is 1 or 2 or 3)
             {
                 // The reservation blocks other writers, but the native backup reads from its own
                 // anchored readonly connection. Backing up the writing handle would deadlock.
@@ -42,10 +43,11 @@ public sealed partial class SqliteWatchStore
                 Checkpoint(SqliteStoreWriteStage.MigrationBackup);
                 cancellationToken.ThrowIfCancellationRequested();
                 if (reservedVersion == 1) Run(connection, transaction, LegacyImportSchemaSql);
-                Run(connection, transaction, BatchSchemaSql);
+                if (reservedVersion < 3) Run(connection, transaction, BatchSchemaSql);
+                Run(connection, transaction, UiSchemaSql);
                 Checkpoint(SqliteStoreWriteStage.MigrationDdl);
                 cancellationToken.ThrowIfCancellationRequested();
-                Run(connection, transaction, "PRAGMA user_version=3;");
+                Run(connection, transaction, "PRAGMA user_version=4;");
                 Checkpoint(SqliteStoreWriteStage.MigrationVersion);
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -100,7 +102,8 @@ public sealed partial class SqliteWatchStore
         // complete definitions, including columns, constraints, foreign keys and index expressions.
         // Do not remove interior whitespace or change quoted identifiers/literals when recognizing it.
         var definitions = new Dictionary<string, string>(StringComparer.Ordinal);
-        var schema = SchemaSql + (version >= 2 ? LegacyImportSchemaSql : "") + (version >= 3 ? BatchSchemaSql : "");
+        var schema = SchemaSql + (version >= 2 ? LegacyImportSchemaSql : "") + (version >= 3 ? BatchSchemaSql : "")
+            + (version >= 4 ? UiSchemaSql : "");
         foreach (var statement in schema.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             var prefix = statement.StartsWith("CREATE TABLE ", StringComparison.Ordinal) ? "CREATE TABLE "

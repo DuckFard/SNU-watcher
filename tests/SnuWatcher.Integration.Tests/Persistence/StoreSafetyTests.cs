@@ -62,7 +62,7 @@ public sealed class StoreSafetyTests
         await using var store = await SqliteWatchStore.OpenAsync(factory);
 
         using var verify = factory.Open();
-        Assert.Equal(3L, Scalar(verify, "PRAGMA user_version;"));
+        Assert.Equal(4L, Scalar(verify, "PRAGMA user_version;"));
         Assert.Equal(1397642583L, Scalar(verify, "PRAGMA application_id;"));
         Assert.Equal("wal", Scalar(verify, "PRAGMA journal_mode;"));
         Assert.Equal(1L, Scalar(verify, "PRAGMA foreign_keys;"));

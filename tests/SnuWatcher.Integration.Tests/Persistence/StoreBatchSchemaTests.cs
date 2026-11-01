@@ -21,7 +21,7 @@ public sealed class StoreBatchSchemaTests
 
         await using var store = await SqliteWatchStore.OpenAsync(fixture.Factory);
 
-        Assert.Equal(3, fixture.Version);
+        Assert.Equal(4, fixture.Version);
         await AssertPendingSeedAsync(store, "Frozen V1 서울");
         var backup = AssertOriginalVersionBackup(fixture.DatabasePath, 1);
         using (var saved = new SqliteConnectionFactory(backup).Open(SqliteOpenMode.ReadOnly))
@@ -41,7 +41,7 @@ public sealed class StoreBatchSchemaTests
 
         await using var store = await SqliteWatchStore.OpenAsync(fixture.Factory);
 
-        Assert.Equal(3, fixture.Version);
+        Assert.Equal(4, fixture.Version);
         await AssertPendingSeedAsync(store, "Frozen V2 서울");
         var backup = AssertOriginalVersionBackup(fixture.DatabasePath, 2);
         using (var saved = new SqliteConnectionFactory(backup).Open(SqliteOpenMode.ReadOnly))
@@ -73,7 +73,7 @@ public sealed class StoreBatchSchemaTests
 
         await using var store = await SqliteWatchStore.OpenAsync(fixture.Factory);
 
-        Assert.Equal(3, fixture.Version);
+        Assert.Equal(4, fixture.Version);
         Assert.Empty(fixture.Backups());
         Assert.Empty(await store.ListSubscriptionsAsync(default));
         Assert.Empty(await store.ReadPendingDeliveriesAsync(20, default));
@@ -108,7 +108,7 @@ public sealed class StoreBatchSchemaTests
 
         var retainedBackups = fixture.Backups();
         await using var retry = await SqliteWatchStore.OpenAsync(fixture.Factory);
-        Assert.Equal(3, fixture.Version);
+        Assert.Equal(4, fixture.Version);
         await AssertPendingSeedAsync(retry, "Frozen V2 서울");
         Assert.Equal(completedBackup ? 2 : 1, fixture.Backups().Length);
         Assert.All(retainedBackups, path => Assert.Contains(path, fixture.Backups()));
@@ -132,7 +132,7 @@ public sealed class StoreBatchSchemaTests
             Assert.Equal(original, StoreLegacyV1Fixture.LogicalSnapshot(saved));
 
         await using var retry = await SqliteWatchStore.OpenAsync(fixture.Factory);
-        Assert.Equal(3, fixture.Version);
+        Assert.Equal(4, fixture.Version);
         await AssertPendingSeedAsync(retry, "Frozen V1 서울");
         Assert.Equal(2, StoreBatchV2Fixture.AllBackups(fixture.DatabasePath).Length);
     }
@@ -185,7 +185,7 @@ public sealed class StoreBatchSchemaTests
             first = await firstTask.WaitAsync(Timeout);
             second = await secondTask.WaitAsync(Timeout);
 
-            Assert.Equal(3, fixture.Version);
+            Assert.Equal(4, fixture.Version);
             AssertOriginalVersionBackup(fixture.DatabasePath, 2);
             await AssertPendingSeedAsync(first, "Frozen V2 서울");
             await AssertPendingSeedAsync(second, "Frozen V2 서울");
@@ -240,8 +240,8 @@ public sealed class StoreBatchSchemaTests
     private static string AssertOriginalVersionBackup(string databasePath, long originalVersion)
     {
         var backup = Assert.Single(StoreBatchV2Fixture.AllBackups(databasePath));
-        Assert.StartsWith(Path.GetFileName(databasePath) + ".before-v3-", Path.GetFileName(backup), StringComparison.Ordinal);
-        var prefixLength = Path.GetFileName(databasePath).Length + ".before-v3-".Length;
+        Assert.StartsWith(Path.GetFileName(databasePath) + ".before-v4-", Path.GetFileName(backup), StringComparison.Ordinal);
+        var prefixLength = Path.GetFileName(databasePath).Length + ".before-v4-".Length;
         Assert.True(Guid.TryParseExact(Path.GetFileName(backup)[prefixLength..^".sqlite3".Length], "N", out _));
         StoreBatchV2Fixture.AssertStandaloneBackup(backup, originalVersion);
         return backup;

@@ -41,10 +41,15 @@ public sealed partial class WatchMonitorLoop
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _observer = observer;
         _origin = clock.GetTimestamp();
-        _snapshot = new(clock.GetUtcNow(), true, false, [], [], [], null);
+        _appliedProfile = new(options.Profile, options.InitialPreferencesRevision);
+        var initialAcknowledgement = new TaskCompletionSource<WatchMonitorProfileSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+        initialAcknowledgement.SetResult(_appliedProfile);
+        _latestProfile = new(_appliedProfile, initialAcknowledgement);
+        _snapshot = new(clock.GetUtcNow(), true, false, [], [], [], null, _appliedProfile);
     }
 
     public WatchMonitorSnapshot Snapshot => Volatile.Read(ref _snapshot);
+    public WatchMonitorProfileSnapshot AppliedRefreshProfile => Snapshot.AppliedRefreshProfile;
 
     /// <summary>One lifetime. Cancellation stops admission and awaits all logical operations owned by this loop.</summary>
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -58,6 +63,7 @@ public sealed partial class WatchMonitorLoop
                 cancellationToken.ThrowIfCancellationRequested();
                 if (Volatile.Read(ref _cancellationFailure) != 0) throw new WatchMonitorException("monitor_cancellation_failed");
                 var committed = await DrainCompletedAsync().ConfigureAwait(false);
+                ApplyPendingProfile();
                 var controls = Controls();
                 if (controls.CancelEpoch != _seenCancelEpoch)
                 { _seenCancelEpoch = controls.CancelEpoch; _draining = true; CancelOwned(); }
@@ -69,6 +75,7 @@ public sealed partial class WatchMonitorLoop
                 ResolveRefreshes(controls);
                 AdmitWork(controls, cancellationToken);
                 Publish(controls, committed);
+                AcknowledgeAppliedProfile();
                 await WaitAsync(controls, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -154,7 +161,7 @@ public sealed partial class WatchMonitorLoop
 
     private async Task StopOwnedAsync()
     {
-        lock (_sync) _finished = true;
+        lock (_sync) { _finished = true; RejectUnappliedProfiles(); }
         CancelOwned();
         var tasks = _jobs.Values.Where(job => job.Work is not null).Select(job => (Task)job.Work!)
             .Concat(_catalogJobs.Values.Select(job => (Task)job.Work)).ToArray();

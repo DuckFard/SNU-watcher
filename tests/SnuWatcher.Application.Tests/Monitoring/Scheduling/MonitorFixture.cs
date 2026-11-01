@@ -42,6 +42,7 @@ internal sealed class FakeMonitorStore : IWatchStore
     private Exception? _issueFailure;
     private Exception? _listFailure;
     private Exception? _commitFailure;
+    private Func<CancellationToken, Task<ImmutableArray<SubscriptionSnapshot>>>? _listHandler;
 
     public FakeMonitorStore(IEnumerable<SubscriptionSnapshot>? watches = null) => Watches = (watches ?? []).ToImmutableArray();
     public ImmutableArray<SubscriptionSnapshot> Watches
@@ -70,6 +71,11 @@ internal sealed class FakeMonitorStore : IWatchStore
     public Exception? IssueFailure { get { lock (_sync) return _issueFailure; } set { lock (_sync) _issueFailure = value; } }
     public Exception? ListFailure { get { lock (_sync) return _listFailure; } set { lock (_sync) _listFailure = value; } }
     public Exception? CommitFailure { get { lock (_sync) return _commitFailure; } set { lock (_sync) _commitFailure = value; } }
+    public Func<CancellationToken, Task<ImmutableArray<SubscriptionSnapshot>>>? ListHandler
+    {
+        get { lock (_sync) return _listHandler; }
+        set { lock (_sync) _listHandler = value; }
+    }
 
     public Task<IssuedCheck> IssueCheckAsync(CheckIssue issue, CancellationToken cancellationToken)
     {
@@ -90,12 +96,16 @@ internal sealed class FakeMonitorStore : IWatchStore
     public Task<ImmutableArray<SubscriptionSnapshot>> ListSubscriptionsAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        Func<CancellationToken, Task<ImmutableArray<SubscriptionSnapshot>>>? handler;
+        ImmutableArray<SubscriptionSnapshot> watches;
         lock (_sync)
         {
             _readCount++;
             if (_listFailure is { } failure) throw failure;
-            return Task.FromResult(_watches);
+            handler = _listHandler;
+            watches = _watches;
         }
+        return handler?.Invoke(cancellationToken) ?? Task.FromResult(watches);
     }
 
     public Task<SubscriptionSnapshot?> FindSubscriptionAsync(Guid id, CancellationToken cancellationToken)

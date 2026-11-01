@@ -55,7 +55,7 @@ public sealed class StoreLegacySchemaValidationTests
             await Assert.ThrowsAsync<InvalidOperationException>(() => SqliteWatchStore.OpenAsync(factory));
 
             Assert.Equal(before, SHA256.HashData(await File.ReadAllBytesAsync(path)));
-            Assert.Empty(Directory.GetFiles(directory, "*.before-v3-*.sqlite3"));
+            Assert.Empty(Directory.GetFiles(directory, "*.before-v4-*.sqlite3"));
         }
         finally
         {

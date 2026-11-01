@@ -8,7 +8,8 @@ public sealed record RuntimeSessionOptions
 {
     public RuntimeSessionOptions(WatchMonitorOptions? monitor = null, BatchDeliveryPolicy? delivery = null,
         BatchDeliveryPumpOptions? pump = null, int maxAdmittedCommands = 128, int? maxRefreshSections = null,
-        int maxPendingKnownResults = 128, int finalizeFlushPasses = 2, int recoveryPageSize = 128)
+        int maxPendingKnownResults = 128, int finalizeFlushPasses = 2, int recoveryPageSize = 128,
+        bool deliveryEnabled = true)
     {
         Monitor = monitor ?? new();
         Delivery = delivery ?? new(TimeSpan.FromMinutes(2), 3);
@@ -24,6 +25,7 @@ public sealed record RuntimeSessionOptions
         MaxPendingKnownResults = maxPendingKnownResults;
         FinalizeFlushPasses = finalizeFlushPasses;
         RecoveryPageSize = recoveryPageSize;
+        DeliveryEnabled = deliveryEnabled;
     }
     public WatchMonitorOptions Monitor { get; }
     public BatchDeliveryPolicy Delivery { get; }
@@ -33,4 +35,15 @@ public sealed record RuntimeSessionOptions
     public int MaxPendingKnownResults { get; }
     public int FinalizeFlushPasses { get; }
     public int RecoveryPageSize { get; }
+    public bool DeliveryEnabled { get; }
+    public long InitialPreferencesRevision => Monitor.InitialPreferencesRevision;
+
+    public RuntimeSessionOptions WithInitialRefreshProfile(WatchMonitorProfile profile, long preferencesRevision) =>
+        Copy(Monitor.WithProfile(profile, preferencesRevision), DeliveryEnabled);
+
+    public RuntimeSessionOptions WithDeliveryEnabled(bool deliveryEnabled) => Copy(Monitor, deliveryEnabled);
+
+    private RuntimeSessionOptions Copy(WatchMonitorOptions monitor, bool deliveryEnabled) =>
+        new(monitor, Delivery, Pump, MaxAdmittedCommands, MaxRefreshSections, MaxPendingKnownResults,
+            FinalizeFlushPasses, RecoveryPageSize, deliveryEnabled);
 }

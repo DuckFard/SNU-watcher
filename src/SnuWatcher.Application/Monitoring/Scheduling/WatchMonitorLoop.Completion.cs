@@ -49,10 +49,11 @@ public sealed partial class WatchMonitorLoop
                 if (progress.Outcome is { } outcome && _queries.TryGetValue(pair.Key, out var entry))
                 {
                     var failures = outcome.Failed ? Math.Min(31, entry.Failures + 1) : 0;
-                    var due = Add(job.Start, outcome.Failed ? Backoff(failures, outcome.ParseChanged) : Target(pair.Key, entry.Attempts));
-                    due = Later(due, Add(outcome.ReceivedAt, outcome.RetryAfter ?? TimeSpan.Zero));
-                    if (!outcome.Failed && entry.Requested) due = Later(Add(job.Start, StartFloor), MonotonicNow);
-                    _queries = _queries.SetItem(pair.Key, entry with { Due = due, Failures = failures,
+                    var fence = Later(entry.NotBefore, Add(job.Start, outcome.Failed ? Backoff(failures, outcome.ParseChanged) : StartFloor));
+                    fence = Later(fence, Add(outcome.ReceivedAt, outcome.RetryAfter ?? TimeSpan.Zero));
+                    var next = entry with { Failures = failures, NotBefore = fence };
+                    var due = next.Requested ? Later(fence, MonotonicNow) : AutomaticDue(pair.Key, next);
+                    _queries = _queries.SetItem(pair.Key, next with { Due = due,
                         ReasonCode = outcome.Failed ? outcome.ParseChanged ? "source_parse_changed" : "source_unavailable" : null });
                 }
                 if (progress.Pending.IsEmpty)
@@ -99,7 +100,8 @@ public sealed partial class WatchMonitorLoop
         }).ToImmutableArray();
         var snapshot = new WatchMonitorSnapshot(_clock.GetUtcNow(), controls.Online, controls.Suspended, queries, _blocked,
             _catalogs.Values.OrderBy(entry => entry.Year).Select(entry =>
-                new WatchMonitorCatalogSnapshot(entry.Year, entry.LastSuccessfulAtUtc, entry.ReasonCode)).ToImmutableArray(), reason);
+                new WatchMonitorCatalogSnapshot(entry.Year, entry.LastSuccessfulAtUtc, entry.ReasonCode)).ToImmutableArray(), reason,
+            _appliedProfile);
         Volatile.Write(ref _snapshot, snapshot);
         try { _observer?.TryWrite(new(snapshot, committed)); }
         catch (Exception error) when (error is not OutOfMemoryException) { /* A bounded observer cannot own monitoring or delivery. */ }

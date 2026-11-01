@@ -98,9 +98,10 @@ public sealed class WatchMonitorLoopPolicyTests
     }
 
     [Theory]
-    [InlineData(SourceProblemKind.Unavailable, 30)]
-    [InlineData(SourceProblemKind.ParseChanged, 120)]
-    public async Task ConsecutiveFailuresUseDistinctStartBasedBackoffAndSuccessResetsIt(SourceProblemKind kind, int seconds)
+    [InlineData(SourceProblemKind.Unavailable, 60, 60)]
+    [InlineData(SourceProblemKind.ParseChanged, 120, 240)]
+    public async Task ConsecutiveFailuresUseDistinctStartBasedBackoffAndSuccessResetsIt(
+        SourceProblemKind kind, int firstSeconds, int secondSeconds)
     {
         var clock = new SplitMonitorClock();
         var store = new FakeMonitorStore([Watch([Key()])]);
@@ -108,12 +109,13 @@ public sealed class WatchMonitorLoopPolicyTests
         await using var session = new Session(store, clock, configure: source => source.SearchHandler = (query, _) =>
             Task.FromResult(Interlocked.Increment(ref count) <= 2 ? Failure<CourseSearchData>(kind, clock) : Rows(query, [Key()], clock.GetUtcNow())));
         await EventuallyAsync(() => session.Loop.Snapshot.Queries.Any(query => query.FailureCount == 1));
-        clock.Advance(TimeSpan.FromSeconds(seconds - 1));
+        // M5: automatic retries retain the independent error fence and the applied Normal60 target.
+        clock.Advance(TimeSpan.FromSeconds(firstSeconds - 1));
         await Task.Delay(20);
         Assert.Single(session.Source.SearchCalls);
         clock.Advance(TimeSpan.FromSeconds(1));
         await EventuallyAsync(() => session.Loop.Snapshot.Queries.Single().FailureCount == 2);
-        clock.Advance(TimeSpan.FromSeconds(seconds * 2));
+        clock.Advance(TimeSpan.FromSeconds(secondSeconds));
         await EventuallyAsync(() => session.Source.SearchCalls.Length == 3 && session.Loop.Snapshot.Queries.Single().FailureCount == 0);
         Assert.Equal(TimeSpan.FromSeconds(60), session.Loop.Snapshot.Queries.Single().NextCheckIn);
     }

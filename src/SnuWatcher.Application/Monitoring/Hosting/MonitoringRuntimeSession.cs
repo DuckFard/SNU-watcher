@@ -42,7 +42,8 @@ public sealed partial class MonitoringRuntimeSession : IAsyncDisposable
     public MonitoringRuntimeSession(IWatchStore watches, ISourcePolicyStore policy, IBatchDeliveryStore batches,
         IPendingDeliveryWorkReader work, IDeliveryRecoveryStore recovery, ICourseSource source,
         IBatchDesktopAlertChannel channel, TimeProvider clock, RuntimeSessionOptions options,
-        SemaphoreSlim lifecycleSendGate, Func<string?>? sourceDiagnosticReader = null)
+        SemaphoreSlim lifecycleSendGate, Func<string?>? sourceDiagnosticReader = null,
+        RuntimePresentationServices? presentationServices = null)
     {
         ArgumentNullException.ThrowIfNull(watches);
         ArgumentNullException.ThrowIfNull(policy);
@@ -55,6 +56,8 @@ public sealed partial class MonitoringRuntimeSession : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(lifecycleSendGate);
         _options = options;
+        _interactiveSource = source;
+        _presentationServices = presentationServices;
         _hub = new(clock, sourceDiagnosticReader);
         _monitor = new(watches, source, policy, clock, options.Monitor, _hub.Writer);
         _watches = new(watches, lifecycleSendGate);
@@ -101,8 +104,8 @@ public sealed partial class MonitoringRuntimeSession : IAsyncDisposable
                 startup.Token.ThrowIfCancellationRequested();
                 _actors = _actors.Add("monitor", _monitor.RunAsync(_monitorStop.Token));
                 _actors = _actors.Add("refresh", _refresh.RunAsync(_refreshStop.Token));
-                _actors = _actors.Add("updates", _hub.RunAsync(changed => _pump.Wake(changed), CancellationToken.None));
-                _actors = _actors.Add("delivery", _pump.RunAsync(_pumpStop.Token));
+                _actors = _actors.Add("updates", _hub.RunAsync(WakeDelivery, CancellationToken.None));
+                if (_options.DeliveryEnabled) _actors = _actors.Add("delivery", _pump.RunAsync(_pumpStop.Token));
                 if (!_stopping) _state = RuntimeSessionState.Running;
                 _supervisor = SuperviseAsync();
             }
@@ -138,8 +141,13 @@ public sealed partial class MonitoringRuntimeSession : IAsyncDisposable
             lock (_sync) _stopCore = EnsureStopCoreLocked();
             return false;
         }
-        _monitor.Wake(); _pump.Wake();
+        _monitor.Wake(); WakeDelivery(false);
         return true;
+    }
+
+    private void WakeDelivery(bool sourceChanged)
+    {
+        if (_options.DeliveryEnabled) _pump.Wake(sourceChanged);
     }
 
     public async ValueTask DisposeAsync()

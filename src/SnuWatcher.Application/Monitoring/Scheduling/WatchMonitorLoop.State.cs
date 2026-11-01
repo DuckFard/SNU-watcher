@@ -12,7 +12,7 @@ public sealed partial class WatchMonitorLoop
     private sealed record ActivationDemand(Guid Id, long Generation, SectionKey Key, long Watermark);
     private sealed record QueryEntry(PlannedWatchQuery Plan, ImmutableArray<ActivationDemand> Demand, TimeSpan Due,
         int Failures = 0, int Attempts = 0, TimeSpan? LastStart = null, DateTimeOffset? LastStartedUtc = null,
-        bool Requested = false, string? ReasonCode = null);
+        bool Requested = false, string? ReasonCode = null, TimeSpan NotBefore = default);
     private sealed record CatalogEntry(int Year, TimeSpan Due, CourseCatalogData? Data = null,
         DateTimeOffset? LastSuccessfulAtUtc = null, int Failures = 0, string? ReasonCode = null);
     private sealed record CatalogJob(TimeSpan Start, CancellationTokenSource Cancellation,
@@ -54,7 +54,7 @@ public sealed partial class WatchMonitorLoop
         foreach (var character in $"{query.Year}/{query.TermSelector}/{query.CourseCode}/{attempt}")
             hash = unchecked((hash ^ character) * 16777619);
         var fraction = (hash % 20001) / 10000.0 - 1;
-        var ticks = (long)(_options.TargetInterval.Ticks * (1 + fraction * _options.JitterPercent / 100.0));
+        var ticks = (long)(_appliedProfile.TargetInterval.Ticks * (1 + fraction * _options.JitterPercent / 100.0));
         return Later(StartFloor, TimeSpan.FromTicks(ticks));
     }
 

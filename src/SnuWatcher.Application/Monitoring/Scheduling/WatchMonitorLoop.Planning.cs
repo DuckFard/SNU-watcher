@@ -40,7 +40,7 @@ public sealed partial class WatchMonitorLoop
             {
                 var due = Add(MonotonicNow, _options.RecoveryStagger * newIndex++);
                 if (_lastStarts.TryGetValue(query.Query, out var start)) due = Later(due, Add(start, StartFloor));
-                _queries = _queries.Add(query.Query, new(query, demand, due));
+                _queries = _queries.Add(query.Query, new(query, demand, due, NotBefore: due));
             }
             else
             {
@@ -51,8 +51,7 @@ public sealed partial class WatchMonitorLoop
         }
     }
 
-    private TimeSpan RequestedDue(QueryEntry entry) => entry.Failures > 0 ? entry.Due
-        : entry.LastStart is { } start ? Later(MonotonicNow, Add(start, StartFloor)) : MonotonicNow;
+    private TimeSpan RequestedDue(QueryEntry entry) => Later(MonotonicNow, entry.NotBefore);
 
     private void ResolveRefreshes((bool Online, bool Suspended, long CancelEpoch) controls)
     {
@@ -83,9 +82,9 @@ public sealed partial class WatchMonitorLoop
         foreach (var pair in OrderedQueries())
         {
             var floor = pair.Value.LastStart is { } start ? Add(start, StartFloor) : TimeSpan.Zero;
-            var due = Later(floor, Add(MonotonicNow, _options.RecoveryStagger * index++));
-            if (pair.Value.Failures > 0) due = Later(due, pair.Value.Due);
-            _queries = _queries.SetItem(pair.Key, pair.Value with { Due = due });
+            var fence = Later(pair.Value.NotBefore, Later(floor, Add(MonotonicNow, _options.RecoveryStagger * index++)));
+            var next = pair.Value with { NotBefore = fence };
+            _queries = _queries.SetItem(pair.Key, next with { Due = next.Requested ? fence : AutomaticDue(pair.Key, next) });
         }
         foreach (var pair in _catalogs) _catalogs = _catalogs.SetItem(pair.Key,
             pair.Value with { Due = pair.Value.Failures > 0 ? Later(pair.Value.Due, MonotonicNow) : MonotonicNow });
@@ -154,7 +153,8 @@ public sealed partial class WatchMonitorLoop
         var work = SignalWhenCompleteAsync(() => FetchAndCommitAsync(entry.Plan, cancellation.Token));
         _jobs = _jobs.Add(key, new(entry.Plan, start, cancellation, completion, waiters, work, [], TimeSpan.Zero));
         _queries = _queries.SetItem(key, entry with { LastStart = start, LastStartedUtc = startedUtc,
-            Due = Add(start, Target(key, entry.Attempts + 1)), Attempts = entry.Attempts + 1, Requested = false });
+            Due = Add(start, Target(key, entry.Attempts + 1)), Attempts = entry.Attempts + 1, Requested = false,
+            NotBefore = Add(start, StartFloor) });
         _lastStarts = _lastStarts.Where(pair => start - pair.Value < StartFloor || _queries.ContainsKey(pair.Key) || _jobs.ContainsKey(pair.Key))
             .ToImmutableDictionary().SetItem(key, start);
     }

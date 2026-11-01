@@ -49,10 +49,11 @@ public sealed record WatchMonitorSnapshot
 {
     internal WatchMonitorSnapshot(DateTimeOffset observedAtUtc, bool isOnline, bool isSuspended,
         ImmutableArray<WatchMonitorQuerySnapshot> queries, ImmutableArray<BlockedWatchSection> blockedSections,
-        ImmutableArray<WatchMonitorCatalogSnapshot> catalogs, string? reasonCode)
+        ImmutableArray<WatchMonitorCatalogSnapshot> catalogs, string? reasonCode, WatchMonitorProfileSnapshot appliedRefreshProfile)
     {
         ObservedAtUtc = observedAtUtc; IsOnline = isOnline; IsSuspended = isSuspended;
         Queries = queries; BlockedSections = blockedSections; Catalogs = catalogs; ReasonCode = reasonCode;
+        AppliedRefreshProfile = appliedRefreshProfile;
     }
     public DateTimeOffset ObservedAtUtc { get; }
     public bool IsOnline { get; }
@@ -61,6 +62,7 @@ public sealed record WatchMonitorSnapshot
     public ImmutableArray<BlockedWatchSection> BlockedSections { get; }
     public ImmutableArray<WatchMonitorCatalogSnapshot> Catalogs { get; }
     public string? ReasonCode { get; }
+    public WatchMonitorProfileSnapshot AppliedRefreshProfile { get; }
 }
 
 /// <summary>A lossy bounded wake/read hint. Durable outbox state, rather than receipt of this hint, owns delivery.</summary>

@@ -9,7 +9,7 @@ namespace SnuWatcher.Infrastructure.Persistence;
 
 public sealed partial class SqliteWatchStore
 {
-    /// <summary>The completed original-version snapshot, if this opener upgraded V1/V2. Never automatically restored.</summary>
+    /// <summary>The completed original-version snapshot, if this opener upgraded V1/V2/V3. Never automatically restored.</summary>
     public string? MigrationBackupPath { get; private set; }
 
     private string BackupRecognizedVersion(long sourceVersion, CancellationToken cancellationToken)
@@ -17,7 +17,7 @@ public sealed partial class SqliteWatchStore
         var budget = Stopwatch.StartNew();
         Checkpoint(SqliteStoreWriteStage.MigrationBackupStarted);
         EnsureBackupBudget(budget, cancellationToken);
-        var path = _factory.DatabasePath + ".before-v3-" + Guid.NewGuid().ToString("N") + ".sqlite3";
+        var path = _factory.DatabasePath + ".before-v4-" + Guid.NewGuid().ToString("N") + ".sqlite3";
         var complete = false;
         try
         {
@@ -30,7 +30,7 @@ public sealed partial class SqliteWatchStore
             using (var snapshot = source.BeginTransaction(deferred: true))
             {
                 Run(source, snapshot, "PRAGMA query_only=ON;");
-                if (sourceVersion is not (1 or 2) || ValidateSchema(source, snapshot) != sourceVersion)
+                if (sourceVersion is not (1 or 2 or 3) || ValidateSchema(source, snapshot) != sourceVersion)
                     throw new InvalidOperationException("The migration backup source is no longer the recognized original version.");
                 EnsureBackupBudget(budget, cancellationToken);
                 var expected = BackupRowCounts(source, snapshot, sourceVersion, budget, cancellationToken);
@@ -103,7 +103,8 @@ public sealed partial class SqliteWatchStore
 
     private static long[] BackupRowCounts(SqliteConnection connection, SqliteTransaction transaction, long sourceVersion,
         Stopwatch budget, CancellationToken cancellationToken) => BackupCountQueries
-        .Concat(sourceVersion >= 2 ? ["SELECT count(*) FROM LegacyImports;"] : Array.Empty<string>()).Select(sql =>
+        .Concat(sourceVersion >= 2 ? ["SELECT count(*) FROM LegacyImports;"] : Array.Empty<string>())
+        .Concat(sourceVersion >= 3 ? V3BackupCountQueries : Array.Empty<string>()).Select(sql =>
         {
             EnsureBackupBudget(budget, cancellationToken);
             var count = (long)Scalar(connection, transaction, sql)!;
@@ -125,11 +126,19 @@ public sealed partial class SqliteWatchStore
         "SELECT count(*) FROM EventRecipients;", "SELECT count(*) FROM Outbox;", "SELECT count(*) FROM DeliveryAttempts;",
     ];
 
+    private static readonly string[] V3BackupCountQueries =
+    [
+        "SELECT count(*) FROM DeliveryBatches;", "SELECT count(*) FROM DeliveryBatchEvents;",
+        "SELECT count(*) FROM DeliveryBatchAttempts;", "SELECT count(*) FROM DeliveryBatchAttemptEvents;",
+        "SELECT count(*) FROM DeliveryBatchResults;", "SELECT count(*) FROM SourcePolicies;",
+        "SELECT count(*) FROM SourceRequests;", "SELECT count(*) FROM SourceRequestResults;",
+    ];
+
     private void DeleteIncompleteBackup(string path)
     {
         var source = Path.GetFullPath(_factory.DatabasePath);
         var target = Path.GetFullPath(path);
-        var prefix = Path.GetFileName(source) + ".before-v3-";
+        var prefix = Path.GetFileName(source) + ".before-v4-";
         var name = Path.GetFileName(target);
         if (!string.Equals(Path.GetDirectoryName(source), Path.GetDirectoryName(target), StringComparison.OrdinalIgnoreCase)
             || !name.StartsWith(prefix, StringComparison.Ordinal) || !name.EndsWith(".sqlite3", StringComparison.Ordinal)

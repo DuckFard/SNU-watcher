@@ -111,10 +111,10 @@ try
     using (var connection = factory.Open(SqliteOpenMode.ReadOnly))
     {
         long Count(string sql) { using var command = connection.CreateCommand(); command.CommandText = sql; return Convert.ToInt64(command.ExecuteScalar()); }
-        if (Count("PRAGMA user_version;") != 3 || Count("SELECT COUNT(*) FROM Events;") != 1
+        if (Count("PRAGMA user_version;") != 4 || Count("SELECT COUNT(*) FROM Events;") != 1
             || Count("SELECT COUNT(*) FROM DeliveryBatches;") != 1 || Count("SELECT COUNT(*) FROM DeliveryBatchResults;") != 1
             || Count("SELECT COUNT(*) FROM SourceRequests;") != 0)
-            throw new InvalidOperationException("The private V3 profile did not retain exactly one event/batch and zero physical HTTP intents.");
+            throw new InvalidOperationException("The private V4 profile did not retain exactly one event/batch and zero physical HTTP intents.");
     }
     var native = Process.GetCurrentProcess().Modules.Cast<ProcessModule>()
         .Where(module => string.Equals(module.ModuleName, "e_sqlite3.dll", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -122,7 +122,7 @@ try
         .StartsWith(appDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     if (!appLocalNative) throw new InvalidOperationException("The published app-local native engine was not loaded.");
     Console.WriteLine(JsonSerializer.Serialize(new { testStatus = "PASSED", nativeVersion = identity.Version,
-        nativeSourceId = identity.SourceId, appLocalNative, schemaVersion = 3, eventCount = 1, acceptedBatchCount = 1,
+        nativeSourceId = identity.SourceId, appLocalNative, schemaVersion = 4, eventCount = 1, acceptedBatchCount = 1,
         eventStable = true, baselineStable = true, pendingCount = 0, resendCount = 0, sourceHttpIntents = 0,
         actorsDrained = true, catalogReads = source.Catalogs, searchReads = source.Searches }));
     return 0;
@@ -209,7 +209,7 @@ if ((Get-Item -LiteralPath $stderr).Length -ne 0) { throw 'The monitoring smoke 
 $result = Get-Content -LiteralPath $stdout -Raw | ConvertFrom-Json
 $expectedSource = '2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76'
 if ($result.testStatus -cne 'PASSED' -or $result.nativeVersion -cne '3.54.1' -or $result.nativeSourceId -cne $expectedSource -or
-    $result.appLocalNative -ne $true -or $result.schemaVersion -ne 3 -or $result.eventCount -ne 1 -or $result.acceptedBatchCount -ne 1 -or
+    $result.appLocalNative -ne $true -or $result.schemaVersion -ne 4 -or $result.eventCount -ne 1 -or $result.acceptedBatchCount -ne 1 -or
     $result.eventStable -ne $true -or $result.baselineStable -ne $true -or $result.pendingCount -ne 0 -or $result.resendCount -ne 0 -or
     $result.sourceHttpIntents -ne 0 -or $result.actorsDrained -ne $true -or $result.catalogReads -lt 1 -or $result.searchReads -ne 1) {
     throw 'The published monitoring evidence did not meet its contract.'

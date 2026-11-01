@@ -1,6 +1,7 @@
 using SnuWatcher.Application.Delivery.Batches;
 using SnuWatcher.Application.Monitoring.Hosting;
 using SnuWatcher.Application.Monitoring.SourcePolicy;
+using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Application.Sources;
 using SnuWatcher.Infrastructure.Persistence;
 using SnuWatcher.Infrastructure.Snu;
@@ -39,7 +40,8 @@ public sealed partial class WindowsMonitoringHost : IAsyncDisposable
         _maxControls = options.MaxAdmittedCommands;
         _controls = Channel.CreateBounded<SourceControl>(new BoundedChannelOptions(_maxControls)
             { SingleReader = true, SingleWriter = false, FullMode = BoundedChannelFullMode.Wait });
-        _session = new(store, store, store, store, store, source.Courses, channel, clock, options, gate, source.Diagnostic);
+        _session = new(store, store, store, store, store, source.Courses, channel, clock, options, gate, source.Diagnostic,
+            new RuntimePresentationServices(store, store, store));
     }
     /// <summary>Opens only the fixed normal profile and mandatory anonymous store-backed source; never called by default M4 launch.</summary>
     public static Task<WindowsHostOpenResult> OpenProductionAsync(IBatchDesktopAlertChannel channel, TimeProvider? clock = null,
@@ -131,9 +133,13 @@ public sealed partial class WindowsMonitoringHost : IAsyncDisposable
         {
             profile.EnsureDirectoryAfterOwnership();
             store = await factories.OpenStore(profile, clock, ct).ConfigureAwait(false);
+            // Restore intent before creating the source or any actor. Invalid settings never silently
+            // become defaults, and a failed read unwinds the store while retaining owner-first ordering.
+            var preferences = await ((IUiPreferencesStore)store).ReadAsync(ct).ConfigureAwait(false);
+            var initialOptions = options.WithInitialRefreshProfile(preferences.Values.DesiredProfile, preferences.Revision);
             source = await factories.OpenSource(store, clock, ct).ConfigureAwait(false);
             gate = new(1, 1);
-            host = new(profile, store, source, owner, gate, channel, clock, options);
+            host = new(profile, store, source, owner, gate, channel, clock, initialOptions);
             await host.Session.StartAsync(ct).ConfigureAwait(false);
             Volatile.Write(ref host._state, (int)WindowsMonitoringHostState.Running);
             host._controlsWorker = host.RunControlsAsync();
