@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using SnuWatcher.Infrastructure.Legacy;
 using Xunit;
@@ -200,20 +199,8 @@ public sealed class LegacySourceFilesTests : IDisposable
         Assert.DoesNotContain("private-source-marker", error.ToString(), StringComparison.Ordinal);
     }
 
-    private static void CreateDirectoryLink(string link, string target)
-    {
-        if (!OperatingSystem.IsWindows()) { Directory.CreateSymbolicLink(link, target); return; }
-        var script = "New-Item -ItemType Junction -Path '" + link.Replace("'", "''") + "' -Target '" + target.Replace("'", "''") + "' -ErrorAction Stop | Out-Null";
-        using var process = Process.Start(new ProcessStartInfo
-        {
-            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe"),
-            Arguments = "-NoProfile -NonInteractive -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)),
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        })!;
-        Assert.True(process.WaitForExit(10000), "Owned fixture junction creation exceeded its deadline.");
-        Assert.Equal(0, process.ExitCode);
-    }
+    private void CreateDirectoryLink(string link, string target) =>
+        NativeJunctionFixture.Create(_directory, link, target);
 
     public void Dispose()
     {
