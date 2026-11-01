@@ -45,7 +45,9 @@ jobs:
           $auditJson = dotnet list SnuWatcher.slnx package --vulnerable --include-transitive --format json | Out-String
           if ($LASTEXITCODE -ne 0) { throw 'Dependency audit failed.' }
           $audit = $auditJson | ConvertFrom-Json
-          if ($audit.version -ne 1 -or @($audit.projects).Count -ne 5) { throw 'Unexpected audit result; review its schema.' }
+          [xml]$solution = Get-Content -LiteralPath SnuWatcher.slnx -Raw
+          $expectedProjects = @($solution.SelectNodes('//Project[@Path]')).Count
+          if ($audit.version -ne 1 -or @($audit.projects).Count -ne $expectedProjects) { throw 'Unexpected audit result; review its schema or solution project set.' }
           $vulnerable = @($audit.projects | ForEach-Object { $_.frameworks } | ForEach-Object { @($_.topLevelPackages) + @($_.transitivePackages) } | Where-Object { $_ -and @($_.vulnerabilities).Count -gt 0 })
           if ($vulnerable.Count -gt 0) { throw 'Known vulnerable dependencies found; review the audit before merging.' }
       - name: Preserve test evidence and unsigned app candidate

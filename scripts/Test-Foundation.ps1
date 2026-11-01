@@ -12,7 +12,13 @@ try {
     & $Dotnet build SnuWatcher.slnx --configuration Release --no-restore
     if ($LASTEXITCODE -ne 0) { throw 'Foundation build failed.' }
 
-    foreach ($testName in @('SnuWatcher.Integration.Tests', 'SnuWatcher.Windows.Tests')) {
+    $testTargets = @(
+        @{ Project = 'SnuWatcher.Core.Tests'; Assembly = 'SnuWatcher.Core' },
+        @{ Project = 'SnuWatcher.Integration.Tests'; Assembly = 'SnuWatcher.Infrastructure' },
+        @{ Project = 'SnuWatcher.Windows.Tests'; Assembly = 'SnuWatcher.Windows' }
+    )
+    foreach ($target in $testTargets) {
+        $testName = $target.Project
         # A unique results directory prevents stale coverage from masking a failed run.
         $resultsPath = Join-Path $repoRoot ('artifacts/test-results/' + $testName + '/' + [Guid]::NewGuid().ToString('N'))
         & $Dotnet test "tests/$testName/$testName.csproj" --configuration Release --no-build --settings tests/coverage.runsettings --collect 'XPlat Code Coverage' --logger trx --results-directory $resultsPath
@@ -26,9 +32,12 @@ try {
         if ($coverageHashes.Count -ne 1) { throw "Conflicting coverage reports were generated for $testName." }
         [xml]$coverageReport = Get-Content -Raw -LiteralPath $coverageFiles[0].FullName
         $culture = [Globalization.CultureInfo]::InvariantCulture
-        $lineRate = [double]::Parse($coverageReport.coverage.'line-rate', $culture)
-        $branchRate = [double]::Parse($coverageReport.coverage.'branch-rate', $culture)
-        Write-Host ("{0}: lines {1:P1}, branches {2:P1}" -f $testName, $lineRate, $branchRate)
+        # A dependency's coverage must never mask gaps in the assembly under test.
+        $assemblies = @($coverageReport.SelectNodes('/coverage/packages/package') | Where-Object { $_.GetAttribute('name') -eq $target.Assembly })
+        if ($assemblies.Count -ne 1) { throw "Expected one coverage entry for $($target.Assembly)." }
+        $lineRate = [double]::Parse($assemblies[0].GetAttribute('line-rate'), $culture)
+        $branchRate = [double]::Parse($assemblies[0].GetAttribute('branch-rate'), $culture)
+        Write-Host ("{0}: lines {1:P1}, branches {2:P1}" -f $target.Assembly, $lineRate, $branchRate)
         if (-not $SkipCoverageGate -and ($lineRate -lt 0.8 -or $branchRate -lt 0.8)) {
             throw "$testName is below the 80% line/branch foundation coverage gate."
         }

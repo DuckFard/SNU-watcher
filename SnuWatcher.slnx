@@ -1,10 +1,12 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/SnuWatcher.Core/SnuWatcher.Core.csproj" />
     <Project Path="src/SnuWatcher.Desktop/SnuWatcher.Desktop.csproj" />
     <Project Path="src/SnuWatcher.Infrastructure/SnuWatcher.Infrastructure.csproj" />
     <Project Path="src/SnuWatcher.Windows/SnuWatcher.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SnuWatcher.Core.Tests/SnuWatcher.Core.Tests.csproj" />
     <Project Path="tests/SnuWatcher.Integration.Tests/SnuWatcher.Integration.Tests.csproj" />
     <Project Path="tests/SnuWatcher.Windows.Tests/SnuWatcher.Windows.Tests.csproj" />
   </Folder>

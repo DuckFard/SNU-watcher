@@ -1,6 +1,6 @@
 # Domain and persistence execution contract
 
-Status: design prepared on 2026-10-29; implementation waits for the M2 exit gate. This refines M3 of the [accepted plan](../DESKTOP_APP_PLAN.md), without starting the watch engine early.
+Status: design prepared on 2026-10-29. The independently tested Core policy library was adopted from an external contribution on 2026-11-01, with the corrections recorded in [ADR 0003](0003-external-contribution-review.md). Persistence, application-engine integration and runtime acceptance still wait for the M2 exit gate. This refines M3 of the [accepted plan](../DESKTOP_APP_PLAN.md); adopting the library does not start the watch engine.
 
 ## Identity and ownership
 
