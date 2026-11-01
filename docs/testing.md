@@ -1,15 +1,14 @@
 # Foundation verification
 
-The source-contract and native Windows foundations use xUnit/VSTest with fake HTTP and real local IPC where appropriate. Tests never log into SNU, submit registrations, or send native notifications. The shared runsettings measure Infrastructure and Windows helper logic; WPF/Windows App SDK display and activation require the separate interactive gate.
+The Core, source-contract and native Windows foundations use xUnit/VSTest with synthetic time zones, fake HTTP and real local IPC where appropriate. Tests never log into SNU, submit registrations, or send native notifications. The shared runsettings measure Core, Infrastructure and Windows helper logic; WPF/Windows App SDK display and activation require the separate interactive gate.
 
-Use the SDK pinned in `global.json`. Restore once to establish lock files during development, then run the locked verification script:
+Use the SDK pinned in `global.json` and the committed dependency lock files. Run the locked verification script:
 
 ```powershell
-dotnet restore SnuWatcher.slnx
 ./scripts/Test-Foundation.ps1
 ```
 
-If the SDK is installed outside PATH, pass its executable to `-Dotnet`. The script performs a Release build, runs both offline suites, writes TRX and Cobertura reports under ignored `artifacts/test-results`, and requires at least 80% line and branch coverage for each foundation suite. `-SkipCoverageGate` is diagnostic only; it does not satisfy the milestone gate.
+If the SDK is installed outside PATH, pass its executable to `-Dotnet`. The script restores in locked mode, performs a Release build, runs all three offline suites, writes TRX and Cobertura reports under ignored `artifacts/test-results`, and requires at least 80% line and branch coverage for each suite's intended assembly. Dependency coverage cannot mask gaps in that assembly. `-SkipCoverageGate` is diagnostic only; it does not satisfy the milestone gate.
 
 Keep async state machines in the measured logic. Excluding `CompilerGeneratedAttribute` removes async implementations as well as generated scaffolding; the shared settings exclude explicit generated code instead.
 
