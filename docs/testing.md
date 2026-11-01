@@ -1,6 +1,6 @@
 # Foundation verification
 
-The Core, source-contract and native Windows foundations use xUnit/VSTest with synthetic time zones, fake HTTP and real local IPC where appropriate. Tests never log into SNU, submit registrations, or send native notifications. The shared runsettings measure Core, Infrastructure and Windows helper logic; WPF/Windows App SDK display and activation require the separate interactive gate.
+The Core, Application, source/storage and native Windows foundations use xUnit/VSTest with synthetic time zones, fake HTTP, temporary SQLite databases and real local IPC where appropriate. Tests never log into SNU, submit registrations, open the student's watch database, or send native notifications. The shared runsettings measure Core, Application, Infrastructure and Windows helper logic; WPF/Windows App SDK display and activation require the separate interactive gate.
 
 Use the SDK pinned in `global.json` and the committed dependency lock files. Run the locked verification script:
 
@@ -8,11 +8,17 @@ Use the SDK pinned in `global.json` and the committed dependency lock files. Run
 ./scripts/Test-Foundation.ps1
 ```
 
-If the SDK is installed outside PATH, pass its executable to `-Dotnet`. The script restores in locked mode, performs a Release build, runs all three offline suites, writes TRX and Cobertura reports under ignored `artifacts/test-results`, and requires at least 80% line and branch coverage for each suite's intended assembly. Dependency coverage cannot mask gaps in that assembly. `-SkipCoverageGate` is diagnostic only; it does not satisfy the milestone gate.
+If the SDK is installed outside PATH, pass its executable to `-Dotnet`. The script restores in locked mode, performs a Release build, runs all four offline suites, writes TRX and Cobertura reports under ignored `artifacts/test-results`, and requires at least 80% line and branch coverage for each suite's intended assembly. Dependency coverage cannot mask gaps in that assembly. `-SkipCoverageGate` is diagnostic only; it does not satisfy the milestone gate.
 
 Keep async state machines in the measured logic. Excluding `CompilerGeneratedAttribute` removes async implementations as well as generated scaffolding; the shared settings exclude explicit generated code instead.
 
 Dependency versions are pinned in project files and `packages.lock.json`. CI uses locked restore, commit-pinned GitHub actions, and no SNU requests. An audit listing is evidence for review, not an assertion that the command automatically fails on every advisory.
+
+Persistence tests use the production connection factory and actual pinned native SQLite engine, not an in-memory repository substitute. They exercise replay, version conflicts, unknown-response ordering, generation eligibility, transactional rollback and reopening pending work. Injected failures run before transaction commit; a separate reopen verifies durable state. The bounded command-lane tests distinguish cancellation before execution from cancellation after a commit has begun. Native engine pins and notice files are recorded in [SQLite dependencies](sqlite-dependencies.md).
+
+Windows database-owner tests use actual kernel mutex contention, release and abandonment with private test identities. Namespace/options establish the cross-session design; same-session tests are not described as two interactive Windows logons. Runtime hosting must acquire that owner gate before opening the production store.
+
+Run `./tests/scripts/Test-PersistencePublish.ps1` (or pass `-Dotnet` for the isolated SDK) to publish and execute the production persistence modules as a self-contained win-x64 smoke. Its temporary project and profile stay under ignored `artifacts/persistence-publish`; it never opens the student's database or sends notifications. The probe checks private owner exclusion, atomic event creation, reopen/replay stability and actual app-local native SQLite loading. The script requires a successful child exit and matching structured results, preserves diagnostics, and runs in CI. It does not replace installed desktop acceptance.
 
 Run `./tests/scripts/Test-NativeBuildOutput.ps1` for the standalone packaging regression. Fake tools verify that a stale SDK file from a prior build cannot enter a new installer, prior outputs are preserved, paths with spaces work, skip mode works and tool failures propagate. It performs no real publish, installer execution or native display. CI runs this alongside the foundation suites.
 

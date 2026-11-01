@@ -11,7 +11,7 @@ public sealed record SourceSectionIdentity
     public SourceSectionIdentity(int year, string semesterCode, string detailSemesterCode, string courseCode, string section, string subsubjectCode)
     {
         if (year is < 2013 or > 2200 || !Valid(semesterCode) || !Valid(detailSemesterCode) ||
-            !Valid(courseCode) || !Regex.IsMatch(section ?? "", @"^\d{3}$") || !Valid(subsubjectCode))
+            !Valid(courseCode) || !Regex.IsMatch(section ?? "", @"\A[0-9]{3}\z") || !Valid(subsubjectCode))
             throw new ArgumentException("A complete source section identity is required.");
         Year = year;
         SemesterCode = semesterCode;

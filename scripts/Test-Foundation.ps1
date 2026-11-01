@@ -13,6 +13,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Foundation build failed.' }
 
     $testTargets = @(
+        @{ Project = 'SnuWatcher.Application.Tests'; Assembly = 'SnuWatcher.Application' },
         @{ Project = 'SnuWatcher.Core.Tests'; Assembly = 'SnuWatcher.Core' },
         @{ Project = 'SnuWatcher.Integration.Tests'; Assembly = 'SnuWatcher.Infrastructure' },
         @{ Project = 'SnuWatcher.Windows.Tests'; Assembly = 'SnuWatcher.Windows' }

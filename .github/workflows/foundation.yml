@@ -34,6 +34,9 @@ jobs:
       - name: Locked restore, build, offline tests and coverage
         shell: pwsh
         run: ./scripts/Test-Foundation.ps1
+      - name: Published SQLite persistence smoke
+        shell: pwsh
+        run: ./tests/scripts/Test-PersistencePublish.ps1
       - name: Publish app-local Windows candidate
         shell: pwsh
         run: |
@@ -58,6 +61,7 @@ jobs:
           path: |
             artifacts/test-results
             artifacts/installer-recovery-tests
+            artifacts/persistence-publish
             artifacts/publish
           retention-days: 14
 

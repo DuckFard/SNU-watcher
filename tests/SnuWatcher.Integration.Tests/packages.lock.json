@@ -45,6 +45,14 @@
         "resolved": "17.14.1",
         "contentHash": "pmTrhfFIoplzFVbhVwUquT+77CbGH+h4/3mBpdmIlYtBi9nAB+kKI6dN3A/nV4DFi3wLLx/BlHIPK+MkbQ6Tpg=="
       },
+      "Microsoft.Data.Sqlite.Core": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "1p9rO3Q2X/L/9YrYog3vaDzi8u+WZfJCOkDYoHqmofqYP0DLPLPyZcS2Rnh/79JXAodgbs1AgsaNwLpIvC3Xew==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.1.13"
+        }
+      },
       "Microsoft.TestPlatform.ObjectModel": {
         "type": "Transitive",
         "resolved": "17.14.1",
@@ -63,6 +71,41 @@
         "type": "Transitive",
         "resolved": "13.0.3",
         "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
+      },
+      "SQLite": {
+        "type": "Transitive",
+        "resolved": "3.54.1",
+        "contentHash": "PVpXeQFwnsQ1vXFEiZR3JYYdzmsPLtxObig62uHVfeVOVX8hAemTpr3bRC1n+eVvrohV2BQ/fuQpXaj59uVnHw=="
+      },
+      "SQLitePCLRaw.bundle_e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "3.0.5",
+        "contentHash": "SW8iASIyWMrLzqabUHYQRvALhvD4ylSBsj4PgEVGwc36kQjc9xT5kSV/XQ9rU7nIpBWD+LPyX3Hlw5FzyUzGeQ==",
+        "dependencies": {
+          "SQLite": "3.53.4",
+          "SQLitePCLRaw.config.e_sqlite3": "3.0.5"
+        }
+      },
+      "SQLitePCLRaw.config.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "3.0.5",
+        "contentHash": "aSk8WE5tF2MybESMgtZAEyMVCAWA0nBqOMc48HFoa9UoSdtm3goDXVzNRnefeKIwE6bV9NaNXptn1F9ReMQI0Q==",
+        "dependencies": {
+          "SQLitePCLRaw.provider.e_sqlite3": "3.0.5"
+        }
+      },
+      "SQLitePCLRaw.core": {
+        "type": "Transitive",
+        "resolved": "3.0.5",
+        "contentHash": "k81AYXXRCw3Zj8rOhyBoCsx/U97KYDFI2CSKr/ijl5BwpsW/hX/4kBiDmerFaoust8nxBwa0IHQFw8MmSHRtnQ=="
+      },
+      "SQLitePCLRaw.provider.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "3.0.5",
+        "contentHash": "um8YSWduhhuskTG2bHfZrBqMNQOydfU8pcseT+cu5RivOGyoUbCrGXxgoRNTmRYw2VbMWnEZVVFcneZT/5dsBg==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "3.0.5"
+        }
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -104,10 +147,23 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "snuwatcher.application": {
+        "type": "Project",
+        "dependencies": {
+          "SnuWatcher.Core": "[1.0.0, )"
+        }
+      },
+      "snuwatcher.core": {
+        "type": "Project"
+      },
       "snuwatcher.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "[1.8.6, )"
+          "AngleSharp": "[1.8.6, )",
+          "Microsoft.Data.Sqlite.Core": "[10.0.14, )",
+          "SQLite": "[3.54.1, )",
+          "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
+          "SnuWatcher.Application": "[1.0.0, )"
         }
       }
     }

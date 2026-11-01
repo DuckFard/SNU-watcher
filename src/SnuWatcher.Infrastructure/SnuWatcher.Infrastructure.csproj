@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -8,5 +9,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.8.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.14" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+    <PackageReference Include="SQLite" Version="3.54.1" />
+    <ProjectReference Include="../SnuWatcher.Application/SnuWatcher.Application.csproj" />
   </ItemGroup>
 </Project>
