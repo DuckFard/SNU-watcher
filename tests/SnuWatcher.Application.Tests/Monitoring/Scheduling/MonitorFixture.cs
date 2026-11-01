@@ -14,15 +14,63 @@ internal sealed class SplitMonitorClock(DateTimeOffset? start = null) : TimeProv
 {
     private readonly FakeTimeProvider _inner = new(start ?? MonitorFixture.Now);
     private long _utcShiftTicks;
+    private Action<TimeSpan>? _beforeTimerCreated;
+    private Action<TimeSpan>? _afterTimerArmed;
+    private int _undisposedTimerCount;
 
     public override long TimestampFrequency => _inner.TimestampFrequency;
     public override TimeZoneInfo LocalTimeZone => _inner.LocalTimeZone;
     public override DateTimeOffset GetUtcNow() => _inner.GetUtcNow().AddTicks(Interlocked.Read(ref _utcShiftTicks));
     public override long GetTimestamp() => _inner.GetTimestamp();
-    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
-        _inner.CreateTimer(callback, state, dueTime, period);
+    /// <summary>Optional phase barrier before the underlying clock anchors a newly created timer.</summary>
+    public Action<TimeSpan>? BeforeTimerCreated
+    {
+        get => Volatile.Read(ref _beforeTimerCreated);
+        set => Volatile.Write(ref _beforeTimerCreated, value);
+    }
+    /// <summary>Reports a successfully armed finite timer, including an explicit Change after creation.</summary>
+    public Action<TimeSpan>? AfterTimerArmed
+    {
+        get => Volatile.Read(ref _afterTimerArmed);
+        set => Volatile.Write(ref _afterTimerArmed, value);
+    }
+    /// <summary>Counts owned timer objects until their actual disposal completes.</summary>
+    public int UndisposedTimerCount => Volatile.Read(ref _undisposedTimerCount);
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+    {
+        BeforeTimerCreated?.Invoke(dueTime);
+        var inner = _inner.CreateTimer(callback, state, dueTime, period);
+        Interlocked.Increment(ref _undisposedTimerCount);
+        var timer = new ObservedTimer(inner, this);
+        try { ObserveArmed(dueTime); return timer; }
+        catch { timer.Dispose(); throw; }
+    }
+    private void ObserveArmed(TimeSpan dueTime) { if (dueTime >= TimeSpan.Zero) AfterTimerArmed?.Invoke(dueTime); }
     public void Advance(TimeSpan value) => _inner.Advance(value);
     public void ShiftUtc(TimeSpan value) => Interlocked.Add(ref _utcShiftTicks, value.Ticks);
+
+    private sealed class ObservedTimer(ITimer inner, SplitMonitorClock owner) : ITimer
+    {
+        private int _disposed;
+        public bool Change(TimeSpan dueTime, TimeSpan period)
+        {
+            var changed = inner.Change(dueTime, period);
+            if (changed) owner.ObserveArmed(dueTime);
+            return changed;
+        }
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            try { inner.Dispose(); }
+            finally { Interlocked.Decrement(ref owner._undisposedTimerCount); }
+        }
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            try { await inner.DisposeAsync().ConfigureAwait(false); }
+            finally { Interlocked.Decrement(ref owner._undisposedTimerCount); }
+        }
+    }
 }
 
 /// <summary>A deliberately narrow store fake: real immutable contracts/effects, without SQL or delivery.</summary>

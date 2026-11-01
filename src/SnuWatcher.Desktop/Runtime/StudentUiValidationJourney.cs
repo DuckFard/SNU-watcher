@@ -65,6 +65,7 @@ internal static partial class StudentUiValidation
         proof = proof with { Onboarding = true, EnglishKorean = true };
 
         _stage = "filters_validation";
+        await ExpandFiltersAsync(window);
         SetText(window, "YearField", StudentUiValidationSource.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
         await LoadTermAsync(window, graph, ct);
         SetText(window, "CodeField", StudentUiValidationSource.Key012.CourseCode);
@@ -92,16 +93,17 @@ internal static partial class StudentUiValidation
         SetText(window, "CodeField", StudentUiValidationSource.Key012.CourseCode);
         SetText(window, "SectionField", "012");
         var codeField = Named<TextBox>(window, "CodeField");
-        await ObserveCommandAsync(graph.Search.SearchCommand,
-            () => Require(SendEnter(codeField, window), "ui_enter_focus_unavailable"), ct);
-        await PumpUiAsync(window);
-        Require(graph.Search.Model.State.Rows.Length == 1
-            && graph.Search.Model.State.Rows[0].Row.Key == StudentUiValidationSource.Key012, "ui_exact_012_lookup_failed");
+        // Exercise field traversal while the editor is open; Enter intentionally collapses short-layout filters.
         codeField.Focus(); Keyboard.Focus(codeField);
         var priorFocus = Keyboard.FocusedElement;
         var moved = codeField.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
         Require(moved && Keyboard.FocusedElement is DependencyObject focused && !ReferenceEquals(priorFocus, focused)
             && ReferenceEquals(Window.GetWindow(focused), window), "ui_tab_traversal_failed");
+        await ObserveCommandAsync(graph.Search.SearchCommand,
+            () => Require(SendEnter(codeField, window), "ui_enter_focus_unavailable"), ct);
+        await PumpUiAsync(window);
+        Require(graph.Search.Model.State.Rows.Length == 1
+            && graph.Search.Model.State.Rows[0].Row.Key == StudentUiValidationSource.Key012, "ui_exact_012_lookup_failed");
         proof = proof with { LeadingZeroLookup = true, EnterSearch = true, TabTraversal = true };
 
         _stage = "details_fixed_actions";

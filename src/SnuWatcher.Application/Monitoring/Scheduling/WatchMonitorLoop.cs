@@ -184,20 +184,46 @@ public sealed partial class WatchMonitorLoop
     private async Task WaitAsync((bool Online, bool Suspended, long CancelEpoch) controls, CancellationToken cancellationToken)
     {
         using var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var delay = NextDelay(controls);
+        var now = MonotonicNow;
+        var delay = NextDelay(controls, now);
         var signal = _wake.Reader.WaitToReadAsync(waiting.Token).AsTask();
-        var timer = Task.Delay(delay is { } value ? (value > MaximumTimer ? MaximumTimer : value) : Timeout.InfiniteTimeSpan,
-            _clock, waiting.Token);
-        await Task.WhenAny(signal, timer).ConfigureAwait(false);
-        waiting.Cancel();
-        try { await Task.WhenAll(signal, timer).ConfigureAwait(false); }
-        catch (OperationCanceledException) when (waiting.IsCancellationRequested) { }
+        ITimer? timer = null;
+        Task timeout = Task.CompletedTask;
+        try
+        {
+            if (delay is { } value)
+            {
+                var deadline = Add(now, value > MaximumTimer ? MaximumTimer : value);
+                var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                timer = _clock.CreateTimer(static state => ((TaskCompletionSource)state!).TrySetResult(), reached,
+                    Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                timeout = reached.Task.WaitAsync(waiting.Token);
+                // Setup can yield after the deadline was selected. Anchor only the remaining
+                // interval after timer creation, never the old relative delay at a later instant.
+                var remaining = Remaining(deadline, MonotonicNow);
+                if (remaining == TimeSpan.Zero) reached.TrySetResult();
+                else
+                {
+                    if (!timer.Change(remaining, Timeout.InfiniteTimeSpan))
+                        throw new WatchMonitorException("monitor_timer_failed");
+                    if (MonotonicNow >= deadline) reached.TrySetResult();
+                }
+            }
+            else timeout = Task.Delay(Timeout.InfiniteTimeSpan, waiting.Token);
+            await Task.WhenAny(signal, timeout).ConfigureAwait(false);
+        }
+        finally
+        {
+            waiting.Cancel();
+            if (timer is not null) await timer.DisposeAsync().ConfigureAwait(false);
+            try { await Task.WhenAll(signal, timeout).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (waiting.IsCancellationRequested) { }
+        }
         while (_wake.Reader.TryRead(out _)) { }
     }
 
-    private TimeSpan? NextDelay((bool Online, bool Suspended, long CancelEpoch) controls)
+    private TimeSpan? NextDelay((bool Online, bool Suspended, long CancelEpoch) controls, TimeSpan now)
     {
-        var now = MonotonicNow;
         var due = _jobs.Values.Where(job => job.Work is null && !job.Cancellation.IsCancellationRequested)
             .Select(job => Remaining(job.CommitDue, now));
         if (AdmissionReason(controls) is null && _jobs.Count + _catalogJobs.Count < _options.MaxConcurrentQueries)
