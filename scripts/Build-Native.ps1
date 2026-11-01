@@ -36,6 +36,7 @@ Write-Output "Build output root: $buildRoot"
 if ($LASTEXITCODE -ne 0) { throw 'Native locked restore failed.' }
 & $DotNetPath publish $projectPath -c Release -r win-x64 --self-contained true --no-restore -o $publishPath @versionProperties
 if ($LASTEXITCODE -ne 0) { throw 'Native publish failed.' }
+Assert-ReleaseRuntimePacks $publishPath $config.runtimeFrameworkVersion
 Write-DistributionMetadata $repoPath $publishPath $config $source
 $manifest = [ordered]@{ schemaVersion = 1; version = $config.version; installerVersion = $config.installerVersion;
     runtimeFrameworkVersion = $config.runtimeFrameworkVersion; source = $source; dotnetSdk = $sdk; innoSetup = $null;

@@ -38,7 +38,11 @@ if ($args[0] -eq '--version') {
     exit 0
 }
 if ($args[0] -eq 'restore') {
-    if ($args -notcontains '--locked-mode' -or $args -notcontains '-p:RuntimeFrameworkVersion=10.0.14') { throw 'Restore must be locked with an exact runtime.' }
+    if ($args -notcontains '--locked-mode' -or $args -notcontains '-p:ContinuousIntegrationBuild=true' -or
+        $args -notcontains '-p:IncludeSourceRevisionInInformationalVersion=false' -or
+        @($args | Where-Object { $_ -like '-p:RuntimeFrameworkVersion=*' }).Count -gt 0) {
+        throw 'Restore must be locked with mapped build paths and no global Windows SDK runtime override.'
+    }
     Set-Content -LiteralPath (Join-Path $PSScriptRoot ('restore-' + $stage + '.txt')) ($args -join "`n")
     if ($stage -eq 'fail-restore') { exit 7 }
     exit 0
@@ -48,7 +52,9 @@ if ($args[0] -ne 'publish' -or $outputIndex -lt 0 -or !(Test-Path -LiteralPath $
     throw 'Fake dotnet received an invalid publish command.'
 }
 if ($args -notcontains '--no-restore' -or $args -notcontains '-p:Version=0.1.0-preview.1' -or
-    $args -notcontains '-p:FileVersion=0.1.0.0' -or $args -notcontains '-p:RuntimeFrameworkVersion=10.0.14') { throw 'Publish lost release or runtime identity.' }
+    $args -notcontains '-p:FileVersion=0.1.0.0' -or $args -notcontains '-p:ContinuousIntegrationBuild=true' -or
+    $args -notcontains '-p:IncludeSourceRevisionInInformationalVersion=false' -or
+    @($args | Where-Object { $_ -like '-p:RuntimeFrameworkVersion=*' }).Count -gt 0) { throw 'Publish lost release identity or mapped build paths.' }
 $outputPath = [IO.Path]::GetFullPath($args[$outputIndex + 1])
 $fixturePrefix = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent)) + [IO.Path]::DirectorySeparatorChar
 if (!$outputPath.StartsWith($fixturePrefix, [StringComparison]::OrdinalIgnoreCase)) {
@@ -59,6 +65,19 @@ if (!$outputPath.StartsWith($fixturePrefix, [StringComparison]::OrdinalIgnoreCas
 if ($stage -eq 'fail-publish') { exit 9 }
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $outputPath ('current-' + $stage + '.dll')) -Value 'Fake assembly marker.'
+$runtimeVersion = if ($stage -eq 'wrong-runtime-deps') { '10.0.15' } else { '10.0.14' }
+$libraries = @{
+    ('runtimepack.Microsoft.NETCore.App.Runtime.win-x64/' + $runtimeVersion) = @{ type = 'runtimepack' }
+    'runtimepack.Microsoft.WindowsDesktop.App.Runtime.win-x64/10.0.14' = @{ type = 'runtimepack' }
+    'runtimepack.Microsoft.Windows.SDK.NET.Ref/10.0.19041.57' = @{ type = 'runtimepack' }
+}
+if ($stage -eq 'missing-runtime-deps') { $libraries.Remove('runtimepack.Microsoft.WindowsDesktop.App.Runtime.win-x64/10.0.14') }
+@{ libraries = $libraries } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $outputPath 'SnuWatcher.Desktop.deps.json')
+$configuredVersion = if ($stage -eq 'wrong-runtime-config') { '10.0.15' } elseif ($stage -eq 'runtime-version-kind') { $true } else { '10.0.14' }
+@{ runtimeOptions = @{ includedFrameworks = @(
+    @{ name = 'Microsoft.NETCore.App'; version = $configuredVersion }
+    @{ name = 'Microsoft.WindowsDesktop.App'; version = '10.0.14' }
+) } } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $outputPath 'SnuWatcher.Desktop.runtimeconfig.json')
 exit 0
 '@
 
@@ -143,6 +162,15 @@ foreach ($stage in 'wrong-sdk', 'fail-restore') {
     try { Invoke-FixtureBuild $stage } catch { $failed = $true }
     Assert-Condition $failed ('Build accepted ' + $stage)
     Assert-Condition (!(Test-Path -LiteralPath (Join-Path $toolsRoot ('dotnet-' + $stage + '.json')))) 'Preflight failure still invoked publish.'
+}
+foreach ($stage in 'wrong-runtime-deps', 'wrong-runtime-config', 'missing-runtime-deps', 'runtime-version-kind') {
+    $failed = $false
+    try { Invoke-FixtureBuild $stage } catch { $failed = $true }
+    Assert-Condition $failed ('Published runtime identity was accepted: ' + $stage)
+    Assert-Condition (Test-Path -LiteralPath (Join-Path $toolsRoot ('dotnet-' + $stage + '.json'))) 'Runtime identity was not tested at the published boundary.'
+    Assert-Condition (!(Test-Path -LiteralPath (Join-Path $toolsRoot ('iscc-' + $stage + '.json')))) 'An invalid runtime still invoked the installer compiler.'
+    $record = Read-ToolRecord 'dotnet' $stage
+    Assert-Condition (!(Test-Path -LiteralPath (Join-Path (Split-Path $record.PublishDirectory -Parent) 'build-manifest.json'))) 'An invalid runtime left a qualifying build manifest.'
 }
 
 $publishFailure = $false

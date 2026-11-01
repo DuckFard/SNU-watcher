@@ -26,6 +26,22 @@ Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/Release.Common.ps1'),
     (Join-Path $repoRoot 'scripts/New-ReleaseAssets.ps1') -Destination (Join-Path $fixtureRepo 'scripts')
 $configuration = [ordered]@{ schemaVersion = 1; version = '0.1.0-preview.1'; installerVersion = '0.1.0.0'; runtimeFrameworkVersion = '10.0.14' }
 Write-ReleaseJson (Join-Path $fixtureRepo 'release.json') $configuration
+foreach ($field in 'version', 'installerVersion', 'runtimeFrameworkVersion', 'schemaVersion') {
+    foreach ($kind in 'Boolean', 'Null', 'Array') {
+        $invalidConfig = [ordered]@{ schemaVersion = 1; version = '0.1.0-preview.1'; installerVersion = '0.1.0.0'; runtimeFrameworkVersion = '10.0.14' }
+        $original = $invalidConfig[$field]
+        $invalidConfig[$field] = switch ($kind) { 'Boolean' { $true }; 'Null' { $null }; 'Array' { ,@($original) } }
+        Write-ReleaseJson (Join-Path $fixtureRepo 'release.json') $invalidConfig
+        Assert-Rejected { Get-ReleaseConfiguration $fixtureRepo } ('Non-scalar canonical configuration accepted: ' + $field + '/' + $kind)
+    }
+}
+Write-ReleaseJson (Join-Path $fixtureRepo 'release.json') $configuration
+foreach ($kind in 'Boolean', 'Null', 'Array') {
+    $invalid = switch ($kind) { 'Boolean' { $true }; 'Null' { $null }; 'Array' { ,@('10.0.403') } }
+    Write-ReleaseJson (Join-Path $fixtureRepo 'global.json') @{ sdk = @{ version = $invalid } }
+    Assert-Rejected { Get-ReleaseConfiguration $fixtureRepo } ('Non-string SDK configuration accepted: ' + $kind)
+}
+Write-ReleaseJson (Join-Path $fixtureRepo 'global.json') @{ sdk = @{ version = '10.0.403' } }
 Write-ReleaseJson (Join-Path $fixtureRepo 'global.json') @{ sdk = @{ version = '10.0.403' } }
 Set-Content -LiteralPath (Join-Path $fixtureRepo 'LICENSE') 'MIT fixture license. Copyright Fixture.'
 Set-Content -LiteralPath (Join-Path $publish 'SnuWatcher.Desktop.exe') 'Fixture executable bytes.'
@@ -157,6 +173,60 @@ function Assert-StageFailure([scriptblock] $Mutation, [string] $Message) {
     & $Mutation $copyRoot
     Assert-Rejected { & $stageCommand -BuildRoot $copyRoot -GitPath $fakeGit } $Message
     Assert-Release (!(Test-Path -LiteralPath (Join-Path $copyRoot 'release'))) 'A rejected build left apparently releasable assets.'
+}
+# PowerShell comparisons coerce to the left operand's type. JSON true must
+# never become an alias for a nonempty source hash, version or platform string.
+$identityStrings = @('source.revision', 'rid', 'configuration', 'signing', 'installer.name', 'installer.sha256',
+    'dotnetSdk', 'version', 'installerVersion', 'runtimeFrameworkVersion', 'repository', 'operatingSystem', 'innoSetup', 'builtAtUtc')
+foreach ($field in $identityStrings) {
+    foreach ($kind in 'Boolean', 'Null', 'Array') {
+        $script:identityField = $field; $script:identityKind = $kind
+        Assert-StageFailure {
+            param($p)
+            $m = Get-Content -LiteralPath (Join-Path $p 'build-manifest.json') -Raw | ConvertFrom-Json
+            $parts = $script:identityField.Split('.')
+            $originalValue = if ($parts.Count -eq 1) { $m.($parts[0]) } else { $m.($parts[0]).($parts[1]) }
+            $invalid = switch ($script:identityKind) { 'Boolean' { $true }; 'Null' { $null }; 'Array' { ,@($originalValue) } }
+            if ($parts.Count -eq 1) { $m.($parts[0]) = $invalid } else { $m.($parts[0]).($parts[1]) = $invalid }
+            Write-ReleaseJson (Join-Path $p 'build-manifest.json') $m
+        } ('Non-string identity accepted before staging: ' + $field + '/' + $kind)
+    }
+}
+foreach ($kind in 'Boolean', 'Null', 'Array', 'String') {
+    $script:identityKind = $kind
+    Assert-StageFailure {
+        param($p)
+        $m = Get-Content -LiteralPath (Join-Path $p 'build-manifest.json') -Raw | ConvertFrom-Json
+        $m.schemaVersion = switch ($script:identityKind) { 'Boolean' { $true }; 'Null' { $null }; 'Array' { ,@(1) }; 'String' { '1' } }
+        Write-ReleaseJson (Join-Path $p 'build-manifest.json') $m
+    } ('Non-integer schema accepted: ' + $kind)
+}
+foreach ($invalidDirty in @($null, 0, 'false', @($false))) {
+    $script:invalidDirty = $invalidDirty
+    Assert-StageFailure {
+        param($p)
+        $m = Get-Content -LiteralPath (Join-Path $p 'build-manifest.json') -Raw | ConvertFrom-Json
+        $m.source.dirty = $script:invalidDirty
+        Write-ReleaseJson (Join-Path $p 'build-manifest.json') $m
+    } 'Non-Boolean clean-source status was accepted.'
+}
+# Recompute checksums so public provenance kind tests reach semantic validation.
+foreach ($field in @($identityStrings + 'claim' + 'schemaVersion' + 'source.dirty')) {
+    foreach ($kind in 'Boolean', 'Null', 'Array') {
+        $download = Join-Path $fixtureRoot ('public-kind-' + [Guid]::NewGuid().ToString('N'))
+        Copy-Item -LiteralPath $releasePath -Destination $download -Recurse
+        $path = Join-Path $download 'BUILD-PROVENANCE.json'
+        $value = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        $parts = $field.Split('.')
+        $originalValue = if ($parts.Count -eq 1) { $value.($parts[0]) } else { $value.($parts[0]).($parts[1]) }
+        $invalid = switch ($kind) { 'Boolean' { $true }; 'Null' { $null }; 'Array' { ,@($originalValue) } }
+        if ($parts.Count -eq 1) { $value.($parts[0]) = $invalid } else { $value.($parts[0]).($parts[1]) = $invalid }
+        Write-ReleaseJson $path $value
+        $checksums = @(Get-ChildItem -LiteralPath $download -File | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object Name |
+            ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Name })
+        [IO.File]::WriteAllText((Join-Path $download 'SHA256SUMS.txt'), ($checksums -join "`n") + "`n", [Text.UTF8Encoding]::new($false))
+        Assert-Rejected { Assert-ReleaseAssetSet $download $config ('a' * 40) } ('Public provenance accepted non-string: ' + $field + '/' + $kind)
+    }
 }
 Assert-StageFailure { param($p) Add-Content -LiteralPath (Join-Path $p 'installer/SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe') 'Tamper' } 'Changed installer bytes were accepted.'
 Assert-StageFailure { param($p) Add-Content -LiteralPath (Join-Path $p 'publish/Example.dll') 'Tamper' } 'Changed payload bytes were staged.'

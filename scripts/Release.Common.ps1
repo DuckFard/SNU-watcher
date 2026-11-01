@@ -4,11 +4,21 @@ function Write-ReleaseJson([string] $Path, $Value) {
     [IO.File]::WriteAllText($Path, $json + "`n", [Text.UTF8Encoding]::new($false))
 }
 
+function Test-ExactReleaseString($Value, [string] $Expected) {
+    return $Value -is [string] -and [string]::Equals($Value, $Expected, [StringComparison]::Ordinal)
+}
+
+function Test-ReleaseInteger($Value) {
+    return $Value -is [int] -or $Value -is [long]
+}
+
 function Get-ReleaseConfiguration([string] $RepositoryPath) {
     $value = Get-Content -LiteralPath (Join-Path $RepositoryPath 'release.json') -Raw | ConvertFrom-Json
     $number = '(?:0|[1-9][0-9]*)'
     $prerelease = '(?:[a-z][a-z0-9-]*|0|[1-9][0-9]*)'
-    if ($value.schemaVersion -ne 1 -or $value.version -notmatch "^$number\.$number\.$number(?:-$prerelease(?:\.$prerelease)*)?\z" -or
+    if (!(Test-ReleaseInteger $value.schemaVersion) -or $value.schemaVersion -ne 1 -or
+        $value.version -isnot [string] -or $value.installerVersion -isnot [string] -or $value.runtimeFrameworkVersion -isnot [string] -or
+        $value.version -notmatch "^$number\.$number\.$number(?:-$prerelease(?:\.$prerelease)*)?\z" -or
         $value.installerVersion -notmatch "^$number\.$number\.$number\.$number\z" -or
         $value.runtimeFrameworkVersion -notmatch "^$number\.$number\.$number\z") {
         throw 'Invalid release configuration; use a safe semantic version and numeric installer/runtime versions.'
@@ -20,7 +30,7 @@ function Get-ReleaseConfiguration([string] $RepositoryPath) {
         throw 'Installer and product version numbers must agree.'
     }
     $sdk = (Get-Content -LiteralPath (Join-Path $RepositoryPath 'global.json') -Raw | ConvertFrom-Json).sdk.version
-    if ($sdk -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+\z') { throw 'Invalid pinned SDK identity.' }
+    if ($sdk -isnot [string] -or $sdk -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+\z') { throw 'Invalid pinned SDK identity.' }
     return [pscustomobject][ordered]@{ schemaVersion = 1; version = $value.version; installerVersion = $value.installerVersion;
         runtimeFrameworkVersion = $value.runtimeFrameworkVersion; dotnetSdk = $sdk }
 }
@@ -28,7 +38,7 @@ function Get-ReleaseConfiguration([string] $RepositoryPath) {
 function Get-ReleaseVersionProperties($Configuration, [string] $Revision) {
     return @(('-p:Version=' + $Configuration.version), ('-p:AssemblyVersion=' + $Configuration.installerVersion),
         ('-p:FileVersion=' + $Configuration.installerVersion), ('-p:InformationalVersion=' + $Configuration.version + '+' + $Revision),
-        ('-p:RuntimeFrameworkVersion=' + $Configuration.runtimeFrameworkVersion))
+        '-p:ContinuousIntegrationBuild=true', '-p:IncludeSourceRevisionInInformationalVersion=false')
 }
 
 function Get-ReleaseBuildRecipe {
@@ -37,11 +47,54 @@ function Get-ReleaseBuildRecipe {
         'ISCC /DSourceDir=<isolated publish> /DOutputDir=<isolated installer> /DReleaseVersion=<version> /DInstallerVersion=<numeric version> installer/SnuWatcher.iss')
 }
 
+function Assert-ReleaseRuntimePacks([string] $PublishPath, [string] $ExpectedVersion) {
+    # The exact SDK selects its bundled .NET patches. A global
+    # RuntimeFrameworkVersion also overrides the unrelated Windows SDK pack.
+    # Verify both actual .NET outputs instead, before packaging an installer.
+    $deps = Get-Content -LiteralPath (Join-Path $PublishPath 'SnuWatcher.Desktop.deps.json') -Raw | ConvertFrom-Json -AsHashtable
+    $runtime = Get-Content -LiteralPath (Join-Path $PublishPath 'SnuWatcher.Desktop.runtimeconfig.json') -Raw | ConvertFrom-Json -AsHashtable
+    if ($deps.libraries -isnot [Collections.IDictionary]) { throw 'Published dependency metadata is invalid.' }
+    $frameworks = @($runtime.runtimeOptions.includedFrameworks)
+    $packs = [ordered]@{ 'Microsoft.NETCore.App' = 'Microsoft.NETCore.App.Runtime.win-x64';
+        'Microsoft.WindowsDesktop.App' = 'Microsoft.WindowsDesktop.App.Runtime.win-x64' }
+    foreach ($name in $packs.Keys) {
+        $prefix = 'runtimepack.' + $packs[$name] + '/'
+        $keys = @($deps.libraries.Keys | Where-Object { $_.StartsWith($prefix, [StringComparison]::Ordinal) })
+        if ($keys.Count -ne 1 -or !(Test-ExactReleaseString $keys[0] ($prefix + $ExpectedVersion)) -or
+            !(Test-ExactReleaseString $deps.libraries[$keys[0]].type 'runtimepack')) {
+            throw 'Published .NET runtime packs differ from release.json.'
+        }
+        $included = @($frameworks | Where-Object { Test-ExactReleaseString $_.name $name })
+        if ($included.Count -ne 1 -or !(Test-ExactReleaseString $included[0].version $ExpectedVersion)) {
+            throw 'Published .NET included frameworks differ from release.json.'
+        }
+    }
+}
+
 function Assert-PublicBuildFields($Value, $Configuration, [string] $Revision) {
+    # Validate JSON value kinds before PowerShell comparisons: a Boolean true on
+    # the left of -cne otherwise compares equal to every nonempty string.
+    if (!(Test-ReleaseInteger $Value.schemaVersion) -or $Value.schemaVersion -ne 1 -or
+        !(Test-ExactReleaseString $Value.source.revision $Revision) -or $Value.source.revision -cnotmatch '^[a-f0-9]{40}\z' -or
+        $Value.source.dirty -isnot [bool] -or $Value.source.dirty) { throw 'Invalid exact release source identity.' }
+    $strings = [ordered]@{ version = $Configuration.version; installerVersion = $Configuration.installerVersion;
+        runtimeFrameworkVersion = $Configuration.runtimeFrameworkVersion; dotnetSdk = $Configuration.dotnetSdk;
+        repository = 'https://github.com/DuckFard/SNU-watcher'; rid = 'win-x64'; configuration = 'Release'; signing = 'unsigned' }
+    foreach ($field in $strings.Keys) {
+        if (!(Test-ExactReleaseString $Value.$field $strings[$field])) { throw ('Invalid release identity string: ' + $field) }
+    }
+    $installerName = 'SnuCourseWatcher-' + $Configuration.version + '-windows-x64-Setup.exe'
+    if (!(Test-ExactReleaseString $Value.installer.name $installerName) -or
+        $Value.installer.sha256 -isnot [string] -or $Value.installer.sha256 -cnotmatch '^[a-f0-9]{64}\z') {
+        throw 'Invalid exact installer identity.'
+    }
+    if ($Value.operatingSystem -isnot [string] -or $Value.innoSetup -isnot [string] -or
+        ($Value.builtAtUtc -isnot [string] -and $Value.builtAtUtc -isnot [DateTime]) -or
+        ($null -ne $Value.ciRunUrl -and $Value.ciRunUrl -isnot [string])) { throw 'Invalid public build field type.' }
     # PowerShell 7.5 can materialize ISO JSON strings as DateTime automatically.
     $timestamp = if ($Value.builtAtUtc -is [DateTime]) { $Value.builtAtUtc.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $Value.builtAtUtc }
     foreach ($field in 'version', 'installerVersion', 'runtimeFrameworkVersion') {
-        if ($Value.$field -cne $Configuration.$field) { throw 'Public build version identity differs from the configured preview.' }
+        if (!(Test-ExactReleaseString $Value.$field $Configuration.$field)) { throw 'Public build version identity differs from the configured preview.' }
     }
     if ($Value.operatingSystem -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?\z' -or
         $Value.innoSetup -cnotmatch '^6\.[0-9]+\.[0-9]+\z' -or $Value.dotnetSdk -cne $Configuration.dotnetSdk -or
@@ -95,7 +148,9 @@ function Assert-ReleaseInventory([string] $Root, $Expected) {
     if ($actual.Count -ne @($Expected).Count) { throw 'Payload file set changed after packaging.' }
     $names = @{}
     foreach ($item in @($Expected)) {
-        if ($item.path -notmatch '^[^:\\]+$' -or $item.path.StartsWith('/') -or
+        if ($item.path -isnot [string] -or $item.sha256 -isnot [string] -or $item.sha256 -cnotmatch '^[a-f0-9]{64}\z' -or
+            !(Test-ReleaseInteger $item.bytes) -or $item.bytes -lt 0 -or
+            $item.path -notmatch '^[^:\\]+$' -or $item.path.StartsWith('/') -or
             @($item.path.Split('/') | Where-Object { $_ -in '.', '..', '' }).Count -gt 0 -or $names.ContainsKey($item.path)) {
             throw 'Unsafe or duplicate payload inventory path.'
         }
@@ -154,7 +209,7 @@ function Assert-ReleaseAssetSet([string] $AssetPath, $Configuration, [string] $E
         $provenance.source.revision -cne $ExpectedSourceRevision -or $provenance.source.dirty -or
         $provenance.version -cne $Configuration.version -or $provenance.signing -cne 'unsigned' -or
         $provenance.rid -cne 'win-x64' -or $provenance.configuration -cne 'Release' -or
-        $provenance.claim -cne 'Unsigned descriptive build metadata; not a signed attestation or byte-reproducibility guarantee.') {
+        !(Test-ExactReleaseString $provenance.claim 'Unsigned descriptive build metadata; not a signed attestation or byte-reproducibility guarantee.')) {
         throw 'Public release provenance differs from the expected preview.'
     }
     $installerName = 'SnuCourseWatcher-' + $Configuration.version + '-windows-x64-Setup.exe'
