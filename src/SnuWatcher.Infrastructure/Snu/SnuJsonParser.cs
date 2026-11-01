@@ -7,12 +7,22 @@ internal static class SnuJsonParser
 {
     internal static SourceCatalog Catalog(string json, int year)
     {
+        var initialization = CatalogInitialization(json, year);
+        if (initialization.Catalog.Year != year) throw Changed();
+        return initialization.Catalog;
+    }
+
+    internal static SourceCatalogInitialization CatalogInitialization(string json, int requestedYear)
+    {
         using var document = Read(json);
         var root = document.RootElement;
+        var year = Year(root, "openSchyy");
+        var currentYear = Year(root, "currSchyy");
         var terms = Required(root, "SHTM");
         if (terms.ValueKind != JsonValueKind.Array) throw Changed();
         var parsedTerms = terms.EnumerateArray().Select(item => new SourceTerm(year, Text(item, "cmmnCd") ?? "", Text(item, "korNm") ?? "", Text(item, "engNm"))).ToArray();
         if (parsedTerms.Length == 0 || parsedTerms.Any(term => !SourceSectionIdentity.Valid(term.Selector) || term.Name.Length == 0)) throw Changed();
+        if (parsedTerms.Select(term => term.Selector).Distinct(StringComparer.Ordinal).Count() != parsedTerms.Length) throw Changed();
         var departments = new List<SourceDepartment>();
         foreach (var level in new[] { "UP_DEPT", "DEPT", "MJ" })
         {
@@ -26,7 +36,12 @@ internal static class SnuJsonParser
                 departments.Add(new(code!, name, Text(item, "deptEngNm") ?? Text(item, "engNm"), level));
             }
         }
-        return new(year, Array.AsReadOnly(parsedTerms), departments.AsReadOnly());
+        var semester = UniqueOptionalText(root, "currShtmFg");
+        var detail = UniqueOptionalText(root, "currDetaShtmFg");
+        var reportedDefault = SourceSectionIdentity.Valid(semester) && SourceSectionIdentity.Valid(detail)
+            ? parsedTerms.SingleOrDefault(term => term.Selector == semester + detail)?.Selector : null;
+        if (year != requestedYear && reportedDefault is null) throw Changed();
+        return new(new(year, Array.AsReadOnly(parsedTerms), departments.AsReadOnly()), currentYear, reportedDefault);
     }
 
     internal static SourceDetails Details(string json, SourceSectionIdentity requested)
@@ -68,7 +83,16 @@ internal static class SnuJsonParser
         catch (JsonException) { throw Changed(); }
     }
 
-    private static JsonElement Required(JsonElement element, string key) => element.TryGetProperty(key, out var value) ? value : throw Changed();
+    private static JsonElement Required(JsonElement element, string key)
+    {
+        if (element.EnumerateObject().Count(property => property.NameEquals(key)) != 1) throw Changed();
+        return element.GetProperty(key);
+    }
+    private static string? UniqueOptionalText(JsonElement element, string key)
+    {
+        if (element.EnumerateObject().Count(property => property.NameEquals(key)) > 1) throw Changed();
+        return Text(element, key);
+    }
     private static string? Text(JsonElement element, string key)
     {
         if (element.ValueKind != JsonValueKind.Object) throw Changed();
@@ -78,6 +102,12 @@ internal static class SnuJsonParser
         } : null;
     }
     private static int? Integer(JsonElement element, string key) => int.TryParse(Text(element, key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value <= 100_000 ? value : null;
+    private static int Year(JsonElement element, string key)
+    {
+        if (element.EnumerateObject().Count(property => property.NameEquals(key)) != 1) throw Changed();
+        return int.TryParse(Text(element, key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value is >= 2013 and <= 2200
+            ? value : throw Changed();
+    }
     private static decimal? Decimal(JsonElement element, string key) => decimal.TryParse(Text(element, key), NumberStyles.Number, CultureInfo.InvariantCulture, out var value) && value >= 0 ? value : null;
     private static string[] Strings(JsonElement element, string key)
     {
@@ -87,3 +117,6 @@ internal static class SnuJsonParser
     }
     private static SnuSourceException Changed() => new(SourceFailureKind.ParseChanged, "SNU changed the expected public JSON contract.");
 }
+
+/// <summary>Source-reported metadata context; its default is never a student/watch term selection.</summary>
+internal sealed record SourceCatalogInitialization(SourceCatalog Catalog, int CurrentYear, string? DefaultSelector);

@@ -20,10 +20,17 @@ internal sealed class NativeNotificationService : IDisposable, IAsyncDisposable,
     private readonly NativeNotificationChannel _channel;
     private readonly RetryableTeardown _teardown;
 
-    public NativeNotificationService()
+    public NativeNotificationService() : this(static driver => driver) { }
+
+    // Installed qualification decorates the real SDK driver to label fixture payloads and record facts;
+    // the default production path keeps the original driver and its one owned native worker unchanged.
+    internal NativeNotificationService(Func<INativeNotificationDriver, INativeNotificationDriver> decorate)
     {
-        _channel = new NativeNotificationChannel(new SdkNativeNotificationDriver(
-            () => Volatile.Read(ref _registered), () => Volatile.Read(ref _shortcutBound)), diagnostic: ReportDiagnostic);
+        ArgumentNullException.ThrowIfNull(decorate);
+        var driver = decorate(new SdkNativeNotificationDriver(
+            () => Volatile.Read(ref _registered), () => Volatile.Read(ref _shortcutBound)))
+            ?? throw new InvalidOperationException("The native driver decorator returned no driver.");
+        _channel = new NativeNotificationChannel(driver, diagnostic: ReportDiagnostic);
         _teardown = new RetryableTeardown(DisposeCoreAsync);
     }
 

@@ -63,10 +63,22 @@ public sealed partial class SnuCourseSource : IDisposable, IAsyncDisposable
         ValidateCode(termSelector);
         ValidateCode(upDepartment);
         ValidateCode(department);
+        var selectedTerm = termSelector;
+        if (string.IsNullOrEmpty(selectedTerm))
+        {
+            // The public initial form has no incomplete year/term selection. Bind its result to its own reported year.
+            var initial = await PostAsync("cc100ajax.action", new Dictionary<string, string>
+            {
+                ["openUpDeptCd"] = upDepartment ?? "", ["openDeptCd"] = department ?? ""
+            }, json: true, purpose, text => SnuJsonParser.CatalogInitialization(text, year), cancellationToken).ConfigureAwait(false);
+            if (initial.Data.Catalog.Year == year) return initial.Data.Catalog;
+            // This verified source option initializes metadata for the requested year; it never selects a user's term.
+            selectedTerm = initial.Data.DefaultSelector!;
+        }
         var text = await PostAsync("cc100ajax.action", new Dictionary<string, string>
         {
             ["srchOpenSchyy"] = year.ToString(CultureInfo.InvariantCulture),
-            ["srchOpenShtm"] = termSelector ?? "", ["openUpDeptCd"] = upDepartment ?? "", ["openDeptCd"] = department ?? ""
+            ["srchOpenShtm"] = selectedTerm, ["openUpDeptCd"] = upDepartment ?? "", ["openDeptCd"] = department ?? ""
         }, json: true, purpose, text => SnuJsonParser.Catalog(text, year), cancellationToken).ConfigureAwait(false);
         return text.Data;
     }
@@ -174,8 +186,11 @@ public sealed partial class SnuCourseSource : IDisposable, IAsyncDisposable
             var requestToken = linked.Token;
             var uri = new Uri($"{Base}/sugang/cc/{action}");
             using var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = new FormUrlEncodedContent(form) };
+            request.Content.Headers.ContentType!.CharSet = "UTF-8";
             request.Headers.UserAgent.ParseAdd("SNU-Watcher/0.1 (anonymous public course monitor)");
-            request.Headers.Referrer = new Uri(action == "cc101ajax.action" ? $"{Base}/sugang/cc/cc100InterfaceSrch.action" : $"{Base}/sugang/co/co100.action");
+            request.Headers.Accept.ParseAdd(json ? "application/json, text/javascript, */*; q=0.01" : "text/html, */*; q=0.01");
+            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            request.Headers.Referrer = new Uri(action == "cc101ajax.action" ? $"{Base}/sugang/cc/cc100InterfaceSrch.action" : $"{Base}/sugang/co/co010.action");
             using var response = await StartTransport(request, requestToken, facts).ConfigureAwait(false);
             var headersReceivedAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
             facts.Headers(headersReceivedAtUtc, (int)response.StatusCode);

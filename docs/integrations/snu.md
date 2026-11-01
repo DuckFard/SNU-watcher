@@ -1,6 +1,6 @@
 # SNU public source adapter
 
-M1 source-contract evidence was reviewed 2026-10-29 (Asia/Seoul); the M4 gateway and stored-policy implementation notes were updated 2026-11-01. The C# adapter is in `src/SnuWatcher.Infrastructure/Snu`. It is an anonymous reader of SNU's existing website interfaces, not an authorized developer API or a registration client. There is no login, student-cookie import, registration endpoint, or PDF feature. Milestone exit evidence remains in `docs/PROGRESS.md`.
+M1 source-contract evidence was reviewed 2026-10-29 (Asia/Seoul); the gateway, stored policy, and catalog initialization were rechecked through the compiled production path on 2026-11-02. The C# adapter is in `src/SnuWatcher.Infrastructure/Snu`. It is an anonymous reader of SNU's existing website interfaces, not an authorized developer API or a registration client. There is no login, student-cookie import, registration endpoint, or PDF feature. Milestone exit evidence remains in `docs/PROGRESS.md`.
 
 ## Verified website contracts
 
@@ -8,11 +8,15 @@ Bounded public requests and an actual compiled .NET adapter probe established:
 
 | Interface | Observed request | Observed response |
 | --- | --- | --- |
-| `/sugang/cc/cc100ajax.action` | POST `srchOpenSchyy`, optional composite `srchOpenShtm`, `openUpDeptCd`, `openDeptCd` | HTTP 201 JSON; `SHTM` options, `UP_DEPT`, dependent `DEPT`; current-term metadata |
+| `/sugang/cc/cc100ajax.action` | Initial POST only `openUpDeptCd`, `openDeptCd`; explicit selection additionally sends both `srchOpenSchyy` and nonempty composite `srchOpenShtm` | HTTP 201 JSON; source-reported `openSchyy`/`currSchyy`, `SHTM` options, `UP_DEPT`, dependent `DEPT`, and current-term metadata |
 | `/sugang/cc/cc100InterfaceSrch.action` | POST `workType=S`, year, term selector, filters, `pageNo` and `srchCurrPage` | HTML course cards, ten per first result page, advertised `fnGotoPage(2)`; page-size request is not evidence of all results |
 | `/sugang/cc/cc101ajax.action` | POST `workType=S`, `openSchyy`, `openShtmFg`, `openDetaShtmFg`, `sbjtCd`, `ltNo`, `sbjtSubhCd`; Referer is the official search page | JSON **served as `text/html; charset=utf-8`**, `LISTTAB01` metadata and `ltTime`/`ltType`/`ltRoom` arrays |
 
 The detail media type is an endpoint-specific compatibility exception. The parser still requires a JSON object, the requested full identity, named metadata, and aligned meeting arrays. An HTML maintenance/login/gate response is rejected as `ParseChanged`; HTML is never rendered or executed. Catalog JSON and search HTML retain their own content-type checks.
+
+Requests use the public page's same-origin AJAX headers and UTF-8 form content type, with the transparent SNU-Watcher user agent. Catalog/search use the actual `co010.action` page as referrer; details retain the separately verified search-page referrer. These headers express the observed protocol; they do not impersonate a browser or establish institutional permission.
+
+An unselected catalog request first reads the site's two-field initial metadata response. The parser requires unique, bounded `openSchyy` and `currSchyy` values and assigns term years from the response, never from the caller's requested year. If that metadata describes another year, at most one follow-up supplies the requested year and a default selector verified against the response's unique raw `SHTM` options. The follow-up must echo the requested `openSchyy`. Missing/malformed years and duplicate year/default fields fail closed; a missing or unreported default blocks a needed follow-up. This selector initializes catalog metadata only: it does not select or persist a student's term. Explicit nonempty term requests retain the four-field contract. Both physical calls pass through the same durable policy, pacing, cancellation, and response bounds.
 
 The compiled .NET `SnuCourseSource.Create()` transport successfully read a fresh anonymous catalog with four terms and 43 combined college/department options for regular second semester, and a complete two-page `F32.102` search containing 12 sections. It located section `012` with detail-semester `U000300001` and subsubject `000`. The corrected compiled details probe read two meetings, an English course name, and capacity for that exact identity. This confirms those three transport/parser paths without importing browser state.
 
@@ -77,6 +81,32 @@ Known 429, access-denied and supported 503 `Retry-After` outcomes are applied in
 
 An opt-in live check on 2026-11-01 used exactly two catalog POSTs in total. The store-backed gateway's first attempt failed closed as `ParseChanged`; a separate matching, bounded structural diagnostic returned HTTP 200 with no Content-Type and a zero-byte body. No course search or detail request was made, so the current catalog/search/detail happy path was not reverified. The upstream cause is unknown; this is not evidence of a maintenance template, and the parser was not relaxed. An offline regression reproduces the empty response through the gateway and stored source, retaining one failed request/result without fabricating catalog data, availability, watches or outbox entries.
 
+A fresh recheck on **2026-11-02, 01:37 Asia/Seoul** (2026-11-01 16:37 UTC) again stopped at the catalog. The current compiled store-backed production gateway issued one catalog POST at `16:37:03.3984714Z` and durably recorded `ParseChanged`. One matching structural diagnostic started at `16:37:05.9979749Z`, received headers at `16:37:06.0462223Z`, and completed its body read at `16:37:06.0465238Z`: HTTP 200, absent Content-Type, declared Content-Length 0, and **0 bytes actually read through EOF**. It stayed at the exact requested URI, with no redirect or Retry-After. This used a fresh anonymous production session, no imported/browser cookies or credentials, and a separate diagnostic with cookies disabled; neither process ran watch or delivery actors. No course search or detail request followed. The attempted term was regular second semester 2026, but no term or saved-section identity was inferred from the failed catalog. This result establishes neither maintenance nor a general site outage; a working public browser page and a usable anonymous data response are separate checks.
+
+Subsequent bounded public-protocol inspection established a usable initial metadata response, without login or queue admission. The official page's initial catalog call sends only `openUpDeptCd` and `openDeptCd`; an explicit selection supplies both year and term. Its [AJAX helper](https://sugang.snu.ac.kr/kor/js/AjaxUtil.js) uses jQuery JSON requests, and the site's [jQuery 3.5.1](https://sugang.snu.ac.kr/kor/js/jquery/jquery-3.5.1.min.js) declares the same-origin `X-Requested-With` header, JSON Accept values, and UTF-8 form content type. The controlled observations below retained the transparent SNU-Watcher user agent, used fresh anonymous handlers, followed no redirects, and imported no cookies or queue keys. Response bodies were bounded and not retained.
+
+| Diagnostic start, UTC 2026-11-01 | Catalog request shape | Observed response |
+| --- | --- | --- |
+| `16:43:37.5104695Z` | Official initial two-field body, documented AJAX headers, UTF-8 form type, actual `co010.action` referrer | HTTP 201, `application/json; charset=UTF-8`, 7,684 bytes; `currSchyy` and `openSchyy` both 2026; four raw `SHTM` selectors |
+| `16:45:14.5040496Z` | Existing four-field body with year 2026 and empty term; documented AJAX headers/referrer, existing form type without charset | HTTP 200, absent Content-Type, 0 bytes through EOF |
+| `16:47:03.9542253Z` | Identical four-field candidate, changing only form charset to UTF-8 | HTTP 200, absent Content-Type, 0 bytes through EOF |
+
+The investigation used five POSTs, including the initial production-gateway call and its structural diagnostic, before changing the adapter. The successful default metadata request did not explicitly request a year and alone proved neither arbitrary requested-year behavior nor course searches/details. Headers alone and charset alone did not repair the existing year-with-empty-term request shape. The year-preserving initialization described above was implemented only after failing offline regressions; the parser remains strict.
+
+The updated, self-contained production gateway then passed a fresh bounded check on **2026-11-02, 02:13:56-02:14:06 Asia/Seoul** (2026-11-01 17:13:56-17:14:06 UTC). Its published adapter bytes matched the newly built production adapter. It used a new private database and anonymous in-memory session, no imported credentials/browser state, and no watch or delivery actors.
+
+| Production check | Verified result |
+| --- | --- |
+| Catalog for 2026 | Complete, four source-confirmed terms; regular second semester `U000200002U000300001` was present |
+| `F32.102` search in that term | Complete, two pages, 12 sections |
+| Exact section `012` | Full identity `2026 / U000200002 / U000300001 / F32.102 / 012 / 000`; **38/40**, observed at `2026-11-01T17:14:00.6478258Z` |
+| Details for that exact identity | Complete, matching all six identity fields, two meetings, capacity 40 |
+| Catalog for 2025 | Complete, explicit source-reported year 2025 for all returned terms after the two-phase initialization; metadata only, no student term selected |
+
+This final production check used six physical POSTs, all recorded as successful durable request/result pairs. Adjacent actual starts were 2.042749, 2.052810, 2.062179, 2.066021, and 2.041405 seconds apart. The complete investigation and final check used **11 POSTs against a limit of 12**, with no retries after the final success. Counts are a timestamped observation, not a current seat guarantee. The other five saved course/section pairs were not rechecked in this final run.
+
+The final offline Integration suite passed **638/638 tests**, with Infrastructure coverage of **96.76% lines and 85.06% branches**. Catalog regressions cover initial versus explicit form shape, actual year echoes, previous-year initialization, missing/malformed/conflicting year fields, duplicate default metadata/options, missing reported selectors, and observed AJAX headers. Tests also preserve the empty-body failure and durable source restrictions; no authentication, queue keys, or parser bypass was introduced.
+
 `tests/SnuWatcher.Integration.Tests/Fixtures` contains minimized, synthetic course metadata following observed shapes. It contains no cookies, student IDs, login state, raw response dumps, or supplied private documents. Public term/code values are retained; instructor text is replaced with an example. Department labels reflect the verified source field names. Default tests are offline and never crawl SNU.
 
 TDD evidence: the initial source tests were run against throwing stubs, producing 16 expected behavior failures and one passing identity-validation test. Additional malformed-count, partial-cooldown, short-selector and legacy-detail-media regressions were also observed failing before the fixes. The parent development report records the final aggregate test/coverage run.
@@ -91,5 +121,7 @@ Run this project's offline suite using the repository's workspace SDK wrapper or
 - Full raw identities are the implemented identity boundary and do not require alias merging. Cross-term aliases remain unsupported without corresponding offering/subsubject evidence; the four selector labels are not alias proof.
 - Exact course registration/syllabus links and Genie deep links remain behind compatibility checks. External-browser homepage links are the fallback.
 - No published approved numeric automated polling rate was established. Obtain operator guidance before a broad public pilot; lack of throttling in these bounded reads does not establish permission.
+
+The official public site's notice **6497**, dated **2025-02-06**, titled `수강신청 부정행위 금지 안내`, warns against improper programs/macros used to attempt registration and against course transfer/sale. It does not explicitly approve automated availability polling. This app remains an anonymous availability reader with alerts and a link to the official page; the notice and these successful reads must not be presented as approval for a polling rate or automated registration.
 
 Sources: [SNU public search and notice page](https://sugang.snu.ac.kr/sugang/co/co100.action), [official registration manual](https://sugang.snu.ac.kr/kor/guide/manual.pdf), [AngleSharp official NuGet package](https://www.nuget.org/packages/AngleSharp). The source actions are observed internal site behavior and may change without notice.

@@ -40,6 +40,14 @@ internal static partial class StudentUiValidation
         grid.GetBindingExpression(Selector.SelectedItemProperty)?.UpdateSource();
         await EventuallyAsync(() => !graph.Alerts.State.SelectionPending && graph.Alerts.State.Details?.EventId == row.EventId, ct);
         Require(graph.Alerts.State.Details?.Source.Trigger == row.Source.Trigger, "ui_alert_details_identity_changed");
+        await PumpUiAsync(window); // Model publication precedes queued WPF bindings and command notifications.
+        Require(graph.Alerts.State.Rows.Any(item => item.EventId == row.EventId)
+            && graph.Alerts.State.SelectedEventId == row.EventId && !graph.Alerts.State.SelectionPending
+            && graph.Alerts.State.Details?.EventId == row.EventId, "ui_alert_selection_changed_after_binding");
+        Require(grid.Items.OfType<AlertHistoryRow>().Any(item => item.EventId == row.EventId)
+            && grid.SelectedItem is AlertHistoryRow selected && selected.EventId == row.EventId,
+            "ui_alert_row_binding_not_ready");
+        Require(graph.Alerts.RecipientFirstCommand.CanExecute(null), "ui_alert_recipient_command_unavailable");
         await RequireReachableAsync(BoundButton(window, graph.Alerts.RecipientFirstCommand), window, "ui_alert_recipient_control_unreachable");
         await InvokeCommandAsync(window, graph.Alerts.RecipientFirstCommand, ct);
         await RequireReachableAsync(BoundButton(window, graph.Alerts.AttemptFirstCommand), window, "ui_alert_record_control_unreachable");

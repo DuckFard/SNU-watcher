@@ -17,6 +17,30 @@ internal static class NativeShortcutBinding
     private static readonly Guid ShellLinkClass = new("00021401-0000-0000-C000-000000000046");
     private static readonly Guid AppModelProperties = new("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3");
 
+    // Pre-registration inspection only: no property write, registry change, Resolve or Shell notification.
+    internal static (string Target, string AppId) ReadExistingForValidation()
+    {
+        var shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "SNU Watcher", "SNU Watcher.lnk");
+        for (var directory = new DirectoryInfo(Path.GetDirectoryName(shortcut)!); directory is not null; directory = directory.Parent)
+            if (!directory.Exists || (directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidOperationException("The installed shortcut parent is not an ordinary directory.");
+        var attributes = File.GetAttributes(shortcut);
+        if ((attributes & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0)
+            throw new InvalidOperationException("The installed shortcut is not an ordinary file.");
+        var instance = Activator.CreateInstance(Type.GetTypeFromCLSID(ShellLinkClass, throwOnError: true)!)!;
+        try
+        {
+            ((IPersistFile)instance).Load(shortcut, 0);
+            var target = new StringBuilder(32768);
+            ((IShellLinkW)instance).GetPath(target, target.Capacity, IntPtr.Zero, 0);
+            var key = new PropertyKey(AppModelProperties, 5);
+            ((IPropertyStore)instance).GetValue(in key, out var value);
+            try { return (target.ToString(), value.ReadString() ?? ""); }
+            finally { value.Dispose(); }
+        }
+        finally { Marshal.FinalReleaseComObject(instance); }
+    }
+
     internal static bool BindExisting()
     {
         var shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs),

@@ -8,21 +8,47 @@ $fixtureScripts = Join-Path $fixtureRepo 'scripts'
 $fixtureProject = Join-Path $fixtureRepo 'src/SnuWatcher.Desktop'
 $fixtureInstaller = Join-Path $fixtureRepo 'installer'
 New-Item -ItemType Directory -Path $fixtureScripts, $fixtureProject, $fixtureInstaller, $toolsRoot | Out-Null
-Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/Build-Native.ps1') -Destination $fixtureScripts
+Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/Build-Native.ps1'), (Join-Path $repoRoot 'scripts/Release.Common.ps1') -Destination $fixtureScripts
+Copy-Item -LiteralPath (Join-Path $repoRoot 'release.json'), (Join-Path $repoRoot 'global.json') -Destination $fixtureRepo
+Set-Content -LiteralPath (Join-Path $fixtureRepo 'LICENSE') 'Fixture original project license.'
+Set-Content -LiteralPath (Join-Path $fixtureScripts 'Distribution.Metadata.ps1') @'
+function Write-DistributionMetadata([string] $RepositoryPath, [string] $PublishPath, $Configuration, $SourceIdentity) {
+    Set-Content -LiteralPath (Join-Path $PublishPath 'DISTRIBUTION-LICENSES.txt') 'Fixture distribution terms.'
+    Set-Content -LiteralPath (Join-Path $PublishPath 'sbom.cdx.json') '{}'
+}
+'@
 Set-Content -LiteralPath (Join-Path $fixtureProject 'SnuWatcher.Desktop.csproj') -Value '<Project />'
 Set-Content -LiteralPath (Join-Path $fixtureInstaller 'SnuWatcher.iss') -Value '; Fake tool fixture; never compiled.'
 $fakeDotNet = Join-Path $toolsRoot 'fake dotnet.ps1'
 $fakeIscc = Join-Path $toolsRoot 'fake iscc.ps1'
+$fakeGit = Join-Path $toolsRoot 'fake git.ps1'
+Set-Content -LiteralPath $fakeGit @'
+if ($args -contains 'rev-parse') { Write-Output ('a' * 40); exit 0 }
+if ($args -contains 'status') { Write-Output ' M development-change'; exit 0 }
+throw 'Unexpected fixture Git command.'
+'@
 $stagePath = Join-Path $toolsRoot 'stage.txt'
 
 # Emulate publish's overlay behavior: an existing output directory is never cleaned.
 Set-Content -LiteralPath $fakeDotNet -Value @'
 $ErrorActionPreference = 'Stop'
 $stage = (Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'stage.txt')).Trim()
+if ($args[0] -eq '--version') {
+    if ($stage -eq 'wrong-sdk') { Write-Output '10.0.999' } else { Write-Output '10.0.403' }
+    exit 0
+}
+if ($args[0] -eq 'restore') {
+    if ($args -notcontains '--locked-mode' -or $args -notcontains '-p:RuntimeFrameworkVersion=10.0.14') { throw 'Restore must be locked with an exact runtime.' }
+    Set-Content -LiteralPath (Join-Path $PSScriptRoot ('restore-' + $stage + '.txt')) ($args -join "`n")
+    if ($stage -eq 'fail-restore') { exit 7 }
+    exit 0
+}
 $outputIndex = [Array]::IndexOf($args, '-o')
 if ($args[0] -ne 'publish' -or $outputIndex -lt 0 -or !(Test-Path -LiteralPath $args[1])) {
     throw 'Fake dotnet received an invalid publish command.'
 }
+if ($args -notcontains '--no-restore' -or $args -notcontains '-p:Version=0.1.0-preview.1' -or
+    $args -notcontains '-p:FileVersion=0.1.0.0' -or $args -notcontains '-p:RuntimeFrameworkVersion=10.0.14') { throw 'Publish lost release or runtime identity.' }
 $outputPath = [IO.Path]::GetFullPath($args[$outputIndex + 1])
 $fixturePrefix = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent)) + [IO.Path]::DirectorySeparatorChar
 if (!$outputPath.StartsWith($fixturePrefix, [StringComparison]::OrdinalIgnoreCase)) {
@@ -45,6 +71,7 @@ $outputArgument = @($args | Where-Object { $_.StartsWith('/DOutputDir=', [String
 if ($sourceArgument.Count -ne 1 -or $outputArgument.Count -ne 1 -or !(Test-Path -LiteralPath $args[-1])) {
     throw 'Fake ISCC requires explicit source/output defines and an existing script.'
 }
+if ($args -notcontains '/DReleaseVersion=0.1.0-preview.1' -or $args -notcontains '/DInstallerVersion=0.1.0.0') { throw 'Installer lost product version defines.' }
 $sourcePath = [IO.Path]::GetFullPath($sourceArgument[0].Substring('/DSourceDir='.Length))
 $outputPath = [IO.Path]::GetFullPath($outputArgument[0].Substring('/DOutputDir='.Length))
 $fixturePrefix = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent)) + [IO.Path]::DirectorySeparatorChar
@@ -60,7 +87,10 @@ $manifest | ConvertTo-Json -Depth 3 |
     Set-Content -LiteralPath (Join-Path $PSScriptRoot ('iscc-' + $stage + '.json'))
 if ($stage -eq 'fail-installer') { exit 11 }
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+$installerName = 'SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe'
+Set-Content -LiteralPath (Join-Path $outputPath $installerName) 'Fixture installer bytes.'
 $manifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $outputPath 'packaged-manifest.json')
+Write-Output 'Compiler engine version: Inno Setup 6.7.3'
 exit 0
 '@
 
@@ -74,7 +104,7 @@ function Read-ToolRecord([string] $Tool, [string] $Stage) {
 
 function Invoke-FixtureBuild([string] $Stage, [switch] $SkipInstaller) {
     Set-Content -LiteralPath $stagePath -Value $Stage
-    & (Join-Path $fixtureScripts 'Build-Native.ps1') -DotNetPath $fakeDotNet -IsccPath $fakeIscc -SkipInstaller:$SkipInstaller | Out-Null
+    & (Join-Path $fixtureScripts 'Build-Native.ps1') -DotNetPath $fakeDotNet -IsccPath $fakeIscc -GitPath $fakeGit -SkipInstaller:$SkipInstaller | Out-Null
 }
 
 Invoke-FixtureBuild 'first'
@@ -91,7 +121,14 @@ Assert-Condition ($first.SourceDirectory -ne $second.SourceDirectory) 'Publish d
 Assert-Condition ($first.OutputDirectory -ne $second.OutputDirectory) 'Installer directories must be unique per build.'
 Assert-Condition (Test-Path -LiteralPath $obsoletePath) 'The earlier build was deleted or cleaned.'
 $firstManifest = Get-Content -Raw -LiteralPath (Join-Path $first.OutputDirectory 'packaged-manifest.json') | ConvertFrom-Json
-Assert-Condition ($firstManifest.Files.Count -eq 1 -and $firstManifest.Files[0] -eq 'current-first.dll') 'The earlier installer output was overwritten.'
+Assert-Condition ($firstManifest.Files -contains 'current-first.dll' -and $firstManifest.Files -notcontains 'current-second.dll') 'The earlier installer output was overwritten.'
+foreach ($required in 'DISTRIBUTION-LICENSES.txt', 'sbom.cdx.json') {
+    Assert-Condition ($second.Files -contains $required) ('Installer omitted mandatory distribution metadata: ' + $required)
+}
+$buildManifest = Get-Content -LiteralPath (Join-Path (Split-Path $second.SourceDirectory -Parent) 'build-manifest.json') -Raw | ConvertFrom-Json
+Assert-Condition ($buildManifest.source.dirty -and $buildManifest.source.revision -eq ('a' * 40)) 'Development source identity was not recorded honestly.'
+Assert-Condition ($buildManifest.version -eq '0.1.0-preview.1' -and $buildManifest.signing -eq 'unsigned') 'Build manifest lost its preview identity.'
+Assert-Condition (@($buildManifest.payload).Count -eq $second.Files.Count) 'Manifest did not hash the final complete payload.'
 foreach ($build in @($first, $second)) {
     Assert-Condition ((Split-Path $build.SourceDirectory -Parent) -eq (Split-Path $build.OutputDirectory -Parent)) 'One build must share a dedicated publish/installer root.'
 }
@@ -101,6 +138,13 @@ $publishOnly = Read-ToolRecord 'dotnet' 'publish-only'
 Assert-Condition ($publishOnly.PublishDirectory -notin @($first.SourceDirectory, $second.SourceDirectory)) 'Publish-only output reused an existing build.'
 Assert-Condition (!(Test-Path -LiteralPath (Join-Path $toolsRoot 'iscc-publish-only.json'))) 'SkipInstaller still invoked the compiler.'
 
+foreach ($stage in 'wrong-sdk', 'fail-restore') {
+    $failed = $false
+    try { Invoke-FixtureBuild $stage } catch { $failed = $true }
+    Assert-Condition $failed ('Build accepted ' + $stage)
+    Assert-Condition (!(Test-Path -LiteralPath (Join-Path $toolsRoot ('dotnet-' + $stage + '.json')))) 'Preflight failure still invoked publish.'
+}
+
 $publishFailure = $false
 try { Invoke-FixtureBuild 'fail-publish' } catch { $publishFailure = $_.Exception.Message -eq 'Native publish failed.' }
 Assert-Condition $publishFailure 'A failed publish did not propagate its failure.'
@@ -109,6 +153,20 @@ Assert-Condition (!(Test-Path -LiteralPath (Join-Path $toolsRoot 'iscc-fail-publ
 $installerFailure = $false
 try { Invoke-FixtureBuild 'fail-installer' } catch { $installerFailure = $_.Exception.Message -eq 'Native installer compilation failed.' }
 Assert-Condition $installerFailure 'A failed installer compilation did not propagate its failure.'
+
+# An artifacts ancestor junction must be rejected before publish or output writes.
+$junctionRepo = Join-Path $fixtureRoot 'junction repository'
+$junctionTarget = Join-Path $fixtureRoot 'external output target'
+New-Item -ItemType Directory -Path $junctionRepo, $junctionTarget | Out-Null
+Copy-Item -LiteralPath $fixtureScripts, (Join-Path $fixtureRepo 'src'), $fixtureInstaller -Destination $junctionRepo -Recurse
+Copy-Item -LiteralPath (Join-Path $fixtureRepo 'release.json'), (Join-Path $fixtureRepo 'global.json'), (Join-Path $fixtureRepo 'LICENSE') -Destination $junctionRepo
+New-Item -ItemType Junction -Path (Join-Path $junctionRepo 'artifacts') -Target $junctionTarget | Out-Null
+Set-Content -LiteralPath $stagePath 'junction-rejected'
+$junctionRejected = $false
+try { & (Join-Path $junctionRepo 'scripts/Build-Native.ps1') -DotNetPath $fakeDotNet -IsccPath $fakeIscc -GitPath $fakeGit | Out-Null } catch { $junctionRejected = $true }
+Assert-Condition $junctionRejected 'An artifacts ancestor junction was accepted.'
+Assert-Condition (@(Get-ChildItem -LiteralPath $junctionTarget -Force).Count -eq 0) 'Packaging wrote outside its trusted repository before rejecting a junction.'
+Assert-Condition (!(Test-Path -LiteralPath (Join-Path $toolsRoot 'dotnet-junction-rejected.json'))) 'A junction output still invoked publish.'
 Write-Output "Native build output regression passed. Preserved fixture: $fixtureRoot"
 # Expected fake tool failures must not leak into GitHub's PowerShell exit-code check.
 exit 0

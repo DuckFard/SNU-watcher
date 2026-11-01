@@ -13,6 +13,7 @@ using SnuWatcher.Windows.Presentation.Search;
 using SnuWatcher.Windows.Presentation.Settings;
 using SnuWatcher.Windows.Presentation.Shell;
 using SnuWatcher.Windows.Presentation.Watches;
+using SnuWatcher.Windows.Diagnostics;
 
 namespace SnuWatcher.Desktop.Presentation;
 
@@ -47,7 +48,17 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
         Search = new(host.Courses, host.WatchCommands, dispatcher, clock, Report, actions);
         Watches = new(host.Dashboard, host.WatchCommands, dispatcher, clock,
             () => host.RefreshProfile.AppliedRefreshProfile.TargetInterval);
-        Settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report, nativeNotifications);
+        SettingsViewModel? settings = null;
+        var diagnostics = new WindowsDiagnosticsReader(host.StorageDiagnostics, () =>
+        {
+            var snapshot = host.Session.LatestSnapshot;
+            var state = settings?.Model.State;
+            return DiagnosticsStateProjector.Project(host.Session.State, snapshot?.ReasonCode, snapshot?.IsOnline,
+                snapshot?.IsSuspended, host.Session.Failure?.Kind, snapshot?.AppliedRefreshProfile.Profile,
+                state?.Stored?.Values, state?.NativeStatus?.Readiness);
+        }, typeof(StudentDesktopSession).Assembly.GetName().Version ?? new Version(0, 0), clock);
+        Settings = settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report, nativeNotifications,
+            diagnostics, new DiagnosticsExportAction(dispatcher));
         Alerts = new(host.Alerts, dispatcher, clock, Report, actions);
         Shell = new(Search, Watches, Settings, host.Dashboard, host.TermHints, dispatcher, clock,
             isDemo, new DesktopSourceControls(host), Report, Alerts);

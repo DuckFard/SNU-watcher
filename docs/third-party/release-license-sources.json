@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "component": "AngleSharp",
+      "version": "1.8.6",
+      "licenseFile": "docs/third-party/AngleSharp-LICENSE.txt",
+      "primaryUrl": "https://github.com/AngleSharp/AngleSharp/blob/v1.8.6/LICENSE",
+      "resolvedUrl": "https://github.com/AngleSharp/AngleSharp/blob/9253950e551f9ed95294f775675de9aa249894a2/LICENSE",
+      "sourceCommitSha": "9253950e551f9ed95294f775675de9aa249894a2",
+      "sourceGitBlobSha": "eae958a8a227d1054019defa2bdecee308d1532d",
+      "downloadedSourceSHA256": "6da3ab781b570d2c45102e74b366c0be0eb758ed0205c3b23093d6ac2231d394",
+      "downloadedTextSHA256": "6da3ab781b570d2c45102e74b366c0be0eb758ed0205c3b23093d6ac2231d394",
+      "extraction": "Official GitHub file content saved verbatim as UTF-8 without BOM; Git blob hash verified.",
+      "retrievedAtUtc": "2026-11-01T16:43:52.2359068Z"
+    },
+    {
+      "component": "Microsoft.Windows.SDK.NET.Ref",
+      "version": "10.0.19041.57",
+      "licenseFile": "docs/third-party/Windows-SDK-LICENSE.txt",
+      "primaryUrl": "https://aka.ms/WinSDKLicenseURL",
+      "resolvedUrl": "https://download.microsoft.com/download/0/F/F/0FF2B061-47DD-4F55-89B6-FD1D8C44F14D/sdk_license.rtf",
+      "sourceCommitSha": null,
+      "sourceGitBlobSha": null,
+      "downloadedSourceSHA256": "dd07eb178e00c6bba4148457fc00ff77cd4887eb521d504186fe59c9ec8bbe62",
+      "downloadedTextSHA256": "8fd61d15d7dabd83bebfe5dc0c7fc32fbd600b7e3a247b1b14fe861dbdb71aea",
+      "agreementId": "WIN10SDK.RTM.AUG_2018_en-US",
+      "extraction": "Official RTF converted using Windows RichTextBox.Text, retaining source list numbering. Two exposed RTF HYPERLINK field-instruction fragments were omitted while preserving displayed URLs. Complete body text independently matches Windows WPF TextRange extraction after list-marker, whitespace, and bullet-glyph normalization. All 15 numbered sections, French clauses, original wording and punctuation, and agreement identifier are retained. Saved as UTF-8 without BOM.",
+      "retrievedAtUtc": "2026-11-01T16:43:52.2359068Z"
+    }
+  ]
+}

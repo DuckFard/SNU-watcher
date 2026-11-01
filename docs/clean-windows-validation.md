@@ -1,6 +1,8 @@
 # Test the candidate in a clean Windows VM
 
-Guide checked on 2026-10-29, Asia/Seoul. **No clean-machine result has been recorded.** This is a setup guide for the M2 feasibility candidate, which does not monitor courses yet. The authoritative acceptance checklist is [Native Windows validation](native-validation.md#required-interactive-clean-pc-checklist).
+Guide checked on 2026-11-02, Asia/Seoul. The historical **M2 feasibility candidate passed its clean-machine checks on 2026-11-01**; its exact binary and evidence are recorded in [Native Windows validation](native-validation.md#required-interactive-clean-pc-checklist). Those results do not qualify the newer student interface or unsigned preview. The preview needs its own installed notification, upgrade/uninstall, accessibility and display-scale results.
+
+The project's existing test VM and snapshots are stored on `D:\SNU-Watcher-VM`. Preserve the current branch before restoring a baseline. Do not change host security or virtualization protections to make a test pass. Record platform/input/login failures separately from application failures, and do not call a forced power-off a clean guest shutdown.
 
 A Windows VM on the current laptop is sufficient; another physical computer is optional. GitHub CI checks builds and offline behavior, but cannot establish what a student sees or clicks. Windows Sandbox is an alternative on supported editions, [including Pro, Enterprise and Education, but not Home](https://learn.microsoft.com/en-us/windows/security/application-security/application-isolation/windows-sandbox/). A fresh account on the existing developer PC still shares its installed runtimes.
 

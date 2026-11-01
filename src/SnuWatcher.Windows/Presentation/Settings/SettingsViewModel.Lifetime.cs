@@ -34,8 +34,10 @@ public sealed partial class SettingsViewModel
         var cancellation = hintStop.CancelAsync();
         var nativeCommandDrain = Task.WhenAll(NativeTestCommand.DisposeAsync().AsTask(), RefreshNativeStatusCommand.DisposeAsync().AsTask());
         var nativeLaneDrain = DisposeNativeLaneAsync(nativeCommandDrain);
+        var diagnosticsDrain = DisposeDiagnosticsLaneAsync(Task.WhenAll(RefreshDiagnosticsCommand.DisposeAsync().AsTask(),
+            ExportDiagnosticsCommand.DisposeAsync().AsTask()));
         var commandDrain = Task.WhenAll(commands.Select(command => command.DisposeAsync().AsTask()));
-        try { await Task.WhenAll(cancellation, commandDrain, nativeLaneDrain, hints, onboarding).ConfigureAwait(false); }
+        try { await Task.WhenAll(cancellation, commandDrain, nativeLaneDrain, diagnosticsDrain, hints, onboarding).ConfigureAwait(false); }
         finally
         {
             Model.PropertyChanged -= ModelChanged;

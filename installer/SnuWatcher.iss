@@ -1,4 +1,4 @@
-; M2 unsigned feasibility candidate. Sign only in an approved release workflow.
+; Unsigned preview. Immutable release assets are prepared separately after validation.
 #ifndef SourceDir
   #error SourceDir must be supplied explicitly; run scripts/Build-Native.ps1.
 #endif
@@ -6,12 +6,21 @@
   #error OutputDir must be supplied explicitly; run scripts/Build-Native.ps1.
 #endif
 #define AppExe "SnuWatcher.Desktop.exe"
+#ifndef ReleaseVersion
+  #define ReleaseVersion "0.1.0-preview.1"
+#endif
+#ifndef InstallerVersion
+  #define InstallerVersion "0.1.0.0"
+#endif
 
 [Setup]
 AppId={{9F9D8A03-BEA5-4CC9-AB54-33AB43B8E9C4}
 AppName=SNU Watcher
-AppVersion=0.1.0
-AppVerName=SNU Watcher 0.1.0 M2 feasibility candidate
+AppVersion={#ReleaseVersion}
+AppVerName=SNU Watcher {#ReleaseVersion} (unsigned preview)
+VersionInfoVersion={#InstallerVersion}
+VersionInfoProductVersion={#InstallerVersion}
+VersionInfoProductTextVersion={#ReleaseVersion}
 AppPublisher=DuckFard
 AppPublisherURL=https://github.com/DuckFard/SNU-watcher
 DefaultDirName={localappdata}\Programs\DuckFard\SNU Watcher
@@ -22,14 +31,14 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.22000
 OutputDir={#OutputDir}
-OutputBaseFilename=SnuCourseWatcher-0.1.0-m2-windows-x64-Setup
+OutputBaseFilename=SnuCourseWatcher-{#ReleaseVersion}-windows-x64-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#AppExe}
 CloseApplications=yes
 RestartApplications=no
-LicenseFile=..\LICENSE
+LicenseFile={#SourceDir}\DISTRIBUTION-LICENSES.txt
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -38,7 +47,7 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Name: "{group}\SNU Watcher"; Filename: "{app}\{#AppExe}"; AppUserModelID: "DuckFard.SnuWatcher"
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Launch SNU Watcher native validation"; Flags: nowait postinstall skipifsilent runasoriginaluser
+Filename: "{app}\{#AppExe}"; Description: "Launch SNU Watcher"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [Code]
 // BEGIN INSTALLER RECOVERY

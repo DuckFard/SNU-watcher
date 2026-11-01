@@ -4,11 +4,11 @@
 
 SNU Watcher is a Windows desktop app being built for Seoul National University students who are waiting for a place in a full class. It is designed to check the sections you choose, alert you when a seat becomes available, and take you to the official SNU registration page so you can try to register.
 
-**Currently in development:** the development branch includes course search, watchlists and settings, backed by local storage and a monitoring engine. Seat notifications, notification testing and saved alert history are being integrated and verified. A public desktop release is not available. Follow the [development progress](docs/PROGRESS.md) for verified capabilities and remaining checks.
+**Unsigned preview in qualification:** version `0.1.0-preview.1` includes course search, watchlists, native alert delivery, saved alert history and notification testing. The live SNU adapter has been rechecked successfully. Installed Windows, notification and accessibility checks still gate publication; a compiled installer alone is not a qualified download. Follow the [development progress](docs/PROGRESS.md) for current evidence.
 
-## Planned features
+## Preview features
 
-| Feature | What it will do |
+| Feature | What it does |
 | --- | --- |
 | Find courses | Search by course code, name, department, instructor, or keyword using the SNU course catalog. |
 | Compare sections | View instructors, schedules, locations, enrollment, capacity, and available seats. |
@@ -18,6 +18,7 @@ SNU Watcher is a Windows desktop app being built for Seoul National University s
 | Check data freshness | See the last successful check and clear status messages when information is delayed or unavailable. |
 | Review alerts | Browse saved opening events and delivery status, test Windows notifications, and choose whether alerts make a sound. |
 | Explore further | Open SNU Genie in your browser for additional course information. |
+| Check local health | Read cached notification/source status and storage sizes, and export a small privacy-safe diagnostic summary locally. |
 
 ## How it will work
 
@@ -34,7 +35,9 @@ SNU Watcher is an independent project and is not affiliated with or endorsed by 
 
 The first desktop release targets **Windows 11 x64**, with an installer `.exe` distributed through [GitHub Releases](https://github.com/DuckFard/SNU-watcher/releases). The installer is intended to include its required runtimes so students can install the app without setting up development tools.
 
-For now, development installers are unsigned validation builds. The earlier installation and notification test build passed its clean Windows 11 VM checks. The newer student interface requires its own qualification before a release.
+The owner selected an **unsigned GitHub prerelease** for the first preview. Unsigned builds may show Windows publisher or reputation warnings. Use only this repository's release assets and compare their SHA-256 checksums. Dependency notices, a scoped SBOM and build metadata accompany the installer. The earlier feasibility build passed its own clean Windows checks; the current preview requires its exact-binary qualification before publication.
+
+The preview uses manual upgrades from GitHub Releases. Automatic updates/startup, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
 
 The earlier command-line prototype is preserved in [legacy/python-watcher](legacy/python-watcher/), along with its setup instructions and known limitations.
 
@@ -42,7 +45,7 @@ The earlier command-line prototype is preserved in [legacy/python-watcher](legac
 
 The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and delivery records. Search, watch management and English/Korean settings use owned asynchronous controllers; availability and the last successful check remain separate from loading and error states. The notification integration records Windows acceptance separately from a student's confirmation that a test banner appeared. Its current source still needs installed-app qualification.
 
-The current live-source recheck returned an empty catalog response. The app reports unavailable data rather than inventing current availability; a successful live recheck remains a release requirement.
+The **2026-11-02** live recheck passed catalog, two-page search, exact section details and previous-year metadata through the production gateway. The adapter now follows SNU's observed catalog initialization flow and validates source-reported academic years. Unsupported responses still produce unavailable data rather than invented availability. See the [integration evidence](docs/integrations/snu.md); these reads do not establish an institution-approved polling rate.
 
 Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](global.json), then run:
 
@@ -63,6 +66,8 @@ See [native validation](docs/native-validation.md) for instructions to build the
 - [Architecture](docs/architecture.md) — application structure and design decisions.
 - [SNU integration](docs/integrations/snu.md) — data sources, verified behavior, and limitations.
 - [Testing](docs/testing.md) — automated checks and coverage requirements.
+- [Privacy](docs/privacy.md) and [security policy](SECURITY.md) — local data, diagnostic sharing and vulnerability reporting.
+- [Preview releases](docs/releases.md) — unsigned packaging, verification, manual upgrade and recovery limits.
 
 ## License
 

@@ -24,6 +24,7 @@ public partial class App : System.Windows.Application
 
     private async void OnStartup(object sender, StartupEventArgs e)
     {
+        if (await Runtime.NativeDeliveryValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         if (await Runtime.StudentUiValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         if (await Runtime.MonitorRuntimeValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         _useStudentInterface = !e.Args.Contains("--native-validation", StringComparer.Ordinal);

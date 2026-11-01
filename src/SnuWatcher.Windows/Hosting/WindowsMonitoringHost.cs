@@ -37,6 +37,7 @@ public sealed partial class WindowsMonitoringHost : IAsyncDisposable
         DatabaseOwnerGate owner, SemaphoreSlim gate, IBatchDesktopAlertChannel channel, TimeProvider clock, RuntimeSessionOptions options)
     {
         _store = store; _source = source; _owner = owner; _gate = gate;
+        _storageDiagnostics = new Diagnostics.ProfileStorageMetadataReader(profile);
         _maxControls = options.MaxAdmittedCommands;
         _controls = Channel.CreateBounded<SourceControl>(new BoundedChannelOptions(_maxControls)
             { SingleReader = true, SingleWriter = false, FullMode = BoundedChannelFullMode.Wait });

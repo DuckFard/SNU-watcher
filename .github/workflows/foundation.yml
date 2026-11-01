@@ -23,6 +23,12 @@ jobs:
       - name: Native packaging output isolation regression
         shell: pwsh
         run: ./tests/scripts/Test-NativeBuildOutput.ps1
+      - name: Offline release metadata and tamper rejection regression
+        shell: pwsh
+        run: ./tests/scripts/Test-ReleaseAssets.ps1
+      - name: Installed notification launcher guards without native execution
+        shell: powershell
+        run: ./tests/scripts/Test-InstalledNativeDelivery.ps1
       - name: Installer recovery policy and native process probe
         shell: pwsh
         run: |

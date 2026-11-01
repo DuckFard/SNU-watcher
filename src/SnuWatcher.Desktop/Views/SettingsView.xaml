@@ -109,6 +109,45 @@
           <TextBlock Text="{DynamicResource Ui.NativeHelp}" Style="{StaticResource Student.Label}" Margin="0,12,0,0"/>
         </StackPanel>
       </Border>
+      <Border Style="{StaticResource Student.Card}">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsTitle}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="SemiBold"/>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsPrivacy}" Style="{StaticResource Student.Label}" Margin="0,8,0,10"/>
+          <WrapPanel>
+            <Button Content="{DynamicResource Ui.DiagnosticsRefresh}" Command="{Binding RefreshDiagnosticsCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.DiagnosticsExport}" Command="{Binding ExportDiagnosticsCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+          </WrapPanel>
+          <TextBlock presentation:ResourceText.Key="{Binding DiagnosticsModel.State.IssueKey}" Style="{StaticResource Student.Label}" AutomationProperties.LiveSetting="Polite"/>
+          <WrapPanel Margin="0,8,0,0">
+            <TextBlock Text="{DynamicResource Ui.DiagnosticsMeasured}" Style="{StaticResource Student.Label}" Margin="0,0,8,0"/>
+            <TextBlock Text="{Binding DiagnosticsModel.State.Snapshot.CapturedAtUtc, StringFormat={}{0:yyyy-MM-dd HH:mm:ss} UTC, TargetNullValue=—}" Style="{StaticResource Student.Label}"/>
+          </WrapPanel>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsStorageNote}" Style="{StaticResource Student.Label}" Margin="0,8,0,6"/>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <TextBlock Text="{DynamicResource Ui.DiagnosticsDatabase}" Style="{StaticResource Student.Label}" Margin="0,0,14,0"/>
+            <TextBlock Grid.Column="1" Text="{Binding DiagnosticsModel.State.Snapshot.Storage.Database.Bytes, StringFormat={}{0:N0}, TargetNullValue=—}" Style="{StaticResource Student.Label}"/>
+            <TextBlock Grid.Row="1" Text="{DynamicResource Ui.DiagnosticsWal}" Style="{StaticResource Student.Label}" Margin="0,0,14,0"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DiagnosticsModel.State.Snapshot.Storage.Wal.Bytes, StringFormat={}{0:N0}, TargetNullValue=—}" Style="{StaticResource Student.Label}"/>
+            <TextBlock Grid.Row="2" Text="{DynamicResource Ui.DiagnosticsShm}" Style="{StaticResource Student.Label}" Margin="0,0,14,0"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DiagnosticsModel.State.Snapshot.Storage.Shm.Bytes, StringFormat={}{0:N0}, TargetNullValue=—}" Style="{StaticResource Student.Label}"/>
+          </Grid>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsStorageUnavailable}" TextWrapping="Wrap" Margin="0,6,0,0">
+            <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><DataTrigger Binding="{Binding DiagnosticsModel.State.Snapshot.Storage.IsComplete}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+            </Style></TextBlock.Style>
+          </TextBlock>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsStorageWarning}" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite">
+            <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><DataTrigger Binding="{Binding DiagnosticsModel.State.Snapshot.Storage.HasSizeWarning}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+            </Style></TextBlock.Style>
+          </TextBlock>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsExportNote}" Style="{StaticResource Student.Label}" Margin="0,10,0,0"/>
+        </StackPanel>
+      </Border>
       <TextBlock Text="{DynamicResource Ui.AlertsInactive}" Style="{StaticResource Student.Label}"/>
     </StackPanel>
   </ScrollViewer>

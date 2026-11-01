@@ -189,6 +189,7 @@ internal static partial class StudentUiValidation
         Require(graph.Settings.Model.State.Applied?.Profile == WatchMonitorProfile.Faster
             && graph.Settings.Model.State.Applied.PreferencesRevision == graph.Settings.Model.State.Stored?.Revision
             && !graph.Settings.Model.State.IsApplyPending, "ui_profile_not_applied");
+        await VerifyLocalDiagnosticsUiAsync(window, graph, source, simulatedNative, ct);
         proof = proof with { ProfileApplied = true };
         captures.Add(await CaptureAsync(profile, window, "ui-settings-en-normal.png", false, ct));
         proof = await VerifySimulatedNativeUiAsync(profile, window, graph, simulatedNative, proof, captures, ct);

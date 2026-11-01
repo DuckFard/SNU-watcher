@@ -278,6 +278,7 @@ $compileSource = Join-Path $runRoot 'compile-source'
 $compileOutput = Join-Path $runRoot 'production-compile'
 $null = New-Item -ItemType Directory -Path $compileSource, $compileOutput
 Set-Content -LiteralPath (Join-Path $compileSource 'SnuWatcher.Desktop.exe') -Value 'Compile-only fixture; never execute.'
+Set-Content -LiteralPath (Join-Path $compileSource 'DISTRIBUTION-LICENSES.txt') -Value 'Compile-only distribution terms fixture; never install.'
 $ErrorActionPreference = 'Continue'
 $compilerOutput = @(& $IsccPath '/Q' ('/DSourceDir=' + $compileSource) ('/DOutputDir=' + $compileOutput) (Join-Path $repoRoot 'installer/SnuWatcher.iss') 2>&1)
 $ErrorActionPreference = 'Stop'

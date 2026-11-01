@@ -4,6 +4,7 @@ using SnuWatcher.Application.Monitoring.Scheduling;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Windows.Presentation.Common;
 using SnuWatcher.Windows.Notifications;
+using SnuWatcher.Application.Presentation.Diagnostics;
 
 namespace SnuWatcher.Windows.Presentation.Settings;
 
@@ -26,7 +27,8 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
     /// <summary>Uses owned session views and a pure root-supplied notification-test callback.</summary>
     public SettingsViewModel(IUiPreferencesStore preferences, IRuntimeRefreshProfile refreshProfile,
         IUiDispatcher dispatcher, TimeProvider clock, Action? requestNativeTest = null, Action<string>? reportError = null,
-        INativeNotificationControls? nativeNotifications = null)
+        INativeNotificationControls? nativeNotifications = null, IDiagnosticsReader? diagnostics = null,
+        IDiagnosticsExportAction? diagnosticsExport = null)
     {
         ArgumentNullException.ThrowIfNull(preferences);
         ArgumentNullException.ThrowIfNull(refreshProfile);
@@ -35,7 +37,9 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
         this.preferences = preferences; this.refreshProfile = refreshProfile; this.dispatcher = dispatcher;
         this.clock = clock; this.reportError = reportError ?? (_ => { });
         nativeControls = nativeNotifications;
+        this.diagnostics = diagnostics; this.diagnosticsExport = diagnosticsExport;
         Model = new(SettingsSnapshot.Initial, dispatcher, reportError);
+        DiagnosticsModel = new(new(null, false, null), dispatcher, reportError);
         ReloadCommand = Command(ReloadCoreAsync, () => !Model.State.IsBusy);
         SaveCommand = Command(SaveCoreAsync, () => Model.State.IsLoaded && !Model.State.IsBusy);
         RetryApplyCommand = Command(RetryApplyCoreAsync,
@@ -49,7 +53,13 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
                 this.reportError, () => !closed && requestNativeTest is not null)
             : new(token => RunNativeSerializedAsync(SendNativeTestCoreAsync, token), dispatcher,
                 this.reportError, () => !closed && !Model.State.IsNativeBusy && Model.State.NativeStatus is { CanSendTest: true });
-        commands = [ReloadCommand, SaveCommand, RetryApplyCommand, DiscardChangesCommand, NativeTestCommand, RefreshNativeStatusCommand];
+        RefreshDiagnosticsCommand = new(token => RunDiagnosticsAsync(false, token), dispatcher, this.reportError,
+            () => !closed && diagnostics is not null && !DiagnosticsModel.State.IsBusy);
+        ExportDiagnosticsCommand = new(token => RunDiagnosticsAsync(true, token), dispatcher, this.reportError,
+            () => !closed && diagnostics is not null && diagnosticsExport is not null && !DiagnosticsModel.State.IsBusy);
+        commands = [ReloadCommand, SaveCommand, RetryApplyCommand, DiscardChangesCommand, NativeTestCommand, RefreshNativeStatusCommand,
+            RefreshDiagnosticsCommand, ExportDiagnosticsCommand];
+        DiagnosticsModel.PropertyChanged += DiagnosticsChanged;
         Model.PropertyChanged += ModelChanged;
     }
     /// <summary>Dispatcher-published immutable settings state.</summary>
