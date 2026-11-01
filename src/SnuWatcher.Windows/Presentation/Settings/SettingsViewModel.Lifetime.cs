@@ -14,18 +14,28 @@ public sealed partial class SettingsViewModel
             onboardingIntent?.Completion.TrySetCanceled();
             pendingHint = null;
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            disposal = DisposeCoreAsync(ready.Task, hintDriver, onboardingDriver);
+            disposal = StartDisposal(ready.Task, hintDriver, onboardingDriver);
             ready.SetResult();
             return new(disposal);
         }
+    }
+
+    private Task StartDisposal(Task ready, Task hints, Task onboarding)
+    {
+        // WPF publication can reenter disposal while carrying a command's ownership context.
+        // The retained driver must drain that command from outside its own-operation context.
+        if (ExecutionContext.IsFlowSuppressed()) return Task.Run(() => DisposeCoreAsync(ready, hints, onboarding));
+        using (ExecutionContext.SuppressFlow()) return Task.Run(() => DisposeCoreAsync(ready, hints, onboarding));
     }
 
     private async Task DisposeCoreAsync(Task ready, Task hints, Task onboarding)
     {
         await ready.ConfigureAwait(false);
         var cancellation = hintStop.CancelAsync();
+        var nativeCommandDrain = Task.WhenAll(NativeTestCommand.DisposeAsync().AsTask(), RefreshNativeStatusCommand.DisposeAsync().AsTask());
+        var nativeLaneDrain = DisposeNativeLaneAsync(nativeCommandDrain);
         var commandDrain = Task.WhenAll(commands.Select(command => command.DisposeAsync().AsTask()));
-        try { await Task.WhenAll(cancellation, commandDrain, hints, onboarding).ConfigureAwait(false); }
+        try { await Task.WhenAll(cancellation, commandDrain, nativeLaneDrain, hints, onboarding).ConfigureAwait(false); }
         finally
         {
             Model.PropertyChanged -= ModelChanged;

@@ -6,6 +6,7 @@
         xmlns:search="clr-namespace:SnuWatcher.Windows.Presentation.Search;assembly=SnuWatcher.Windows"
         xmlns:watches="clr-namespace:SnuWatcher.Windows.Presentation.Watches;assembly=SnuWatcher.Windows"
         xmlns:settings="clr-namespace:SnuWatcher.Windows.Presentation.Settings;assembly=SnuWatcher.Windows"
+        xmlns:alerts="clr-namespace:SnuWatcher.Windows.Presentation.Alerts;assembly=SnuWatcher.Windows"
         xmlns:shell="clr-namespace:SnuWatcher.Windows.Presentation.Shell;assembly=SnuWatcher.Windows"
         Title="SNU Watcher" Width="1180" Height="820" MinWidth="680" MinHeight="480" SizeChanged="OnWindowSizeChanged"
         FontFamily="Segoe UI, Malgun Gothic" FontSize="14"
@@ -16,6 +17,7 @@
     <DataTemplate DataType="{x:Type search:CourseSearchViewModel}"><views:FindCoursesView/></DataTemplate>
     <DataTemplate DataType="{x:Type watches:WatchListViewModel}"><views:MyWatchesView/></DataTemplate>
     <DataTemplate DataType="{x:Type settings:SettingsViewModel}"><views:SettingsView/></DataTemplate>
+    <DataTemplate DataType="{x:Type alerts:AlertHistoryViewModel}"><views:AlertsView/></DataTemplate>
     <DataTemplate DataType="{x:Type shell:StudentAlertsPlaceholder}">
       <Border Style="{DynamicResource Student.Card}" VerticalAlignment="Top">
         <StackPanel>

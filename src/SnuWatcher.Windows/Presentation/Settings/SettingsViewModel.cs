@@ -3,6 +3,7 @@ using SnuWatcher.Application.Monitoring.Hosting;
 using SnuWatcher.Application.Monitoring.Scheduling;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Windows.Presentation.Common;
+using SnuWatcher.Windows.Notifications;
 
 namespace SnuWatcher.Windows.Presentation.Settings;
 
@@ -24,7 +25,8 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
 
     /// <summary>Uses owned session views and a pure root-supplied notification-test callback.</summary>
     public SettingsViewModel(IUiPreferencesStore preferences, IRuntimeRefreshProfile refreshProfile,
-        IUiDispatcher dispatcher, TimeProvider clock, Action? requestNativeTest = null, Action<string>? reportError = null)
+        IUiDispatcher dispatcher, TimeProvider clock, Action? requestNativeTest = null, Action<string>? reportError = null,
+        INativeNotificationControls? nativeNotifications = null)
     {
         ArgumentNullException.ThrowIfNull(preferences);
         ArgumentNullException.ThrowIfNull(refreshProfile);
@@ -32,6 +34,7 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
         ArgumentNullException.ThrowIfNull(clock);
         this.preferences = preferences; this.refreshProfile = refreshProfile; this.dispatcher = dispatcher;
         this.clock = clock; this.reportError = reportError ?? (_ => { });
+        nativeControls = nativeNotifications;
         Model = new(SettingsSnapshot.Initial, dispatcher, reportError);
         ReloadCommand = Command(ReloadCoreAsync, () => !Model.State.IsBusy);
         SaveCommand = Command(SaveCoreAsync, () => Model.State.IsLoaded && !Model.State.IsBusy);
@@ -39,9 +42,14 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
             () => Model.State.IsApplyPending && !Model.State.SaveUncertain && !Model.State.IsBusy);
         DiscardChangesCommand = Command(DiscardCoreAsync,
             () => Model.State.IsLoaded && Model.State.IsDirty && !Model.State.SaveUncertain && !Model.State.IsBusy);
-        NativeTestCommand = new(token => dispatcher.InvokeAsync(() => requestNativeTest!(), token), dispatcher,
-            this.reportError, () => requestNativeTest is not null);
-        commands = [ReloadCommand, SaveCommand, RetryApplyCommand, DiscardChangesCommand, NativeTestCommand];
+        RefreshNativeStatusCommand = new(token => RunNativeSerializedAsync(ReadNativeStatusCoreAsync, token), dispatcher,
+            this.reportError, () => !closed && nativeControls is not null && !Model.State.IsNativeBusy);
+        NativeTestCommand = nativeControls is null
+            ? new(token => dispatcher.InvokeAsync(() => { ThrowIfClosed(); requestNativeTest!(); }, token), dispatcher,
+                this.reportError, () => !closed && requestNativeTest is not null)
+            : new(token => RunNativeSerializedAsync(SendNativeTestCoreAsync, token), dispatcher,
+                this.reportError, () => !closed && !Model.State.IsNativeBusy && Model.State.NativeStatus is { CanSendTest: true });
+        commands = [ReloadCommand, SaveCommand, RetryApplyCommand, DiscardChangesCommand, NativeTestCommand, RefreshNativeStatusCommand];
         Model.PropertyChanged += ModelChanged;
     }
     /// <summary>Dispatcher-published immutable settings state.</summary>
@@ -54,8 +62,10 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
     public UiAsyncCommand RetryApplyCommand { get; }
     /// <summary>Explicitly replaces unsaved edits with the latest known saved choices.</summary>
     public UiAsyncCommand DiscardChangesCommand { get; }
-    /// <summary>Invokes only the optional root-provided callback on the dispatcher.</summary>
+    /// <summary>Owns a typed native test, or invokes the explicit legacy callback when no typed port is supplied.</summary>
     public UiAsyncCommand NativeTestCommand { get; }
+    /// <summary>Explicitly refreshes actual native availability; no source or preference save is involved.</summary>
+    public UiAsyncCommand RefreshNativeStatusCommand { get; }
     /// <summary>The editable language; setters require this model's dispatcher.</summary>
     public UiLanguage Language
     { get => Model.State.Editor.Language; set { ValidateEnum(value); Edit(Model.State.Editor with { Language = value }); } }
@@ -65,6 +75,9 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
     /// <summary>The editable close behavior; it takes effect after a known save.</summary>
     public UiCloseBehavior CloseBehavior
     { get => Model.State.Editor.CloseBehavior; set { ValidateEnum(value); Edit(Model.State.Editor with { CloseBehavior = value }); } }
+    /// <summary>The editable notification-audio choice; native configuration uses only a known saved snapshot.</summary>
+    public bool NotificationSoundMuted
+    { get => Model.State.Editor.NotificationSoundMuted; set => Edit(Model.State.Editor with { NotificationSoundMuted = value }); }
     /// <summary>Binding notifications run on the dispatcher and isolate observer exceptions.</summary>
     public event PropertyChangedEventHandler? PropertyChanged;
     /// <summary>Known saved/read preferences, published before actor application for shell language/tray updates.</summary>
@@ -78,6 +91,7 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
         var outcome = await ReloadCommand.ExecuteAsync(cancellationToken).ConfigureAwait(false);
         if (outcome == UiCommandOutcome.Failed) throw new InvalidOperationException("settings_load_failed");
         if (outcome == UiCommandOutcome.Canceled) cancellationToken.ThrowIfCancellationRequested();
+        if (nativeControls is not null) await RefreshNativeStatusCommand.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private UiAsyncCommand Command(Func<CancellationToken, Task> operation, Func<bool> available) =>
@@ -104,7 +118,7 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
 
     private void ModelChanged(object? sender, PropertyChangedEventArgs args)
     {
-        foreach (var property in new[] { nameof(Language), nameof(DesiredProfile), nameof(CloseBehavior) })
+        foreach (var property in new[] { nameof(Language), nameof(DesiredProfile), nameof(CloseBehavior), nameof(NotificationSoundMuted) })
             foreach (var observer in PropertyChanged?.GetInvocationList() ?? [])
                 try { ((PropertyChangedEventHandler)observer)(this, new(property)); }
                 catch (Exception) { ReportObserverFailure(); }

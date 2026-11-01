@@ -91,10 +91,10 @@ public sealed class BatchDeliveryCoordinatorTests
         var flushed = await fixture.RunAsync(coordinator);
 
         Assert.Equal(BatchDeliveryRunDisposition.ResultNotRecorded, first.Disposition);
-        Assert.Equal(DesktopAlertOutcome.OsAccepted, first.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.OsAccepted, first.ChannelOutcome);
         Assert.Null(first.Receipt);
         Assert.Equal(BatchDeliveryRunDisposition.ResultRecorded, flushed.Disposition);
-        Assert.Equal(DesktopAlertOutcome.OsAccepted, flushed.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.OsAccepted, flushed.ChannelOutcome);
         Assert.False(flushed.SubmittedThisCall);
         Assert.Same(first.KnownResult, flushed.KnownResult);
         Assert.Same(fixture.Port.Results[0], fixture.Port.Results[1]);
@@ -164,9 +164,9 @@ public sealed class BatchDeliveryCoordinatorTests
     }
 
     [Theory]
-    [InlineData(DesktopAlertOutcome.OsAccepted)]
-    [InlineData(DesktopAlertOutcome.RetryableFailure)]
-    public async Task KnownChannelOutcomeSurvivesLateCancellationAndUsesUncancelledRecording(DesktopAlertOutcome outcome)
+    [InlineData(BatchChannelOutcome.OsAccepted)]
+    [InlineData(BatchChannelOutcome.RetryableFailure)]
+    public async Task KnownChannelOutcomeSurvivesLateCancellationAndUsesUncancelledRecording(BatchChannelOutcome outcome)
     {
         using var fixture = new CoordinatorFixture();
         using var cancellation = new CancellationTokenSource();
@@ -196,20 +196,20 @@ public sealed class BatchDeliveryCoordinatorTests
         {
             "throw" => throw new InvalidOperationException("private driver information"),
             "cancel" => CancelStoppedDriver(token),
-            _ => Task.FromResult((DesktopAlertOutcome)99),
+            _ => Task.FromResult((BatchChannelOutcome)99),
         };
 
         var result = await fixture.RunAsync(fixture.Coordinator(), cancellation.Token);
 
         Assert.True(result.SubmittedThisCall);
-        Assert.Null(result.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.AcceptanceUnknown, result.ChannelOutcome);
         Assert.Equal(BatchAttemptResultOutcome.InterruptedUnknown, result.KnownResult!.Outcome);
         Assert.Equal("channel_result_unknown", result.ReasonCode);
         Assert.NotNull(result.Receipt);
-        Task<DesktopAlertOutcome> CancelStoppedDriver(CancellationToken token)
+        Task<BatchChannelOutcome> CancelStoppedDriver(CancellationToken token)
         {
             cancellation.Cancel();
-            return Task.FromCanceled<DesktopAlertOutcome>(token);
+            return Task.FromCanceled<BatchChannelOutcome>(token);
         }
     }
 
@@ -235,7 +235,7 @@ public sealed class BatchDeliveryCoordinatorTests
     public async Task ObserverRunsOutsideGateAndCannotTurnDesktopFailureIntoAcceptance()
     {
         using var fixture = new CoordinatorFixture();
-        fixture.Channel.Send = (_, _) => Task.FromResult(DesktopAlertOutcome.RetryableFailure);
+        fixture.Channel.Send = (_, _) => Task.FromResult(BatchChannelOutcome.RetryableFailure);
         var entered = false;
         BatchDeliveryAudit? audit = null;
         var result = await fixture.RunAsync(fixture.Coordinator(value =>
@@ -248,7 +248,7 @@ public sealed class BatchDeliveryCoordinatorTests
 
         Assert.True(entered);
         Assert.True(result.ObserverFailed);
-        Assert.Equal(DesktopAlertOutcome.RetryableFailure, result.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.RetryableFailure, result.ChannelOutcome);
         Assert.Equal(2, result.Receipt!.PendingCount);
         Assert.NotNull(audit);
         Assert.Equal(BatchFixture.Key(), audit!.Key);
@@ -279,7 +279,7 @@ public sealed class BatchDeliveryCoordinatorTests
     {
         using var fixture = new CoordinatorFixture();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var stopped = new TaskCompletionSource<DesktopAlertOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stopped = new TaskCompletionSource<BatchChannelOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var reserved = false;
         var reserve = fixture.Port.Reserve;
         fixture.Port.Reserve = async (command, token) => { reserved = true; return await reserve(command, token); };
@@ -293,7 +293,7 @@ public sealed class BatchDeliveryCoordinatorTests
         var second = fixture.RunAsync(coordinator);
         Assert.False(second.IsCompleted);
         Assert.False(fixture.Gate.Wait(0));
-        stopped.SetResult(DesktopAlertOutcome.OsAccepted);
+        stopped.SetResult(BatchChannelOutcome.OsAccepted);
         await first.WaitAsync(TimeSpan.FromSeconds(5));
         var blocked = await second.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -381,7 +381,7 @@ public sealed class BatchDeliveryCoordinatorTests
         fixture.Port.Record = (command, _) => Task.FromResult(BatchPort.Receipt(command));
         var flush = await fixture.RunAsync(coordinator);
         Assert.Equal("result_receipt_mismatch", mismatch.ReasonCode);
-        Assert.Equal(DesktopAlertOutcome.OsAccepted, mismatch.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.OsAccepted, mismatch.ChannelOutcome);
         Assert.Equal(BatchDeliveryRunDisposition.ResultRecorded, flush.Disposition);
         Assert.Same(mismatch.KnownResult, flush.KnownResult);
         Assert.Single(fixture.Channel.Envelopes);

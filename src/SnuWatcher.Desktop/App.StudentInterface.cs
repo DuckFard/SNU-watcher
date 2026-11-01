@@ -18,7 +18,7 @@ public partial class App
     private Task? _studentStarting;
     private Task? _studentQuit;
     private Task? _studentFailureObserver;
-    private Task<bool>? _studentDrain;
+    private RetryableTeardown? _studentTeardown;
     private bool _useStudentInterface;
 
     private Task StartStudentInterfaceAsync()
@@ -32,8 +32,9 @@ public partial class App
         if (_quitting) return;
         try
         {
-            _studentOpening = WindowsMonitoringHost.OpenMonitoringOnlyProductionAsync(
-                cancellationToken: _studentStartupStop.Token);
+            _studentOpening = _notifications is null
+                ? WindowsMonitoringHost.OpenMonitoringOnlyProductionAsync(cancellationToken: _studentStartupStop.Token)
+                : WindowsMonitoringHost.OpenProductionAsync(_notifications, cancellationToken: _studentStartupStop.Token);
             var opened = await _studentOpening;
             if (_quitting) return;
             _studentHost = opened.Host;
@@ -46,7 +47,9 @@ public partial class App
                 return;
             }
             var ui = new WpfUiDispatcher(Dispatcher);
-            _studentSession = new(_studentHost, ui, TimeProvider.System, new DesktopStudentActions(ui), SendTestNotification);
+            _studentSession = new(_studentHost, ui, TimeProvider.System, new DesktopStudentActions(ui), SendTestNotification,
+                nativeNotifications: _notifications);
+            AttachStudentNotifications();
             _studentWindow = new(_studentSession.Shell, Quit);
             MainWindow = _studentWindow;
             _studentWindow.Show();
@@ -87,7 +90,7 @@ public partial class App
         Task failed;
         try
         {
-            failed = await Task.WhenAny(session.FailureTask, (Task)host.Session.FailureTask)
+            failed = await Task.WhenAny(session.FailureTask, (Task)host.Session.FailureTask, _studentNativeFailure.Task)
                 .WaitAsync(_studentLifetimeStop.Token);
         }
         catch (OperationCanceledException) when (_studentLifetimeStop.IsCancellationRequested) { return; }
@@ -116,8 +119,7 @@ public partial class App
         {
             var stopStartup = _studentStartupStop.CancelAsync();
             var stopObserver = _studentLifetimeStop.CancelAsync();
-            if (_studentDrain is { IsCompletedSuccessfully: true } prior && !prior.Result) _studentDrain = null;
-            var drained = await DrainStudentResourcesAsync();
+            var drained = await DrainStudentResourcesAsync(retryFailed: true);
             await Task.WhenAll(stopStartup, stopObserver, _studentFailureObserver ?? Task.CompletedTask);
             if (!drained) { _quitting = false; _studentWindow?.ShowStatusKey("Ui.StopBlocked"); return; }
             _studentWindow?.AllowClose(); _window?.AllowClose();
@@ -131,25 +133,40 @@ public partial class App
         }
     }
 
-    private Task<bool> DrainStudentResourcesAsync() => _studentDrain ??= DrainStudentCoreAsync();
+    private Task<bool> DrainStudentResourcesAsync(bool retryFailed = false) =>
+        (_studentTeardown ??= new(DrainStudentCoreAsync)).TryRunAsync(retryFailed);
 
-    private async Task<bool> DrainStudentCoreAsync()
+    private async Task DrainStudentCoreAsync()
     {
+        DetachStudentNotifications();
         if (_studentOpening is not null)
         {
             try { _studentHost ??= (await _studentOpening).Host; }
             catch (WindowsMonitoringHostStartupException retained) { _studentHost = retained.Host; }
             catch (Exception error) when (error is not OutOfMemoryException) { /* Factory already unwound ordinary startup failure. */ }
         }
-        var uiDrain = _studentSession?.DisposeAsync().AsTask() ?? Task.CompletedTask;
-        var hostDrain = _studentHost is null ? null : _studentHost.State == WindowsMonitoringHostState.StopBlocked
-            ? _studentHost.RetryFinalizeStopAsync() : _studentHost.StopAsync();
+        var uiDrain = DrainInterfaceAsync();
+        var hostDrain = DrainHostAsync();
         // Start both owners before waiting: a UI driver can still be awaiting a runtime operation.
-        try { await Task.WhenAll(uiDrain, hostDrain is null ? Task.CompletedTask : hostDrain); }
-        catch (Exception error) when (error is not OutOfMemoryException) { return false; }
-        if (hostDrain is null) return true;
-        if (!(await hostDrain).IsFinalized) return false;
-        await _studentHost!.DisposeAsync(); // Join the concrete host's stop worker and failure observer too.
-        return true;
+        await Task.WhenAll(uiDrain, hostDrain);
+        if (!await hostDrain) throw new InvalidOperationException("Student runtime finalization remains blocked.");
+        if (_studentHost is not null)
+            await _studentHost!.DisposeAsync(); // Join the concrete host's stop worker and failure observer too.
+        // Retain registration while logical finalization is blocked; no callback/SDK call is abandoned.
+        if (_notifications is not null) await _notifications.DisposeAsync();
+
+        // Async wrappers retain even synchronous finalizer failures, so the other owner is still started
+        // and awaited before the attempt is reported blocked. Neither wrapper releases a blocked owner.
+        async Task DrainInterfaceAsync()
+        {
+            if (_studentSession is not null) await _studentSession.DisposeAsync();
+        }
+        async Task<bool> DrainHostAsync()
+        {
+            if (_studentHost is null) return true;
+            var result = _studentHost.State == WindowsMonitoringHostState.StopBlocked
+                ? await _studentHost.RetryFinalizeStopAsync() : await _studentHost.StopAsync();
+            return result.IsFinalized;
+        }
     }
 }

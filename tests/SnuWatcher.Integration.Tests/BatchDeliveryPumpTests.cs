@@ -50,7 +50,7 @@ public sealed partial class BatchDeliveryPumpTests
         await f.AddAsync(StoreFixture.Key()); await f.ObserveAsync(StoreFixture.Key(), 119);
         var clock = new PumpClock(f.Clock);
         using var gate = new SemaphoreSlim(1, 1);
-        var channel = new PumpChannel(clock) { Handler = (_, _) => Task.FromResult(DesktopAlertOutcome.RetryableFailure) };
+        var channel = new PumpChannel(clock) { Handler = (_, _) => Task.FromResult(BatchChannelOutcome.RetryableFailure) };
         var pump = new BatchDeliveryPump(f.Store, new(f.Store, clock, gate, channel), clock, Policy, _ => { });
         using var stop = new CancellationTokenSource();
         var run = pump.RunAsync(stop.Token);
@@ -93,7 +93,7 @@ public sealed partial class BatchDeliveryPumpTests
         await using var f = await StoreFixture.CreateAsync();
         await f.AddAsync(StoreFixture.Key()); await f.ObserveAsync(StoreFixture.Key(), 119);
         var clock = new PumpClock(f.Clock);
-        var entered = Signal(); var release = new TaskCompletionSource<DesktopAlertOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var entered = Signal(); var release = new TaskCompletionSource<BatchChannelOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var gate = new SemaphoreSlim(1, 1);
         var channel = new PumpChannel(clock) { Handler = (_, _) => { entered.SetResult(); return release.Task; } };
         var pump = new BatchDeliveryPump(f.Store, new(f.Store, clock, gate, channel), clock, Policy, _ => { });
@@ -102,7 +102,7 @@ public sealed partial class BatchDeliveryPumpTests
         await entered.Task.WaitAsync(Timeout);
         stop.Cancel();
         Assert.False(run.IsCompleted);
-        release.SetResult(DesktopAlertOutcome.OsAccepted);
+        release.SetResult(BatchChannelOutcome.OsAccepted);
         await run.WaitAsync(Timeout);
         Assert.False(pump.Wake());
         Assert.Empty(await f.Store.ReadPendingDeliveriesAsync(20, default));

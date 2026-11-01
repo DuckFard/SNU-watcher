@@ -104,12 +104,14 @@ public class UnusedShellPort : DispatchProxy
 
 internal sealed class ShellFixture : IAsyncDisposable
 {
-    internal ShellFixture(bool demo = false, bool controls = true)
+    internal ShellFixture(bool demo = false, bool controls = true, bool history = false)
     {
         Search = new(Ports, Ports, Dispatcher, Clock);
         Watches = new(Ports, Ports, Dispatcher, Clock, () => Ports.AppliedRefreshProfile.TargetInterval);
         Settings = new(Ports, Ports, Dispatcher, Clock);
-        Shell = new(Search, Watches, Settings, Ports, Ports, Dispatcher, Clock, demo, controls ? Ports : null);
+        if (history) Alerts = new(History, Dispatcher, Clock);
+        Shell = new(Search, Watches, Settings, Ports, Ports, Dispatcher, Clock, demo, controls ? Ports : null,
+            alertHistory: Alerts);
     }
     internal DedicatedUiDispatcher Dispatcher { get; } = new();
     internal ShellClock Clock { get; } = new();
@@ -117,6 +119,8 @@ internal sealed class ShellFixture : IAsyncDisposable
     internal CourseSearchViewModel Search { get; }
     internal WatchListViewModel Watches { get; }
     internal SettingsViewModel Settings { get; }
+    internal SnuWatcher.Windows.Presentation.Alerts.AlertHistoryViewModel? Alerts { get; }
+    internal ShellHistory History { get; } = new();
     internal StudentShellViewModel Shell { get; }
     internal static async Task EventuallyAsync(Func<bool> condition)
     {
@@ -126,6 +130,28 @@ internal sealed class ShellFixture : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await Shell.DisposeAsync(); await Search.DisposeAsync(); await Watches.DisposeAsync(); await Settings.DisposeAsync();
+        if (Alerts is not null) await Alerts.DisposeAsync();
         await Dispatcher.DisposeAsync();
     }
+}
+
+internal sealed class ShellHistory : SnuWatcher.Application.Presentation.Alerts.IAlertHistoryReader
+{
+    internal int Reads { get; private set; }
+    public Task<SnuWatcher.Application.Presentation.Alerts.AlertHistoryPage> ReadPageAsync(
+        SnuWatcher.Application.Presentation.Alerts.AlertHistoryCursor? after = null, int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        Reads++;
+        return Task.FromResult(new SnuWatcher.Application.Presentation.Alerts.AlertHistoryPage(
+            new(0, 0, DateTimeOffset.UtcNow), 0, [], false, null));
+    }
+    public Task<SnuWatcher.Application.Presentation.Alerts.AlertHistoryItem?> ReadDetailsAsync(Guid eventId,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<SnuWatcher.Application.Presentation.Alerts.AlertRecipientPage?> ReadRecipientsAsync(Guid eventId,
+        SnuWatcher.Application.Presentation.Alerts.AlertRecipientCursor? after = null, int pageSize = 25,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<SnuWatcher.Application.Presentation.Alerts.AlertAttemptPage?> ReadAttemptsAsync(Guid eventId,
+        SnuWatcher.Application.Presentation.Alerts.AlertAttemptCursor? after = null, int pageSize = 25,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }

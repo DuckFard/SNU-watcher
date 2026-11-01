@@ -11,12 +11,13 @@ namespace SnuWatcher.Application.Tests.Monitoring.Hosting;
 /// <summary>Existing monitor policy fakes plus narrowly scripted delivery/mutation port responses.</summary>
 internal sealed class MonitoringRuntimeSessionFixture : IAsyncDisposable
 {
-    internal MonitoringRuntimeSessionFixture(IEnumerable<SubscriptionSnapshot>? watches = null)
+    internal MonitoringRuntimeSessionFixture(IEnumerable<SubscriptionSnapshot>? watches = null, bool deliveryEnabled = true)
     {
         Store = new(watches);
         Mutations = new(Store);
         Source = new(Store, Clock);
-        Session = new(Mutations, Policy, Batches, Work, Recovery, Source, Channel, Clock, new(), Gate);
+        Session = new(Mutations, Policy, Batches, Work, Recovery, Source, Channel, Clock,
+            new(deliveryEnabled: deliveryEnabled), Gate);
     }
     internal SplitMonitorClock Clock { get; } = new();
     internal FakeMonitorStore Store { get; }
@@ -39,9 +40,12 @@ internal sealed class MonitoringRuntimeSessionFixture : IAsyncDisposable
 
 internal sealed class EmptyRuntimeWork : IPendingDeliveryWorkReader
 {
+    private int _reads;
+    internal int Reads => Volatile.Read(ref _reads);
     public Task<PendingDeliveryWorkPage> ReadPageAsync(PendingDeliveryWorkCursor? after, int limit, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        Interlocked.Increment(ref _reads);
         return Task.FromResult(new PendingDeliveryWorkPage([], null, false));
     }
 }

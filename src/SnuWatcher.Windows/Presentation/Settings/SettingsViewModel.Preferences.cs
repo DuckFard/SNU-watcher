@@ -30,7 +30,7 @@ public sealed partial class SettingsViewModel
                 var stored = state.Stored ?? throw new InvalidOperationException("Load settings before saving.");
                 var editor = state.Editor;
                 var values = new UiPreferencesValues(editor.Language, stored.Values.SelectedYear, stored.Values.TermHint,
-                    editor.DesiredProfile, editor.CloseBehavior, stored.Values.OnboardingVersion);
+                    editor.DesiredProfile, editor.CloseBehavior, stored.Values.OnboardingVersion, editor.NotificationSoundMuted);
                 pendingWrite = new(new(Guid.NewGuid(), stored.Revision, values), WriteOrigin.Editor, editVersion);
             }).ConfigureAwait(false);
         var result = await WritePendingAsync(token).ConfigureAwait(false);

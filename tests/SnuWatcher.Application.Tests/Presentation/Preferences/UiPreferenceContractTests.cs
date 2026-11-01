@@ -115,6 +115,24 @@ public sealed class UiPreferenceContractTests
     }
 
     [Fact]
+    public void SoundDefaultsToTheSystemAndMuteIsAnOptionalImmutableSavedChoice()
+    {
+        var muted = typeof(UiPreferencesValues).GetProperty("NotificationSoundMuted");
+        Assert.NotNull(muted);
+        Assert.Null(muted.SetMethod);
+        Assert.Equal(false, muted.GetValue(UiPreferencesValues.Defaults));
+        Assert.Equal(false, muted.GetValue(Korean()));
+        var constructor = Assert.Single(typeof(UiPreferencesValues).GetConstructors());
+        var option = Assert.Single(constructor.GetParameters(), parameter => parameter.Name == "notificationSoundMuted");
+        Assert.True(option.IsOptional);
+        Assert.Equal(false, option.DefaultValue);
+        var explicitMute = (UiPreferencesValues)constructor.Invoke([UiLanguage.English, null, null,
+            WatchMonitorProfile.Normal, UiCloseBehavior.MinimizeToTray, 0, true]);
+        Assert.Equal(true, muted.GetValue(explicitMute));
+        Assert.NotEqual(UiPreferencesValues.Defaults, explicitMute);
+    }
+
+    [Fact]
     public void PreferenceSnapshotsHaveNoPublicSetters()
     {
         Type[] types = [typeof(AcademicTermHint), typeof(UiPreferencesValues), typeof(UiPreferencesSnapshot),

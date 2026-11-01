@@ -41,7 +41,7 @@ public sealed partial class WindowsMonitoringHost : IAsyncDisposable
         _controls = Channel.CreateBounded<SourceControl>(new BoundedChannelOptions(_maxControls)
             { SingleReader = true, SingleWriter = false, FullMode = BoundedChannelFullMode.Wait });
         _session = new(store, store, store, store, store, source.Courses, channel, clock, options, gate, source.Diagnostic,
-            new RuntimePresentationServices(store, store, store));
+            new RuntimePresentationServices(store, store, store, store));
     }
     /// <summary>Opens only the fixed normal profile and mandatory anonymous store-backed source; never called by default M4 launch.</summary>
     public static Task<WindowsHostOpenResult> OpenProductionAsync(IBatchDesktopAlertChannel channel, TimeProvider? clock = null,

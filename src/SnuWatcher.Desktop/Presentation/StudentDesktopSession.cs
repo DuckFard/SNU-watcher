@@ -5,7 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using SnuWatcher.Windows.Hosting;
+using SnuWatcher.Windows.Notifications;
 using SnuWatcher.Windows.Presentation.Common;
+using SnuWatcher.Windows.Presentation.Alerts;
 using SnuWatcher.Windows.Presentation.Navigation;
 using SnuWatcher.Windows.Presentation.Search;
 using SnuWatcher.Windows.Presentation.Settings;
@@ -34,7 +36,8 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
     private string? _lastErrorCode;
 
     public StudentDesktopSession(WindowsMonitoringHost host, IUiDispatcher dispatcher, TimeProvider clock,
-        IStudentActions actions, Action nativeTest, bool isDemo = false, bool observeSystemState = true)
+        IStudentActions actions, Action nativeTest, bool isDemo = false, bool observeSystemState = true,
+        INativeNotificationControls? nativeNotifications = null)
     {
         ArgumentNullException.ThrowIfNull(host); ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(clock); ArgumentNullException.ThrowIfNull(actions);
@@ -44,9 +47,10 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
         Search = new(host.Courses, host.WatchCommands, dispatcher, clock, Report, actions);
         Watches = new(host.Dashboard, host.WatchCommands, dispatcher, clock,
             () => host.RefreshProfile.AppliedRefreshProfile.TargetInterval);
-        Settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report);
+        Settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report, nativeNotifications);
+        Alerts = new(host.Alerts, dispatcher, clock, Report, actions);
         Shell = new(Search, Watches, Settings, host.Dashboard, host.TermHints, dispatcher, clock,
-            isDemo, new DesktopSourceControls(host), Report);
+            isDemo, new DesktopSourceControls(host), Report, Alerts);
         _ageTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher.CurrentDispatcher)
             { Interval = TimeSpan.FromSeconds(2) };
         _ageTimer.Tick += RefreshAges;
@@ -57,6 +61,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
     public CourseSearchViewModel Search { get; }
     public WatchListViewModel Watches { get; }
     public SettingsViewModel Settings { get; }
+    public AlertHistoryViewModel Alerts { get; }
     public string? LastErrorCode => Volatile.Read(ref _lastErrorCode);
     /// <summary>First fixed presentation failure, independent of any lossy visual status update.</summary>
     public Task<string> FailureTask => _failure.Task;
@@ -172,6 +177,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
         drains.Add(BeginDrain(() => Search.DisposeAsync().AsTask()));
         drains.Add(BeginDrain(() => Watches.DisposeAsync().AsTask()));
         drains.Add(BeginDrain(() => Settings.DisposeAsync().AsTask()));
+        drains.Add(BeginDrain(() => Alerts.DisposeAsync().AsTask()));
         if (_systemState is not null) drains.Add(BeginDrain(() => _systemState.DisposeAsync().AsTask()));
         drains.Add(initialization); drains.Add(updates);
         try { await Task.WhenAll(drains).ConfigureAwait(false); }

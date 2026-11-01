@@ -38,6 +38,13 @@ internal sealed record StudentUiJourney
     public bool EnterSearch { get; init; }
     public bool FixedActionIntents { get; init; }
     public bool TerminalStoppingVisible { get; init; }
+    public bool SavedSoundMute { get; init; }
+    public bool SimulatedNativeStatus { get; init; }
+    public bool SimulatedNativeTest { get; init; }
+    public bool SimulatedFeedbackScoped { get; init; }
+    public bool SavedAlertHistory { get; init; }
+    public bool OriginalAlertIdentitySeats { get; init; }
+    public bool BoundedAlertDetails { get; init; }
     public Guid WatchId { get; init; }
     public long PreferencesRevision { get; init; }
     public string Label { get; init; } = "Statistics choices renamed (Demo)";
@@ -48,7 +55,7 @@ internal static partial class StudentUiValidation
     private static async Task<StudentUiJourney> RunJourneyAsync(RuntimeProfile profile, StudentWindow window,
         StudentDesktopSession graph, WindowsMonitoringHost host, StudentUiValidationSource source,
         StudentUiValidationClock clock, StudentUiValidationActions actions, StudentUiBindingProbe bindings,
-        List<StudentUiCapture> captures, CancellationToken ct)
+        StudentUiSimulatedNativeControls simulatedNative, List<StudentUiCapture> captures, CancellationToken ct)
     {
         var proof = new StudentUiJourney();
         _stage = "onboarding";
@@ -184,6 +191,7 @@ internal static partial class StudentUiValidation
             && !graph.Settings.Model.State.IsApplyPending, "ui_profile_not_applied");
         proof = proof with { ProfileApplied = true };
         captures.Add(await CaptureAsync(profile, window, "ui-settings-en-normal.png", false, ct));
+        proof = await VerifySimulatedNativeUiAsync(profile, window, graph, simulatedNative, proof, captures, ct);
         _stage = "source_unavailable";
         await NavigateAsync(window, graph, StudentPage.FindCourses);
         source.FailInteractiveSearch = true;
@@ -222,6 +230,7 @@ internal static partial class StudentUiValidation
         clock.AdvanceUtc(TimeSpan.FromDays(2)); graph.Shell.RefreshAges();
         Require(graph.Watches.State.Details!.Health.EffectiveWatchStatus == WatchStatus.Expired, "ui_expiry_not_projected");
         captures.Add(await CaptureAsync(profile, window, "ui-expired-ko.png", false, ct));
+        proof = await VerifySavedAlertsUiAsync(profile, window, graph, source, proof, captures, ct);
         Require(graph.LastErrorCode is null && actions.NativeTestRequests == 0, "ui_unexpected_graph_or_native_action");
         return proof with { Expiry = true, PreferencesRevision = graph.Settings.Model.State.Stored!.Revision };
     }
@@ -269,7 +278,12 @@ internal static partial class StudentUiValidation
 
     private static async Task NavigateAsync(StudentWindow window, StudentDesktopSession graph, StudentPage page)
     {
-        var name = page switch { StudentPage.FindCourses => "FindNavigation", StudentPage.MyWatches => "WatchesNavigation", _ => "SettingsNavigation" };
+        var name = page switch
+        {
+            StudentPage.FindCourses => "FindNavigation", StudentPage.MyWatches => "WatchesNavigation",
+            StudentPage.Alerts => "AlertsNavigation", StudentPage.Settings => "SettingsNavigation",
+            _ => throw new ArgumentOutOfRangeException(nameof(page)),
+        };
         Named<RadioButton>(window, name).SetCurrentValue(ToggleButton.IsCheckedProperty, true);
         await PumpUiAsync(window);
         Require(graph.Shell.SelectedPage == page, "ui_navigation_binding_failed");

@@ -17,9 +17,9 @@ public sealed class StoreUiMigrationTests
 
         await using var store = await SqliteWatchStore.OpenAsync(fixture.Factory);
 
-        Assert.Equal(4, fixture.Version);
+        Assert.Equal(5, fixture.Version);
         var backup = Assert.Single(fixture.Backups());
-        Assert.StartsWith(Path.GetFileName(fixture.DatabasePath) + ".before-v4-", Path.GetFileName(backup), StringComparison.Ordinal);
+        Assert.StartsWith(Path.GetFileName(fixture.DatabasePath) + ".before-v5-", Path.GetFileName(backup), StringComparison.Ordinal);
         StoreBatchV2Fixture.AssertStandaloneBackup(backup, 3);
         using (var saved = new SqliteConnectionFactory(backup).Open(SqliteOpenMode.ReadOnly))
             Assert.Equal(original, StoreUiV3Fixture.LogicalSnapshot(saved));
@@ -37,7 +37,7 @@ public sealed class StoreUiMigrationTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    public async Task GenuineEarlierProducerUpgradesDirectlyToFourWithOneBackupOfItsOriginalVersion(int version)
+    public async Task GenuineEarlierProducerUpgradesDirectlyToFiveWithOneBackupOfItsOriginalVersion(int version)
     {
         using var one = version == 1 ? new StoreLegacyV1Fixture() : null;
         using var two = version == 2 ? new StoreBatchV2Fixture() : null;
@@ -48,9 +48,9 @@ public sealed class StoreUiMigrationTests
         await using var store = await SqliteWatchStore.OpenAsync(factory);
 
         using var upgraded = factory.Open(SqliteOpenMode.ReadOnly);
-        Assert.Equal(4L, StoreBatchV2Fixture.Scalar(upgraded, "PRAGMA user_version;"));
+        Assert.Equal(5L, StoreBatchV2Fixture.Scalar(upgraded, "PRAGMA user_version;"));
         var backup = Assert.Single(StoreBatchV2Fixture.AllBackups(path));
-        Assert.Contains(".before-v4-", backup, StringComparison.Ordinal);
+        Assert.Contains(".before-v5-", backup, StringComparison.Ordinal);
         StoreBatchV2Fixture.AssertStandaloneBackup(backup, version);
         using var saved = new SqliteConnectionFactory(backup).Open(SqliteOpenMode.ReadOnly);
         Assert.Equal(before, version == 1 ? StoreLegacyV1Fixture.LogicalSnapshot(saved) : StoreBatchV2Fixture.LogicalSnapshot(saved));
@@ -64,7 +64,7 @@ public sealed class StoreUiMigrationTests
     [InlineData(SqliteStoreWriteStage.MigrationBackup, true)]
     [InlineData(SqliteStoreWriteStage.MigrationDdl, true)]
     [InlineData(SqliteStoreWriteStage.MigrationVersion, true)]
-    public async Task InterruptedV3UpgradeRollsBackAllFourTablesAndPreservesVerifiedBackup(SqliteStoreWriteStage stage, bool completedBackup)
+    public async Task InterruptedV3UpgradeRollsBackUiTablesAndHistoryIndexAndPreservesVerifiedBackup(SqliteStoreWriteStage stage, bool completedBackup)
     {
         using var fixture = new StoreUiV3Fixture();
         var original = fixture.LogicalSnapshot();
@@ -77,7 +77,7 @@ public sealed class StoreUiMigrationTests
         Assert.Equal(completedBackup ? 1 : 0, fixture.Backups().Length);
         if (completedBackup) StoreBatchV2Fixture.AssertStandaloneBackup(Assert.Single(fixture.Backups()), 3);
         await using var retry = await SqliteWatchStore.OpenAsync(fixture.Factory);
-        Assert.Equal(4, fixture.Version);
+        Assert.Equal(5, fixture.Version);
     }
 
     [Theory]
@@ -135,7 +135,7 @@ public sealed class StoreUiMigrationTests
         finally { release.Set(); }
         await using var firstStore = await first.WaitAsync(TimeSpan.FromSeconds(10));
         await using var secondStore = await second!.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.Equal(4, fixture.Version);
+        Assert.Equal(5, fixture.Version);
         StoreBatchV2Fixture.AssertStandaloneBackup(Assert.Single(fixture.Backups()), 3);
     }
 

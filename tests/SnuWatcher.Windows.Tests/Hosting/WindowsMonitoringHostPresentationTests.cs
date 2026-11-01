@@ -146,6 +146,7 @@ public sealed class WindowsMonitoringHostPresentationTests
         var options = new RuntimeSessionOptions(deliveryEnabled: true);
         var opened = await WindowsMonitoringHost.OpenMonitoringOnlyForTestingAsync(fixture.Profile, factories, options: options);
         await using var host = opened.Host!;
+        Assert.False(host.NotifyDeliveryChannelChanged());
         Assert.True(options.DeliveryEnabled);
         await host.WatchCommands.CreateAsync(new NewSubscription(Guid.NewGuid(), "Private monitoring-only watch", SubscriptionKind.Section,
             [Key], true, null, DateTimeOffset.UtcNow));

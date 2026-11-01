@@ -2,6 +2,7 @@ using SnuWatcher.Application.Delivery;
 using SnuWatcher.Application.Delivery.Batches;
 using SnuWatcher.Application.Monitoring.Hosting;
 using SnuWatcher.Application.Presentation.Preferences;
+using SnuWatcher.Application.Presentation.Alerts;
 using SnuWatcher.Application.Presentation.Reads;
 using SnuWatcher.Application.Presentation.Terms;
 
@@ -13,6 +14,8 @@ public sealed partial class WindowsMonitoringHost
     public IRuntimeCourseQueries Courses => _session.Courses;
     /// <summary>Bounded, consistent dashboard reads admitted and drained by the session.</summary>
     public IWatchDashboardReader Dashboard => _session.Dashboard;
+    /// <summary>Owned durable event history, separate from source freshness and notification visibility.</summary>
+    public IAlertHistoryReader Alerts => _session.Alerts;
     /// <summary>Owned preference reads/saves; this view never exposes the injected store.</summary>
     public IUiPreferencesStore Preferences => _session.Preferences;
     /// <summary>Owned nonauthoritative offline term hints, distinct from a live source catalog.</summary>
@@ -48,7 +51,9 @@ public sealed partial class WindowsMonitoringHost
     private sealed class MonitoringOnlyChannel : IBatchDesktopAlertChannel
     {
         internal static MonitoringOnlyChannel Instance { get; } = new();
-        public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken) =>
+        public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(BatchChannelReadiness.Disabled); }
+        public Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Desktop alert delivery is disabled in monitoring-only mode.");
     }
 }

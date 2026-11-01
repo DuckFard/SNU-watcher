@@ -5,6 +5,7 @@ using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Application.Presentation.Reads;
 using SnuWatcher.Application.Presentation.Terms;
 using SnuWatcher.Windows.Presentation.Common;
+using SnuWatcher.Windows.Presentation.Alerts;
 using SnuWatcher.Windows.Presentation.Search;
 using SnuWatcher.Windows.Presentation.Settings;
 using SnuWatcher.Windows.Presentation.Watches;
@@ -22,6 +23,7 @@ public sealed partial class StudentShellViewModel : INotifyPropertyChanged, IAsy
     private readonly Action<string> reportError;
     private readonly UiAsyncCommand[] commands;
     private readonly StudentAlertsPlaceholder alerts = new();
+    private readonly AlertHistoryViewModel? alertHistory;
     private SourceStatusSnapshot? storedSource;
     private ShellRuntimeFacts? runtime;
     private RuntimeFailure? failure;
@@ -41,9 +43,11 @@ public sealed partial class StudentShellViewModel : INotifyPropertyChanged, IAsy
     /// <param name="isDemo">Explicit private demonstration label.</param>
     /// <param name="controls">Optional host source-control bridge.</param>
     /// <param name="reportError">Fixed diagnostic observer.</param>
+    /// <param name="alertHistory">Optional desktop-owned durable history controller.</param>
     public StudentShellViewModel(CourseSearchViewModel search, WatchListViewModel watches, SettingsViewModel settings,
         IWatchDashboardReader dashboard, ITermHintCache termHints, IUiDispatcher dispatcher, TimeProvider clock,
-        bool isDemo = false, ISourceUiControls? controls = null, Action<string>? reportError = null)
+        bool isDemo = false, ISourceUiControls? controls = null, Action<string>? reportError = null,
+        AlertHistoryViewModel? alertHistory = null)
     {
         ArgumentNullException.ThrowIfNull(search); ArgumentNullException.ThrowIfNull(watches); ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(dashboard); ArgumentNullException.ThrowIfNull(termHints);
@@ -51,6 +55,7 @@ public sealed partial class StudentShellViewModel : INotifyPropertyChanged, IAsy
         Search = search; Watches = watches; Settings = settings;
         this.dashboard = dashboard; this.termHints = termHints; this.dispatcher = dispatcher; this.clock = clock;
         this.controls = controls; this.reportError = reportError ?? (_ => { });
+        this.alertHistory = alertHistory;
         Model = new(new(StudentPage.FindCourses, false, isDemo, true, UiLanguage.English, UiCloseBehavior.MinimizeToTray,
             null, ShellSourceProjector.Project(null, null, null, clock.GetUtcNow(), TimeSpan.Zero, false, controls is not null), null), dispatcher, this.reportError);
         LoadCommand = new(LoadCoreAsync, dispatcher, this.reportError);
@@ -76,9 +81,10 @@ public sealed partial class StudentShellViewModel : INotifyPropertyChanged, IAsy
     public StudentShellState State => Model.State;
     /// <summary>Navigation binding; setters require the UI dispatcher.</summary>
     public StudentPage SelectedPage { get => State.SelectedPage; set => Navigate(value); }
-    /// <summary>Typed child controller or honest inactive-alert placeholder for a desktop data template.</summary>
+    /// <summary>Typed desktop-owned child, with an unavailable-history placeholder for legacy compositions.</summary>
     public object PageContent => SelectedPage switch
-    { StudentPage.FindCourses => Search, StudentPage.MyWatches => Watches, StudentPage.Settings => Settings, _ => alerts };
+    { StudentPage.FindCourses => Search, StudentPage.MyWatches => Watches, StudentPage.Settings => Settings,
+        _ => (object?)alertHistory ?? alerts };
     /// <summary>Reads local preferences, hints and source status only.</summary>
     public UiAsyncCommand LoadCommand { get; }
     /// <summary>Rereads durable source status without HTTP.</summary>
@@ -103,6 +109,7 @@ public sealed partial class StudentShellViewModel : INotifyPropertyChanged, IAsy
         Model.Replace(State with { SelectedPage = page });
         if (page == StudentPage.MyWatches) RequestWatchReload(force: true);
         if (page == StudentPage.Settings) Settings.ReloadCommand.Execute(null);
+        if (page == StudentPage.Alerts) alertHistory?.ReloadCommand.Execute(null);
     }
 
     /// <summary>The desktop is the sole runtime-channel consumer and calls this on its dispatcher.</summary>

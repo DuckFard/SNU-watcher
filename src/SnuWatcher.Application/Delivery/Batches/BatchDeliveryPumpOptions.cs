@@ -25,5 +25,6 @@ public sealed record BatchDeliveryPumpOptions
     public TimeSpan IdleInterval => TimeSpan.FromSeconds(1);
     public TimeSpan RetryDelay => TimeSpan.FromSeconds(5);
     public TimeSpan FreshRequestInterval => TimeSpan.FromSeconds(5);
+    public TimeSpan ChannelRecheckInterval => TimeSpan.FromSeconds(30);
     public TimeSpan MinimumSubmissionInterval => TimeSpan.FromSeconds(1);
 }

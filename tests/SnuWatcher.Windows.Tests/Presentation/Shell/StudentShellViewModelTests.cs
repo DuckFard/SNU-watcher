@@ -10,6 +10,25 @@ namespace SnuWatcher.Windows.Tests.Presentation.Shell;
 public sealed class StudentShellViewModelTests
 {
     [Fact]
+    public async Task AlertsNavigationReadsOnlyInjectedLocalHistoryAndShellDoesNotOwnItsLifetime()
+    {
+        await using var fixture = new ShellFixture(history: true);
+        await fixture.Shell.LoadInitialAsync();
+        Assert.Equal(0, fixture.History.Reads);
+        await fixture.Dispatcher.InvokeAsync(() => fixture.Shell.Navigate(StudentPage.Alerts));
+        await ShellFixture.EventuallyAsync(() => fixture.Alerts!.State.IsLoaded && !fixture.Alerts.ReloadCommand.IsExecuting);
+        Assert.Same(fixture.Alerts, fixture.Shell.PageContent);
+        Assert.Equal(1, fixture.History.Reads);
+        await fixture.Dispatcher.InvokeAsync(() => fixture.Shell.Navigate(StudentPage.FindCourses));
+        await fixture.Dispatcher.InvokeAsync(() => fixture.Shell.Navigate(StudentPage.Alerts));
+        await ShellFixture.EventuallyAsync(() => fixture.History.Reads == 2 && !fixture.Alerts!.ReloadCommand.IsExecuting);
+        await fixture.Shell.DisposeAsync();
+        Assert.Equal(UiCommandOutcome.Completed, await fixture.Alerts!.ReloadCommand.ExecuteAsync());
+        Assert.Equal(3, fixture.History.Reads);
+        Assert.Equal(0, fixture.Ports.HttpCalls);
+    }
+
+    [Fact]
     public async Task LocalStartupExposesCachedHintsWithoutAuthorizingSearchOrCallingSource()
     {
         await using var fixture = new ShellFixture(demo: true);

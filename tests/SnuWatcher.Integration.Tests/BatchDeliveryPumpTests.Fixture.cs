@@ -24,8 +24,9 @@ public sealed partial class BatchDeliveryPumpTests
         public override long TimestampFrequency => _clock.TimestampFrequency;
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
+            var timer = _clock.CreateTimer(callback, state, dueTime, period);
             _timers.Writer.TryWrite(dueTime);
-            return _clock.CreateTimer(callback, state, dueTime, period);
+            return timer;
         }
         public void Advance(TimeSpan amount)
         {
@@ -47,12 +48,15 @@ public sealed partial class BatchDeliveryPumpTests
     private sealed class PumpChannel(PumpClock clock) : IBatchDesktopAlertChannel
     {
         public ConcurrentQueue<(BatchDeliveryEnvelope Envelope, long Started)> Calls { get; } = new();
-        public Func<BatchDeliveryEnvelope, CancellationToken, Task<DesktopAlertOutcome>> Handler { get; set; } =
-            (_, _) => Task.FromResult(DesktopAlertOutcome.OsAccepted);
-        public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken token)
+        public Func<BatchDeliveryEnvelope, CancellationToken, Task<BatchChannelOutcome>> Handler { get; set; } =
+            (_, _) => Task.FromResult(BatchChannelOutcome.OsAccepted);
+        public Func<CancellationToken, Task<BatchChannelReadiness>> Readiness { get; set; } = _ => Task.FromResult(BatchChannelReadiness.Ready);
+        public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken token) => Readiness(token);
+        public async Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken token)
         {
+            var envelope = submission.Envelope;
             Calls.Enqueue((envelope, clock.GetTimestamp()));
-            return Handler(envelope, token);
+            return new BatchChannelResult(await Handler(envelope, token));
         }
     }
 

@@ -35,6 +35,7 @@ public sealed class BatchDeliveryPumpContractTests
         Assert.Equal(32, options.MaxWorkPerTurn);
         Assert.Equal(TimeSpan.FromSeconds(1), options.MinimumSubmissionInterval);
         Assert.Equal(TimeSpan.FromSeconds(5), options.RetryDelay);
+        Assert.Equal(TimeSpan.FromSeconds(30), options.ChannelRecheckInterval);
         Assert.Throws<ArgumentOutOfRangeException>(() => new BatchDeliveryPumpOptions(pageSize: 201));
         Assert.Throws<ArgumentOutOfRangeException>(() => new BatchDeliveryPumpOptions(maxWorkPerTurn: 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => new BatchDeliveryPumpOptions(maxTrackedSections: 0));

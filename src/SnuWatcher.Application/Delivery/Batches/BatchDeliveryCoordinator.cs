@@ -115,6 +115,14 @@ public sealed class BatchDeliveryCoordinator
         var decision = BatchDeliveryPlanner.Plan(context, now);
         if (decision.Disposition is not (BatchPlanDisposition.Send or BatchPlanDisposition.ResolveWithoutSend))
             return PlanResult(context, decision);
+        if (decision.Disposition == BatchPlanDisposition.Send)
+        {
+            if (await ReadinessResultAsync(batchId, cancellationToken).ConfigureAwait(false) is { } blocked) return blocked;
+            now = _clock.GetUtcNow();
+            decision = BatchDeliveryPlanner.Plan(context, now);
+            if (decision.Disposition is not (BatchPlanDisposition.Send or BatchPlanDisposition.ResolveWithoutSend))
+                return PlanResult(context, decision);
+        }
         BatchReservationResult reservation;
         var prepared = new PreparedBatchAttempt(Guid.NewGuid(), context, decision, now);
         try
@@ -128,50 +136,93 @@ public sealed class BatchDeliveryCoordinator
             return new(BatchDeliveryRunDisposition.NeedsRecovery, "reservation_result_unknown", batchId);
         }
         if (reservation.Batch.Id != batchId || reservation.Batch.Key != key
-            || (reservation.Attempt is { } returned && returned.ReservationRequestId != prepared.ReservationRequestId))
+            || (reservation.Attempt is { } returned && (returned.ReservationRequestId != prepared.ReservationRequestId
+                || returned.Envelope.BatchId != batchId || returned.Envelope.Key != key)))
             return new(BatchDeliveryRunDisposition.NeedsRecovery, "reservation_authority_mismatch", batchId);
         if (reservation.Status != BatchReservationStatus.Reserved) return ReservationResult(reservation);
-        var attempt = reservation.Attempt!;
+        return await SubmitReservedAsync(key, context, decision, reservation.Attempt!, policy, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<BatchDeliveryRunResult> SubmitReservedAsync(SectionKey key, BatchDeliveryContext context,
+        BatchDeliveryDecision decision, BatchAttemptSnapshot attempt, BatchDeliveryPolicy policy, CancellationToken cancellationToken)
+    {
+        var validatedAt = _clock.GetUtcNow();
         var preflight = cancellationToken.IsCancellationRequested ? "not_submitted_cancelled"
-            : Preflight(context, decision, attempt, policy);
+            : Preflight(context, decision, attempt, policy, validatedAt);
+        BatchDesktopSubmission? submission = null;
+        if (preflight is null)
+        {
+            try { submission = new(attempt.Envelope, validatedAt, context.ValidUntilUtc, policy.MaxAge); }
+            catch (ArgumentException) { preflight = "not_submitted_facts_changed"; }
+        }
         if (preflight is null && cancellationToken.IsCancellationRequested) preflight = "not_submitted_cancelled";
         if (preflight is not null)
             return await RetainAndRecordAsync(key, attempt, BatchAttemptResultOutcome.NotSubmitted, null, preflight, submitted: false).ConfigureAwait(false);
-        var actual = await InvokeAsync(attempt.Envelope, cancellationToken).ConfigureAwait(false);
-        return await RetainAndRecordAsync(key, attempt, actual.Result, actual.Channel, actual.Code, submitted: true).ConfigureAwait(false);
+        var actual = await InvokeAsync(submission!, cancellationToken).ConfigureAwait(false);
+        return await RetainAndRecordAsync(key, attempt, actual.Result, actual.Channel, actual.Code,
+            submitted: actual.Result != BatchAttemptResultOutcome.NotSubmitted).ConfigureAwait(false);
     }
 
-    private string? Preflight(BatchDeliveryContext context, BatchDeliveryDecision decision, BatchAttemptSnapshot attempt, BatchDeliveryPolicy policy)
+    private async Task<BatchDeliveryRunResult?> ReadinessResultAsync(Guid batchId, CancellationToken token)
     {
+        BatchChannelReadiness readiness;
+        try { readiness = await _channel.ReadReadinessAsync(token).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception) { readiness = BatchChannelReadiness.Unavailable; }
+        token.ThrowIfCancellationRequested();
+        return readiness == BatchChannelReadiness.Ready ? null : new(BatchDeliveryRunDisposition.ChannelDeferred,
+            readiness switch
+            {
+                BatchChannelReadiness.Initializing => "channel_initializing",
+                BatchChannelReadiness.Disabled => "channel_disabled",
+                _ => "channel_unavailable",
+            }, batchId);
+    }
+
+    private static string? Preflight(BatchDeliveryContext context, BatchDeliveryDecision decision,
+        BatchAttemptSnapshot attempt, BatchDeliveryPolicy policy, DateTimeOffset now)
+    {
+        if (now < attempt.PreparedAtUtc) return "not_submitted_clock_changed";
         var content = decision.Content;
         var envelope = attempt.Envelope;
         if (content is null || attempt.Policy != policy || envelope.Key != content.Key || envelope.CurrentCounts != content.CurrentCounts
             || envelope.CurrentSuccessAtUtc != content.CurrentSuccessAtUtc || envelope.CurrentSourceOrdinal != content.CurrentSourceOrdinal
             || envelope.Coverage != content.Coverage || !BatchValidation.SameRecipients(envelope.EligibleRecipients, content.EligibleRecipients))
             return "not_submitted_facts_changed";
-        var current = BatchDeliveryPlanner.Plan(context, _clock.GetUtcNow());
+        var current = BatchDeliveryPlanner.Plan(context, now);
         return current.Disposition == BatchPlanDisposition.Send ? null : "not_submitted_" + current.ReasonCode;
     }
 
-    private async Task<(BatchAttemptResultOutcome Result, DesktopAlertOutcome? Channel, string Code)> InvokeAsync(
-        BatchDeliveryEnvelope envelope, CancellationToken cancellationToken)
+    private async Task<(BatchAttemptResultOutcome Result, BatchChannelOutcome? Channel, string Code)> InvokeAsync(
+        BatchDesktopSubmission submission, CancellationToken cancellationToken)
     {
         try
         {
-            return await _channel.SendAsync(envelope, cancellationToken).ConfigureAwait(false) switch
+            return await _channel.SendAsync(submission, cancellationToken).ConfigureAwait(false) switch
             {
-                DesktopAlertOutcome.OsAccepted => (BatchAttemptResultOutcome.OsAccepted, DesktopAlertOutcome.OsAccepted, "os_accepted"),
-                DesktopAlertOutcome.RetryableFailure => (BatchAttemptResultOutcome.RetryableFailure, DesktopAlertOutcome.RetryableFailure, "desktop_retryable_failure"),
-                _ => (BatchAttemptResultOutcome.InterruptedUnknown, null, "channel_result_unknown"),
+                { Outcome: BatchChannelOutcome.OsAccepted } => (BatchAttemptResultOutcome.OsAccepted, BatchChannelOutcome.OsAccepted, "os_accepted"),
+                { Outcome: BatchChannelOutcome.RetryableFailure } => (BatchAttemptResultOutcome.RetryableFailure, BatchChannelOutcome.RetryableFailure, "desktop_retryable_failure"),
+                { Outcome: BatchChannelOutcome.NotSubmitted, NoSubmissionReason: { } reason } =>
+                    (BatchAttemptResultOutcome.NotSubmitted, BatchChannelOutcome.NotSubmitted, NoSubmissionCode(reason)),
+                _ => (BatchAttemptResultOutcome.InterruptedUnknown, BatchChannelOutcome.AcceptanceUnknown, "channel_result_unknown"),
             };
         }
         // The driver contract guarantees the actual operation stopped before returning/throwing.
         // No returned OS result means uncertainty, including caller cancellation after invocation.
-        catch (Exception) { return (BatchAttemptResultOutcome.InterruptedUnknown, null, "channel_result_unknown"); }
+        catch (Exception) { return (BatchAttemptResultOutcome.InterruptedUnknown, BatchChannelOutcome.AcceptanceUnknown, "channel_result_unknown"); }
     }
 
+    private static string NoSubmissionCode(BatchNoSubmissionReason reason) => reason switch
+    {
+        BatchNoSubmissionReason.Cancelled => "not_submitted_cancelled",
+        BatchNoSubmissionReason.ChannelNotReady => "not_submitted_channel_not_ready",
+        BatchNoSubmissionReason.ValidityChanged => "not_submitted_validity_changed",
+        BatchNoSubmissionReason.PayloadRejected => "not_submitted_payload_rejected",
+        _ => throw new ArgumentOutOfRangeException(nameof(reason)),
+    };
+
     private async Task<BatchDeliveryRunResult> RetainAndRecordAsync(SectionKey key, BatchAttemptSnapshot attempt,
-        BatchAttemptResultOutcome outcome, DesktopAlertOutcome? channel, string code, bool submitted)
+        BatchAttemptResultOutcome outcome, BatchChannelOutcome? channel, string code, bool submitted)
     {
         var command = new BatchAttemptResultCommand(attempt.AttemptId, outcome, code, _clock.GetUtcNow());
         var known = new KnownResult(attempt.Envelope.BatchId, attempt.Envelope.Coverage.EventCount, command, channel);
@@ -224,5 +275,5 @@ public sealed class BatchDeliveryCoordinator
         }, reservation.ReasonCode, reservation.Batch.Id, reservation.Attempt?.AttemptId ?? reservation.UnresolvedAttemptId,
             receipt: reservation.Resolution);
 
-    private sealed record KnownResult(Guid BatchId, long CoveredCount, BatchAttemptResultCommand Command, DesktopAlertOutcome? Channel);
+    private sealed record KnownResult(Guid BatchId, long CoveredCount, BatchAttemptResultCommand Command, BatchChannelOutcome? Channel);
 }

@@ -90,7 +90,7 @@ public sealed partial class SettingsViewModel
         { await ApplyCoreAsync(current, token).ConfigureAwait(false); return current; }
         var values = current.Values;
         var completed = new UiPreferencesValues(values.Language, values.SelectedYear, values.TermHint,
-            values.DesiredProfile, values.CloseBehavior, version);
+            values.DesiredProfile, values.CloseBehavior, version, values.NotificationSoundMuted);
         pendingWrite = new(new(Guid.NewGuid(), current.Revision, completed), WriteOrigin.Onboarding, 0);
         var result = await WritePendingAsync(token).ConfigureAwait(false);
         if (result is null || result.Status == UiPreferencesSaveStatus.VersionConflict)

@@ -204,13 +204,13 @@ function Assert-UiWorkArea($Result) {
 }
 
 function Assert-UiResult($Result, [string]$RunId, [int]$OwnedProcessId) {
-    $null = Assert-UiInteger $Result 'schemaVersion' 1 1
+    $null = Assert-UiInteger $Result 'schemaVersion' 2 2
     $null = Assert-UiInteger $Result 'processId' $OwnedProcessId $OwnedProcessId
     if ((Get-UiField $Result 'codePath') -cne 'ui-validation' -or (Get-UiField $Result 'runId') -cne $RunId -or
         (Get-UiField $Result 'testStatus') -cne 'PASSED' -or (Get-UiField $Result 'code') -cne 'student_ui_validation_passed') {
         throw 'The private UI result does not identify this exact run and executable process.'
     }
-    foreach ($name in @('profileGuarded','isDemo','noLiveHttp','noOsNotifications','noBrowser','noClipboard','noSimulatedAcceptance',
+    foreach ($name in @('profileGuarded','isDemo','noLiveHttp','noOsNotifications','noBrowser','noClipboard','noSimulatedAcceptance','noSimulatedDeliveryAcceptance',
             'deliveryDisabled','localStartupOnly','initializationJoined','graphDrained','hostDrained','reopenStable','ownerHandoff',
             'ownerRetainedDuringDrain','sourceDisposed','quitObserved','glyphGuardsVerified')) { Assert-UiTrue $Result $name }
     foreach ($name in @('httpRequests','nativeNotificationCalls','browserCalls','clipboardCalls','channelCalls','bindingErrors')) {
@@ -221,7 +221,21 @@ function Assert-UiResult($Result, [string]$RunId, [int]$OwnedProcessId) {
     $journey = Get-UiField $Result 'journey'
     foreach ($name in @('onboarding','englishKorean','leadingZeroLookup','detailsQuotaSeparated','groupWatch','autoRoutedWatch',
             'pauseResume','rename','expiry','profileApplied','fullVsUnknown','interactiveUnavailable','invalidYearBlocked',
-            'tabTraversal','enterSearch','fixedActionIntents','terminalStoppingVisible')) { Assert-UiTrue $journey $name }
+            'tabTraversal','enterSearch','fixedActionIntents','terminalStoppingVisible','savedSoundMute','simulatedNativeStatus',
+            'simulatedNativeTest','simulatedFeedbackScoped','savedAlertHistory','originalAlertIdentitySeats','boundedAlertDetails')) { Assert-UiTrue $journey $name }
+    if ((Get-UiField $Result 'noSimulatedAcceptanceScope') -cne 'durable-production-delivery-only') {
+        throw 'Simulated-acceptance safety evidence must explicitly refer to durable production delivery.'
+    }
+    $simulated = Get-UiField $Result 'simulatedNativeTest'
+    if ((Get-UiField $simulated 'driver') -cne 'deterministic-offline-controls' -or
+        (Get-UiField $simulated 'observationScope') -cne 'programmatic-ui-only-no-human-seen-or-heard-evidence') {
+        throw 'The offline native-test fixture must not be reported as Windows or human observation evidence.'
+    }
+    $null = Assert-UiInteger $simulated 'statusProbes' 2 100
+    $null = Assert-UiInteger $simulated 'fixtureAcceptedReceipts' 2 2
+    $null = Assert-UiInteger $simulated 'programmaticConfirmations' 2 2
+    $null = Assert-UiInteger $simulated 'realNativeCalls' 0 0
+    $null = Assert-UiInteger $simulated 'legacyGuardCalls' 0 0
     $source = Get-UiField $Result 'source'
     $null = Assert-UiInteger $source 'catalogCalls' 1 100
     $null = Assert-UiInteger $source 'interactiveSearchCalls' 3 100
@@ -232,10 +246,12 @@ function Assert-UiResult($Result, [string]$RunId, [int]$OwnedProcessId) {
 
 function Copy-UiCaptures($Result, [string]$ProfileRoot, [string]$RunRoot) {
     $captures = @(Get-UiField $Result 'captures')
-    if ($captures.Count -ne 12) { throw 'Unexpected number of private UI captures.' }
+    if ($captures.Count -ne 17) { throw 'Unexpected number of private UI captures.' }
     $allowed = @('ui-onboarding-en.png','ui-search-en-normal.png','ui-search-ko-normal.png','ui-search-ko-narrow.png',
         'ui-watches-en-normal.png','ui-watches-ko-narrow.png','ui-settings-en-normal.png','ui-expired-ko.png',
-        'ui-actual-search.png','ui-actual-watches-list.png','ui-actual-watches-details.png','ui-actual-settings.png')
+        'ui-actual-search.png','ui-actual-watches-list.png','ui-actual-watches-details.png','ui-actual-settings.png',
+        'ui-simulated-native-en.png','ui-simulated-native-ko-narrow.png','ui-alerts-en-normal.png',
+        'ui-alerts-ko-narrow.png','ui-alerts-ko-details-narrow.png')
     $seen = @{}
     $destination = Join-Path $RunRoot 'captures'
     $null = [IO.Directory]::CreateDirectory($destination)
@@ -421,7 +437,7 @@ Write-UiNewText $resultCopyPath ($result | ConvertTo-Json -Depth 10 -Compress)
 $invalid = Invoke-OwnedStudentUi $exe '--ui-validation-wrong' 'invalid' $runRoot
 if ($invalid.ExitCode -ne 2 -or (Get-Item -LiteralPath $invalid.Stdout -Force).Length -ne 0) { throw 'Invalid UI input did not exit privately with code 2.' }
 $rejection = Read-UiJson $invalid.Stderr
-$null = Assert-UiInteger $rejection 'schemaVersion' 1 1
+$null = Assert-UiInteger $rejection 'schemaVersion' 2 2
 foreach ($name in @('httpRequests','nativeNotificationCalls','browserCalls','clipboardCalls')) { $null = Assert-UiInteger $rejection $name 0 0 }
 if ((Get-UiField $rejection 'codePath') -cne 'ui-validation' -or (Get-UiField $rejection 'testStatus') -cne 'REJECTED' -or
     (Get-UiField $rejection 'code') -cne 'invalid_ui_validation_argument') { throw 'Invalid UI input escaped its private rejection route.' }
@@ -436,4 +452,5 @@ $runManifest = [PSCustomObject]@{ schemaVersion=1; runId=$runId; validProcessId=
 Write-UiNewText (Join-Path $runRoot 'run-manifest.json') ($runManifest | ConvertTo-Json -Compress)
 $result | ConvertTo-Json -Depth 10 -Compress
 Write-Output 'Published offline UI validation passed. Browser/clipboard intentions were recorded; no HTTP or OS notifications were used.'
+Write-Output 'Native-test results and confirmation buttons were simulated; they are not Windows acceptance or human seen/heard evidence.'
 Write-Output 'PNG export DPI is recorded separately from actual Windows DPI. These are not separate Windows DPI-mode qualification tests.'

@@ -62,7 +62,9 @@ public sealed class WindowsMonitoringHostTests
             while (host.Session.LatestSnapshot is null) await Task.Delay(10, deadline.Token);
             Assert.Equal(0, source.Calls);
             Assert.Equal(WindowsMonitoringHostState.Running, host.State);
+            Assert.True(host.NotifyDeliveryChannelChanged());
             Assert.True((await host.StopAsync()).IsFinalized);
+            Assert.False(host.NotifyDeliveryChannelChanged());
             Assert.True(source.Disposed);
             var replacement = await DatabaseOwnerGate.TryAcquireAsync(fixture.Profile.ApplicationId);
             Assert.Equal(DatabaseOwnerDisposition.Acquired, replacement.Disposition);
@@ -88,6 +90,8 @@ public sealed class WindowsMonitoringHostTests
 internal sealed class HostTestChannel : IBatchDesktopAlertChannel
 {
     internal int Calls;
-    public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken)
-    { Interlocked.Increment(ref Calls); return Task.FromResult(DesktopAlertOutcome.OsAccepted); }
+    public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken cancellationToken)
+    { cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(BatchChannelReadiness.Ready); }
+    public Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken)
+    { Interlocked.Increment(ref Calls); return Task.FromResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted)); }
 }

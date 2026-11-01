@@ -90,10 +90,15 @@ internal sealed class StudentUiValidationChannel : IBatchDesktopAlertChannel
 {
     private int _calls;
     internal int Calls => Volatile.Read(ref _calls);
-    public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken)
+    public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested(); Interlocked.Increment(ref _calls);
+        return Task.FromResult(BatchChannelReadiness.Disabled);
+    }
+    public Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref _calls);
-        return Task.FromException<DesktopAlertOutcome>(new InvalidOperationException("ui_validation_delivery_must_be_disabled"));
+        return Task.FromException<BatchChannelResult>(new InvalidOperationException("ui_validation_delivery_must_be_disabled"));
     }
 }
 

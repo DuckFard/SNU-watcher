@@ -25,6 +25,23 @@ public sealed class StoreUiPreferencesTests
     }
 
     [Fact]
+    public async Task MutedSoundRoundTripsAcrossReopenAsAnExplicitBooleanWithoutLosingOtherFields()
+    {
+        await using var fixture = await StoreFixture.CreateAsync();
+        Assert.Equal(5L, Scalar(fixture, "PRAGMA user_version;"));
+        var prior = Values();
+        var muted = new UiPreferencesValues(prior.Language, prior.SelectedYear, prior.TermHint,
+            prior.DesiredProfile, prior.CloseBehavior, prior.OnboardingVersion, notificationSoundMuted: true);
+        var saved = await Preferences(fixture).TrySaveAsync(new(Guid.NewGuid(), 0, muted));
+        await fixture.ReopenAsync();
+        Assert.Equal(saved.CurrentSnapshot, await Preferences(fixture).ReadAsync());
+        Assert.True((await Preferences(fixture).ReadAsync()).Values.NotificationSoundMuted);
+        using var json = System.Text.Json.JsonDocument.Parse((string)Scalar(fixture, "SELECT valuesJson FROM UiPreferences;")!);
+        Assert.Equal(2, json.RootElement.GetProperty("version").GetInt32());
+        Assert.True(json.RootElement.GetProperty("soundMuted").GetBoolean());
+    }
+
+    [Fact]
     public async Task SavePersistsSelectedTermAndNamedValuesAcrossReopenWithoutWatchSideEffects()
     {
         await using var fixture = await StoreFixture.CreateAsync();

@@ -27,11 +27,13 @@ public sealed class BatchDeliveryPump
     private int _lifetime;
     private long _sourceGeneration;
     private long _seenSourceGeneration;
+    private long _channelGeneration;
+    private long _seenChannelGeneration;
     private bool _hasSubmitted;
     private long _submissionCompletedAt;
     private SectionKey? _promoted;
     private bool _promotionSeen;
-    private enum DeferredKind { Reserved, Fresh, Retry }
+    private enum DeferredKind { Reserved, Fresh, Retry, Channel }
     private sealed record Deferred(DeferredKind Kind, long StartedAt);
 
     public BatchDeliveryPump(IPendingDeliveryWorkReader reader, BatchDeliveryCoordinator coordinator, TimeProvider clock,
@@ -60,11 +62,12 @@ public sealed class BatchDeliveryPump
     }
 
     /// <summary>Returns wake admission/coalescing status, not monitoring health.</summary>
-    public bool Wake(bool sourceChanged = false)
+    public bool Wake(bool sourceChanged = false, bool channelChanged = false)
     {
         if (Volatile.Read(ref _lifetime) >= 2) return false;
         // A full wake channel must not lose the separate source-change evidence.
         if (sourceChanged) Interlocked.Increment(ref _sourceGeneration);
+        if (channelChanged) Interlocked.Increment(ref _channelGeneration);
         return _wake.Writer.TryWrite(0);
     }
 
@@ -99,6 +102,13 @@ public sealed class BatchDeliveryPump
             foreach (var key in _deferred.Where(pair => pair.Value.Kind == DeferredKind.Fresh).Select(pair => pair.Key).ToArray())
                 _deferred.Remove(key);
             _seenSourceGeneration = generation;
+        }
+        var channelGeneration = Interlocked.Read(ref _channelGeneration);
+        if (channelGeneration != _seenChannelGeneration)
+        {
+            foreach (var key in _deferred.Where(pair => pair.Value.Kind == DeferredKind.Channel).Select(pair => pair.Key).ToArray())
+                _deferred.Remove(key);
+            _seenChannelGeneration = channelGeneration;
         }
         PruneDeferred();
     }
@@ -183,6 +193,10 @@ public sealed class BatchDeliveryPump
     {
         switch (result.Disposition)
         {
+            case BatchDeliveryRunDisposition.ChannelDeferred:
+                Defer(key, DeferredKind.Channel);
+                Notify(key, result.ReasonCode);
+                return ProcessState.Continue;
             case BatchDeliveryRunDisposition.NeedsRecovery:
                 Notify(key, "recovery_required");
                 return ProcessState.Stop;
@@ -197,7 +211,9 @@ public sealed class BatchDeliveryPump
                 return ProcessState.Yield;
             case BatchDeliveryRunDisposition.ResultRecorded:
                 if (knownOnly) Notify(key, "known_result_recorded");
-                if (result.Receipt?.PendingCount > 0) Defer(key, DeferredKind.Retry);
+                if (result.Receipt?.PendingCount > 0)
+                    Defer(key, result.KnownResult?.DiagnosticCode is "not_submitted_channel_not_ready" or "not_submitted_payload_rejected"
+                        ? DeferredKind.Channel : DeferredKind.Retry);
                 else _deferred.Remove(key);
                 return ProcessState.Continue;
             case BatchDeliveryRunDisposition.PendingResultLimit:
@@ -255,7 +271,12 @@ public sealed class BatchDeliveryPump
 
     private TimeSpan Remaining(Deferred state)
     {
-        var duration = state.Kind == DeferredKind.Fresh ? _options.FreshRequestInterval : _options.RetryDelay;
+        var duration = state.Kind switch
+        {
+            DeferredKind.Fresh => _options.FreshRequestInterval,
+            DeferredKind.Channel => _options.ChannelRecheckInterval,
+            _ => _options.RetryDelay,
+        };
         return duration - _clock.GetElapsedTime(state.StartedAt, _clock.GetTimestamp());
     }
 

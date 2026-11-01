@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:prefs="clr-namespace:SnuWatcher.Application.Presentation.Preferences;assembly=SnuWatcher.Application"
              xmlns:monitor="clr-namespace:SnuWatcher.Application.Monitoring.Scheduling;assembly=SnuWatcher.Application"
+             xmlns:batch="clr-namespace:SnuWatcher.Application.Delivery.Batches;assembly=SnuWatcher.Application"
+             xmlns:settings="clr-namespace:SnuWatcher.Windows.Presentation.Settings;assembly=SnuWatcher.Windows"
              xmlns:presentation="clr-namespace:SnuWatcher.Desktop.Presentation">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Settings.BooleanVisibility"/>
@@ -33,6 +35,11 @@
             <TextBlock Text="{DynamicResource Ui.Seconds}" Style="{StaticResource Student.Label}" Margin="5,0,0,0"/>
           </WrapPanel>
           <TextBlock Text="{DynamicResource Ui.RefreshNote}" Style="{StaticResource Student.Label}" Margin="0,0,0,14"/>
+          <CheckBox x:Name="MuteNotificationSoundField" Content="{DynamicResource Ui.MuteNotificationSound}"
+                    IsChecked="{Binding NotificationSoundMuted, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    IsEnabled="{Binding Model.State.CanEdit}" Margin="0,0,0,6"
+                    AutomationProperties.Name="{DynamicResource Ui.MuteNotificationSound}"/>
+          <TextBlock Text="{DynamicResource Ui.NotificationSoundNote}" Style="{StaticResource Student.Label}" Margin="0,0,0,14"/>
           <TextBlock Text="{DynamicResource Ui.CloseBehavior}" Style="{StaticResource Student.Label}"/>
           <ComboBox Style="{StaticResource Student.Select}" SelectedValuePath="Tag"
                     SelectedValue="{Binding CloseBehavior, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -58,7 +65,48 @@
         <StackPanel>
           <TextBlock Text="{DynamicResource Ui.NativeTest}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="SemiBold"/>
           <TextBlock Text="{DynamicResource Ui.NativeTestNote}" Style="{StaticResource Student.Label}" Margin="0,8,0,12"/>
-          <Button Content="{DynamicResource Ui.SendTest}" Command="{Binding NativeTestCommand}" Style="{StaticResource Student.SecondaryButton}" HorizontalAlignment="Left"/>
+          <TextBlock Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite">
+            <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+              <Setter Property="Text" Value="{DynamicResource Ui.NativeUnavailable}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Model.State.NativeStatus.Readiness}" Value="{x:Static batch:BatchChannelReadiness.Initializing}"><Setter Property="Text" Value="{DynamicResource Ui.NativeInitializing}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.NativeStatus.Readiness}" Value="{x:Static batch:BatchChannelReadiness.Ready}"><Setter Property="Text" Value="{DynamicResource Ui.NativeReady}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.NativeStatus.Readiness}" Value="{x:Static batch:BatchChannelReadiness.Disabled}"><Setter Property="Text" Value="{DynamicResource Ui.NativeDisabled}"/></DataTrigger>
+              </Style.Triggers>
+            </Style></TextBlock.Style>
+          </TextBlock>
+          <WrapPanel>
+            <Button Content="{DynamicResource Ui.NativeRefreshStatus}" Command="{Binding RefreshNativeStatusCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.SendTest}" Command="{Binding NativeTestCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+          </WrapPanel>
+          <TextBlock presentation:ResourceText.Key="{Binding Model.State.NativeIssueKey}" Style="{StaticResource Student.Label}"
+                     AutomationProperties.LiveSetting="Polite"/>
+          <StackPanel Margin="0,10,0,0">
+            <StackPanel.Style><Style TargetType="StackPanel">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Model.State.NativeTestReceipt.Result.Outcome}" Value="{x:Static batch:BatchChannelOutcome.OsAccepted}"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.IsNativeBusy}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+              </Style.Triggers>
+            </Style></StackPanel.Style>
+            <TextBlock Text="{DynamicResource Ui.NativeConfirmationPrompt}" Style="{StaticResource Student.Label}"/>
+            <WrapPanel Margin="0,8,0,0">
+              <Button Content="{DynamicResource Ui.NativeSeen}" Tag="{Binding Model.State.NativeTestReceipt.TestId}"
+                      CommandParameter="{x:Static settings:NativeTestBannerConfirmation.Seen}" Click="OnNativeTestConfirmation" Style="{StaticResource Student.SecondaryButton}"/>
+              <Button Content="{DynamicResource Ui.NativeNotSeen}" Tag="{Binding Model.State.NativeTestReceipt.TestId}"
+                      CommandParameter="{x:Static settings:NativeTestBannerConfirmation.NotSeen}" Click="OnNativeTestConfirmation" Style="{StaticResource Student.SecondaryButton}"/>
+            </WrapPanel>
+            <TextBlock AutomationProperties.LiveSetting="Polite">
+              <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+                <Setter Property="Text" Value="{DynamicResource Ui.NativeConfirmationUnknown}"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Model.State.NativeTestFeedback.Confirmation}" Value="{x:Static settings:NativeTestBannerConfirmation.Seen}"><Setter Property="Text" Value="{DynamicResource Ui.NativeConfirmationSeen}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding Model.State.NativeTestFeedback.Confirmation}" Value="{x:Static settings:NativeTestBannerConfirmation.NotSeen}"><Setter Property="Text" Value="{DynamicResource Ui.NativeConfirmationNotSeen}"/></DataTrigger>
+                </Style.Triggers>
+              </Style></TextBlock.Style>
+            </TextBlock>
+          </StackPanel>
+          <TextBlock Text="{DynamicResource Ui.NativeHelp}" Style="{StaticResource Student.Label}" Margin="0,12,0,0"/>
         </StackPanel>
       </Border>
       <TextBlock Text="{DynamicResource Ui.AlertsInactive}" Style="{StaticResource Student.Label}"/>

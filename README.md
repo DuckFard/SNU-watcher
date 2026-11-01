@@ -4,7 +4,7 @@
 
 SNU Watcher is a Windows desktop app being built for Seoul National University students who are waiting for a place in a full class. It is designed to check the sections you choose, alert you when a seat becomes available, and take you to the official SNU registration page so you can try to register.
 
-**Currently in development:** the development branch includes a student interface for course search, watchlists and settings, backed by local storage and a monitoring engine. UI validation is underway; automatic seat popups are not connected yet. A public desktop release is not available. Follow the [development progress](docs/PROGRESS.md) for verified capabilities and remaining checks.
+**Currently in development:** the development branch includes course search, watchlists and settings, backed by local storage and a monitoring engine. Seat notifications, notification testing and saved alert history are being integrated and verified. A public desktop release is not available. Follow the [development progress](docs/PROGRESS.md) for verified capabilities and remaining checks.
 
 ## Planned features
 
@@ -16,6 +16,7 @@ SNU Watcher is a Windows desktop app being built for Seoul National University s
 | Get seat alerts | Receive a Windows popup identifying the course and section, with a shortcut to official SNU registration. |
 | Manage your watches | Add, pause, resume, or remove watches, and choose when they expire. |
 | Check data freshness | See the last successful check and clear status messages when information is delayed or unavailable. |
+| Review alerts | Browse saved opening events and delivery status, test Windows notifications, and choose whether alerts make a sound. |
 | Explore further | Open SNU Genie in your browser for additional course information. |
 
 ## How it will work
@@ -39,7 +40,7 @@ The earlier command-line prototype is preserved in [legacy/python-watcher](legac
 
 ## Develop locally
 
-The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and delivery records. Search, watch management and English/Korean settings use owned asynchronous controllers; availability and the last successful check remain separate from loading and error states. Production seat-alert integration remains in development, so pending opening events stay saved without claiming a popup was sent.
+The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and delivery records. Search, watch management and English/Korean settings use owned asynchronous controllers; availability and the last successful check remain separate from loading and error states. The notification integration records Windows acceptance separately from a student's confirmation that a test banner appeared. Its current source still needs installed-app qualification.
 
 The current live-source recheck returned an empty catalog response. The app reports unavailable data rather than inventing current availability; a successful live recheck remains a release requirement.
 

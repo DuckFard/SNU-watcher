@@ -133,6 +133,16 @@ public sealed partial class MonitoringRuntimeSession : IAsyncDisposable
         }
     }
 
+    /// <summary>Coalesces native availability changes; acceptance is not proof of channel readiness.</summary>
+    public bool NotifyDeliveryChannelChanged()
+    {
+        lock (_sync)
+        {
+            if (_state != RuntimeSessionState.Running || _stopping || !_options.DeliveryEnabled) return false;
+            return _pump.Wake(channelChanged: true);
+        }
+    }
+
     private bool WakeActors()
     {
         _hub.CheckSourceDiagnostic();

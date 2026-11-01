@@ -63,17 +63,17 @@ public sealed class BatchDeliveryCoordinatorTests
         await fixture.ObserveAsync(key, 116);
         var original = Assert.Single(await fixture.Store.ReadPendingDeliveriesAsync(10, default));
         using var gate = new SemaphoreSlim(1, 1);
-        var channel = new Channel { Handler = (_, _) => Task.FromResult(DesktopAlertOutcome.RetryableFailure) };
+        var channel = new Channel { Handler = (_, _) => Task.FromResult(BatchChannelOutcome.RetryableFailure) };
         List<BatchDeliveryAudit> audits = [];
         var failed = await new BatchDeliveryCoordinator(fixture.Store, fixture.Clock, gate, channel, audits.Add)
             .TryDeliverSectionAsync(key, Policy);
-        Assert.Equal(DesktopAlertOutcome.RetryableFailure, failed.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.RetryableFailure, failed.ChannelOutcome);
         Assert.Equal(1, Assert.Single(audits).Result.Receipt!.PendingCount);
         await fixture.ReopenAsync();
         Assert.Equal(1, Assert.Single(await fixture.Store.ReadPendingDeliveriesAsync(10, default)).Attempts);
         fixture.Clock.Advance(TimeSpan.FromSeconds(5));
         await fixture.ObserveAsync(key, 118);
-        channel.Handler = (_, _) => Task.FromResult(DesktopAlertOutcome.OsAccepted);
+        channel.Handler = (_, _) => Task.FromResult(BatchChannelOutcome.OsAccepted);
 
         var retry = await new BatchDeliveryCoordinator(fixture.Store, fixture.Clock, gate, channel).TryDeliverSectionAsync(key, Policy);
 
@@ -140,7 +140,7 @@ public sealed class BatchDeliveryCoordinatorTests
         var original = Assert.Single(await fixture.Store.ReadPendingDeliveriesAsync(10, default));
         using var gate = new SemaphoreSlim(1, 1);
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var finish = new TaskCompletionSource<DesktopAlertOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finish = new TaskCompletionSource<BatchChannelOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var channel = new Channel { Handler = (_, _) => { started.SetResult(); return finish.Task; } };
         var coordinator = new BatchDeliveryCoordinator(fixture.Store, fixture.Clock, gate, channel);
         var sending = coordinator.TryDeliverSectionAsync(key, Policy);
@@ -161,7 +161,7 @@ public sealed class BatchDeliveryCoordinatorTests
             Assert.Equal(CommitWriteStatus.Committed, (await writer.TryCommitSectionAsync(prepared, default).WaitAsync(Timeout)).Status);
             Assert.False(pause.IsCompleted);
         }
-        finally { finish.TrySetResult(DesktopAlertOutcome.OsAccepted); }
+        finally { finish.TrySetResult(BatchChannelOutcome.OsAccepted); }
         var delivered = await sending.WaitAsync(Timeout);
         await pause.WaitAsync(Timeout);
         Assert.Equal(1, delivered.Receipt!.AcceptedCount);
@@ -191,7 +191,7 @@ public sealed class BatchDeliveryCoordinatorTests
         armed = true;
         var first = await coordinator.TryDeliverSectionAsync(key, Policy);
         armed = false;
-        Assert.Equal(DesktopAlertOutcome.OsAccepted, first.ChannelOutcome);
+        Assert.Equal(BatchChannelOutcome.OsAccepted, first.ChannelOutcome);
         Assert.Equal(BatchDeliveryRunDisposition.ResultNotRecorded, first.Disposition);
         Assert.Equal(0, Assert.Single(await fixture.Store.ReadPendingDeliveriesAsync(10, default)).Attempts);
         fixture.Clock.Advance(TimeSpan.FromHours(1));
@@ -284,7 +284,7 @@ public sealed class BatchDeliveryCoordinatorTests
         var channel = new Channel { Handler = (_, token) =>
         {
             cancellation.Cancel();
-            return known ? Task.FromResult(DesktopAlertOutcome.OsAccepted) : Task.FromCanceled<DesktopAlertOutcome>(token);
+            return known ? Task.FromResult(BatchChannelOutcome.OsAccepted) : Task.FromCanceled<BatchChannelOutcome>(token);
         } };
 
         var result = await new BatchDeliveryCoordinator(fixture.Store, fixture.Clock, gate, channel)
@@ -326,29 +326,166 @@ public sealed class BatchDeliveryCoordinatorTests
         await fixture.ObserveAsync(key, 119);
         using var gate = new SemaphoreSlim(1, 1);
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var finish = new TaskCompletionSource<DesktopAlertOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finish = new TaskCompletionSource<BatchChannelOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var channel = new Channel { Handler = (_, _) => { started.SetResult(); return finish.Task; } };
         var coordinator = new BatchDeliveryCoordinator(fixture.Store, fixture.Clock, gate, channel);
         var first = coordinator.TryDeliverSectionAsync(key, Policy);
         await started.Task.WaitAsync(Timeout);
         var second = coordinator.TryDeliverSectionAsync(key, Policy);
         Assert.False(second.IsCompleted);
-        finish.SetResult(DesktopAlertOutcome.OsAccepted);
+        finish.SetResult(BatchChannelOutcome.OsAccepted);
 
         Assert.Equal(1, (await first.WaitAsync(Timeout)).Receipt!.AcceptedCount);
         Assert.Equal(BatchDeliveryRunDisposition.NoWork, (await second.WaitAsync(Timeout)).Disposition);
         Assert.Single(channel.Envelopes);
     }
 
+    [Theory]
+    [InlineData(BatchChannelReadiness.Initializing)]
+    [InlineData(BatchChannelReadiness.Disabled)]
+    [InlineData(BatchChannelReadiness.Unavailable)]
+    public async Task BlockedNativeReadinessCreatesNoAttemptAndDoesNotHoldSqliteFromNewObservations(BatchChannelReadiness readiness)
+    {
+        await using var f = await StoreFixture.CreateAsync();
+        var key = StoreFixture.Key();
+        await f.AddAsync(key); await f.ObserveAsync(key, 119);
+        using var gate = new SemaphoreSlim(1, 1);
+        var channel = new Channel { Readiness = _ => Task.FromResult(readiness) };
+        var result = await new BatchDeliveryCoordinator(f.Store, f.Clock, gate, channel).TryDeliverSectionAsync(key, Policy);
+        Assert.Equal(BatchDeliveryRunDisposition.ChannelDeferred, result.Disposition);
+        Assert.Equal(0, CountRows(f, "SELECT count(*) FROM DeliveryBatchAttempts;"));
+        Assert.Equal(0, CountRows(f, "SELECT count(*) FROM DeliveryBatchResults;"));
+        await f.ObserveAsync(key, 118);
+        Assert.Equal(2, (await f.Store.ReadPendingDeliveriesAsync(10, default)).Length);
+        Assert.All(await f.Store.ReadPendingDeliveriesAsync(10, default), item => Assert.Equal(0, item.Attempts));
+        Assert.Empty(channel.Envelopes);
+    }
+
+    [Fact]
+    public async Task ReadyThenDisabledAfterSealRecordsZeroCostProofAndRetryKeepsBatchKeyAcrossReopen()
+    {
+        var ready = true;
+        await using var f = await StoreFixture.CreateAsync(stage => { if (stage == SqliteStoreWriteStage.BatchReserved) ready = false; });
+        var key = StoreFixture.Key();
+        await f.AddAsync(key); await f.ObserveAsync(key, 119);
+        using var gate = new SemaphoreSlim(1, 1);
+        var channel = new Channel
+        {
+            Readiness = _ => Task.FromResult(ready ? BatchChannelReadiness.Ready : BatchChannelReadiness.Disabled),
+            SendResult = (_, _) => Task.FromResult(new BatchChannelResult(BatchChannelOutcome.NotSubmitted, BatchNoSubmissionReason.ChannelNotReady)),
+        };
+        var first = await new BatchDeliveryCoordinator(f.Store, f.Clock, gate, channel).TryDeliverSectionAsync(key, Policy);
+        Assert.False(first.SubmittedThisCall);
+        Assert.Equal(BatchAttemptResultOutcome.NotSubmitted, first.Receipt!.Outcome);
+        Assert.Equal(1, CountRows(f, "SELECT count(*) FROM DeliveryBatchAttempts WHERE status=1;"));
+        Assert.Equal(1, CountRows(f, "SELECT count(*) FROM DeliveryBatchResults;"));
+        await f.ReopenAsync();
+        Assert.Equal(0, Assert.Single(await f.Store.ReadPendingDeliveriesAsync(10, default)).Attempts);
+        Assert.Empty(await f.Store.ReadUnresolvedAttemptsAsync(null, 10));
+        ready = true;
+        channel.SendResult = null;
+        var retry = await new BatchDeliveryCoordinator(f.Store, f.Clock, gate, channel).TryDeliverSectionAsync(key, Policy);
+        Assert.Equal(first.BatchId, retry.BatchId);
+        Assert.Equal(channel.Envelopes[0].NativeDedupeKey, channel.Envelopes[1].NativeDedupeKey);
+        Assert.NotEqual(first.AttemptId, retry.AttemptId);
+        Assert.Equal(1, retry.Receipt!.AcceptedCount);
+    }
+
+    [Fact]
+    public async Task LostZeroCostResultReturnIsReplayedExactlyWhileNativeReadinessIsBlocked()
+    {
+        await using var f = await StoreFixture.CreateAsync();
+        var key = StoreFixture.Key();
+        await f.AddAsync(key); await f.ObserveAsync(key, 119);
+        using var gate = new SemaphoreSlim(1, 1);
+        var channel = new Channel { SendResult = (_, _) => Task.FromResult(new BatchChannelResult(
+            BatchChannelOutcome.NotSubmitted, BatchNoSubmissionReason.PayloadRejected)) };
+        var port = new LoseFirstResultReturn(f.Store);
+        var coordinator = new BatchDeliveryCoordinator(port, f.Clock, gate, channel);
+        var first = await coordinator.TryDeliverSectionAsync(key, Policy);
+        channel.Readiness = _ => throw new InvalidOperationException("known result flush must not probe");
+        f.Clock.Advance(TimeSpan.FromMinutes(5));
+        var replay = await coordinator.TryDeliverSectionAsync(key, Policy);
+        Assert.Same(first.KnownResult, replay.KnownResult);
+        Assert.Equal(first.KnownResult!.RecordedAtUtc, replay.Receipt!.RecordedAtUtc);
+        Assert.False(replay.SubmittedThisCall);
+        Assert.Single(channel.Envelopes);
+        Assert.Equal(1, CountRows(f, "SELECT count(*) FROM DeliveryBatchResults;"));
+        await f.ReopenAsync();
+        Assert.Equal(0, Assert.Single(await f.Store.ReadPendingDeliveriesAsync(10, default)).Attempts);
+    }
+
+    [Fact]
+    public async Task CrossingMinimumRecipientExpiryRefusesWholeUnionThenRetryKeepsStillActiveRecipient()
+    {
+        await using var f = await StoreFixture.CreateAsync();
+        var key = StoreFixture.Key();
+        var expiry = WatchExpiry.FromLocalDate(new DateOnly(2026, 11, 1), TimeZoneInfo.Utc);
+        f.Clock.Set(expiry.ExclusiveUtc.AddSeconds(-1));
+        var expiring = await f.Store.CreateSubscriptionAsync(f.NewSection(key, expiry: expiry), default);
+        var steady = await f.AddAsync(key);
+        await f.ObserveAsync(key, 119);
+        var original = Assert.Single(await f.Store.ReadPendingDeliveriesAsync(10, default));
+        using var gate = new SemaphoreSlim(1, 1);
+        var channel = new Channel { SendResult = (submission, _) =>
+        {
+            Assert.Equal(expiry.ExclusiveUtc, submission.EligibilityExpiresAtUtc);
+            Assert.Equal(2, submission.Envelope.EligibleRecipients.Length);
+            f.Clock.Advance(TimeSpan.FromSeconds(1));
+            return Task.FromResult(new BatchChannelResult(BatchChannelOutcome.NotSubmitted, BatchNoSubmissionReason.ValidityChanged));
+        } };
+        var coordinator = new BatchDeliveryCoordinator(f.Store, f.Clock, gate, channel);
+        var refused = await coordinator.TryDeliverSectionAsync(key, Policy);
+        Assert.Equal(BatchAttemptResultOutcome.NotSubmitted, refused.Receipt!.Outcome);
+        Assert.Equal(0, Assert.Single(await f.Store.ReadPendingDeliveriesAsync(10, default)).Attempts);
+        channel.SendResult = null;
+        var delivered = await coordinator.TryDeliverSectionAsync(key, Policy);
+        Assert.Equal(refused.BatchId, delivered.BatchId);
+        Assert.Equal(steady.Id, Assert.Single(channel.Envelopes[1].EligibleRecipients).SubscriptionId);
+        Assert.DoesNotContain(channel.Envelopes[1].EligibleRecipients, recipient => recipient.SubscriptionId == expiring.Id);
+        var persisted = (await f.Store.ReadDeliveryContextAsync(original.EventId, default)).Delivery;
+        Assert.Equal(2, persisted.Trigger.Recipients.Count);
+        Assert.Equal(1, persisted.Attempts);
+        Assert.Equal(DeliveryStatus.OsAccepted, persisted.Status);
+    }
+
+    [Fact]
+    public async Task CrashWithUnresolvedSealStillCostsOneConservativeAttemptEvenWithoutAnyKnownOsCall()
+    {
+        await using var f = await StoreFixture.CreateAsync();
+        var key = StoreFixture.Key();
+        await f.AddAsync(key); await f.ObserveAsync(key, 119);
+        await StoreBatchBehaviorTests.ReserveAsync(f, key);
+        await f.ReopenAsync();
+        using var gate = new SemaphoreSlim(1, 1);
+        var recovered = await new DeliveryStartupRecovery(f.Store, f.Store, f.Clock, gate).RecoverAsync();
+        Assert.Equal(1, recovered.RecoveredAttempts);
+        Assert.Equal(1, Assert.Single(await f.Store.ReadPendingDeliveriesAsync(10, default)).Attempts);
+        Assert.Empty(await f.Store.ReadUnresolvedAttemptsAsync(null, 10));
+    }
+
+    private static long CountRows(StoreFixture fixture, string fixedSql)
+    {
+        using var connection = new SqliteConnectionFactory(fixture.DatabasePath).Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = fixedSql;
+        return (long)command.ExecuteScalar()!;
+    }
+
     private sealed class Channel : IBatchDesktopAlertChannel
     {
         internal List<BatchDeliveryEnvelope> Envelopes { get; } = [];
-        internal Func<BatchDeliveryEnvelope, CancellationToken, Task<DesktopAlertOutcome>> Handler { get; set; } = (_, _) =>
-            Task.FromResult(DesktopAlertOutcome.OsAccepted);
-        public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken)
+        internal Func<BatchDeliveryEnvelope, CancellationToken, Task<BatchChannelOutcome>> Handler { get; set; } = (_, _) =>
+            Task.FromResult(BatchChannelOutcome.OsAccepted);
+        internal Func<BatchDesktopSubmission, CancellationToken, Task<BatchChannelResult>>? SendResult { get; set; }
+        public Func<CancellationToken, Task<BatchChannelReadiness>> Readiness { get; set; } = _ => Task.FromResult(BatchChannelReadiness.Ready);
+        public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken token) => Readiness(token);
+        public async Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken)
         {
+            var envelope = submission.Envelope;
             Envelopes.Add(envelope);
-            return Handler(envelope, cancellationToken);
+            return SendResult is { } scripted ? await scripted(submission, cancellationToken)
+                : new BatchChannelResult(await Handler(envelope, cancellationToken));
         }
     }
 

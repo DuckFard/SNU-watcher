@@ -116,11 +116,14 @@ public sealed record BatchAttemptReceipt
 }
 
 /// <summary>
-/// Must bound and finish the actual OS operation before completing this task. Never cancel the task
-/// while submission continues outside the lifecycle gate. Known OS acceptance survives late cancellation.
-/// This channel takes a genuine batch envelope and never fabricates a single-event trigger.
+/// Readiness never submits. No default-Ready implementation is provided. Send must finish the actual
+/// OS operation before completing, including a retained synchronous platform call that cannot be aborted.
+/// Never return task cancellation while submission continues outside the lifecycle gate. Known acceptance
+/// survives late cancellation; NotSubmitted proves that no OS submission began. The driver rechecks the
+/// transient validity window immediately before that boundary. No synthetic single-event trigger is used.
 /// </summary>
 public interface IBatchDesktopAlertChannel
 {
-    Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken);
+    Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken cancellationToken);
+    Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken);
 }

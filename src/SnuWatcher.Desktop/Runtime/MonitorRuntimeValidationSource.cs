@@ -49,10 +49,12 @@ internal sealed class MonitorRuntimeValidationChannel : IBatchDesktopAlertChanne
     private int _calls;
     internal int Calls => Volatile.Read(ref _calls);
     internal TaskCompletionSource<BatchDeliveryEnvelope> Invoked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken)
+    public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken cancellationToken)
+    { cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(BatchChannelReadiness.Ready); }
+    public Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref _calls);
-        Invoked.TrySetResult(envelope);
-        return Task.FromResult(DesktopAlertOutcome.OsAccepted);
+        Invoked.TrySetResult(submission.Envelope);
+        return Task.FromResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted));
     }
 }

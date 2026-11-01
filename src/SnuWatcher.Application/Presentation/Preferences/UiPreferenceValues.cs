@@ -19,7 +19,7 @@ public sealed record AcademicTermHint
 public sealed record UiPreferencesValues
 {
     public UiPreferencesValues(UiLanguage language, int? selectedYear, AcademicTermHint? termHint,
-        WatchMonitorProfile desiredProfile, UiCloseBehavior closeBehavior, int onboardingVersion)
+        WatchMonitorProfile desiredProfile, UiCloseBehavior closeBehavior, int onboardingVersion, bool notificationSoundMuted = false)
     {
         Language = PersistenceValidation.Defined(language, nameof(language));
         SelectedYear = selectedYear is { } year ? SourceValidation.Year(year) : null;
@@ -28,7 +28,7 @@ public sealed record UiPreferencesValues
         DesiredProfile = PersistenceValidation.Defined(desiredProfile, nameof(desiredProfile));
         CloseBehavior = PersistenceValidation.Defined(closeBehavior, nameof(closeBehavior));
         if (onboardingVersion is < 0 or > 10000) throw new ArgumentOutOfRangeException(nameof(onboardingVersion));
-        TermHint = termHint; OnboardingVersion = onboardingVersion;
+        TermHint = termHint; OnboardingVersion = onboardingVersion; NotificationSoundMuted = notificationSoundMuted;
     }
     public UiLanguage Language { get; }
     public int? SelectedYear { get; }
@@ -36,6 +36,8 @@ public sealed record UiPreferencesValues
     public WatchMonitorProfile DesiredProfile { get; }
     public UiCloseBehavior CloseBehavior { get; }
     public int OnboardingVersion { get; }
+    /// <summary>Explicitly suppresses notification audio; false leaves the system's ordinary sound behavior in place.</summary>
+    public bool NotificationSoundMuted { get; }
     /// <summary>Stable product defaults, independent of thread culture or the current academic date.</summary>
     public static UiPreferencesValues Defaults { get; } = new(UiLanguage.English, null, null,
         WatchMonitorProfile.Normal, UiCloseBehavior.MinimizeToTray, 0);

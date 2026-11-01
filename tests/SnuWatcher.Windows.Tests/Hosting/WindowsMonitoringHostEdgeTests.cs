@@ -57,7 +57,7 @@ public sealed class WindowsMonitoringHostEdgeTests
             Assert.False(stopping.IsCompleted);
             Assert.False(source.Disposed);
             await AssertOwnerHeldAsync(fixture.Profile);
-            channel.Release.TrySetResult(DesktopAlertOutcome.OsAccepted);
+            channel.Release.TrySetResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted));
             Assert.True((await stopping.WaitAsync(Timeout)).IsFinalized);
             Assert.True(source.Disposed);
             Assert.Equal(1, channel.Calls);
@@ -67,7 +67,7 @@ public sealed class WindowsMonitoringHostEdgeTests
             Assert.Equal(DeliveryStatus.OsAccepted, accepted.Status);
             Assert.Equal(1, accepted.Attempts);
         }
-        finally { channel.Release.TrySetResult(DesktopAlertOutcome.OsAccepted); await CloseAsync(host); }
+        finally { channel.Release.TrySetResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted)); await CloseAsync(host); }
     }
 
     [Fact]
@@ -255,11 +255,13 @@ public sealed class WindowsMonitoringHostEdgeTests
     private sealed class EdgeChannel : IBatchDesktopAlertChannel
     {
         private int _calls;
-        internal EdgeChannel(bool block = false) { if (!block) Release.SetResult(DesktopAlertOutcome.OsAccepted); }
+        internal EdgeChannel(bool block = false) { if (!block) Release.SetResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted)); }
         internal int Calls => Volatile.Read(ref _calls);
         internal TaskCompletionSource Started { get; } = Signal();
-        internal TaskCompletionSource<DesktopAlertOutcome> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken token)
+        internal TaskCompletionSource<BatchChannelResult> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken token)
+        { token.ThrowIfCancellationRequested(); return Task.FromResult(BatchChannelReadiness.Ready); }
+        public Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken token)
         { Interlocked.Increment(ref _calls); Started.TrySetResult(); return Release.Task; }
     }
 }

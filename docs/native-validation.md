@@ -2,7 +2,17 @@
 
 This guide records the M2 native-feasibility candidate and its binary-specific acceptance, not a finished course-monitoring release. That candidate does not poll or show synthetic live counts. The developing M5 student window has separate UI gates in [development progress](PROGRESS.md); historical M2 results do not qualify the newer app.
 
-In a new development build, `--native-validation` selects the original feasibility window. Ordinary launch selects the student interface and its monitoring-only host. Native diagnostic/test/cleanup arguments retain their dedicated behavior. Keep those tests separate from `--ui-validation=<runId>`, which is an offline private-profile journey with no native notification initialization.
+In a new development build, `--native-validation` selects the original feasibility window. Ordinary launch selects the student interface and production monitoring/native channel. The M6 integration is under qualification; historical M2 banners do not prove the new opening-event pipeline. Native diagnostic/test/cleanup arguments retain their dedicated behavior. Keep those tests separate from `--ui-validation=<runId>`, which is an offline private-profile journey with no native notification initialization.
+
+The student Settings page probes notification readiness and sends an asynchronous test using saved language/sound settings. An accepted SDK result means Windows accepted the request. The separate Seen/NotSeen controls record only the student's answer for that exact test; a later test resets the answer. Confirm a banner, sound when enabled, and the fixed official HTTPS body/button destination independently. Windows notification settings can suppress a banner or sound even after acceptance. A saved mute setting takes effect only after Save.
+
+## M6 opening-delivery qualification still required
+
+The existing monitor smoke returns a simulated channel result, and the UI journey uses simulated test-notification controls. Neither proves an installed opening popup. The next native protocol must be an explicit, separate opt-in route that rejects malformed/reused run identities before registration, verifies the stable installed target, acquires existing instance/database ownership and opens only a fresh marked private profile. Native app identity remains shared OS state even with a private database, so use one interactive user session with no other candidate instance.
+
+Feed the actual source parser/gateway from a sealed fixture-only HTTP handler with no socket fallback. Create an exact `F32.102 (012)` watch with initial notices disabled; first prove a committed 40/40 baseline with zero opening events, then serve 39/40 and request an owned refresh under normal pacing. The actual host/coordinator/pump must send through the real native service, persist its unchanged result, and reopen without resending. Clearly label fixture popups as tests so synthetic counts cannot be mistaken for live SNU availability. No native test shortcut or fabricated acceptance may substitute for this pipeline.
+
+Run separate English/sound, Korean/muted and permission-disabled cases. The disabled case must keep its opening pending with zero native sends or attempt charges. Machine evidence must bind the exact executable hash, PID, case/run identity, real acceptance, durable receipt, zero live HTTP and actual drain/ownership handoff. A bounded watchdog failure never proves that a synchronous SDK call stopped. Human confirmation of banner, sound/silence and separate official HTTPS button/body clicks remains pending until observed. None of these M6 installed cases is passed by the historical M2 matrix below.
 
 ## Automated checks
 

@@ -19,7 +19,8 @@ public sealed partial class SettingsViewModel
         cancellationToken.ThrowIfCancellationRequested();
         var term = selector is null ? null : new AcademicTermHint(year, selector);
         var defaults = UiPreferencesValues.Defaults;
-        _ = new UiPreferencesValues(defaults.Language, year, term, defaults.DesiredProfile, defaults.CloseBehavior, defaults.OnboardingVersion);
+        _ = new UiPreferencesValues(defaults.Language, year, term, defaults.DesiredProfile, defaults.CloseBehavior,
+            defaults.OnboardingVersion, defaults.NotificationSoundMuted);
         Task<SettingsHintResult> result;
         TaskCompletionSource? ready = null;
         lock (lifetimeSync)
@@ -92,7 +93,7 @@ public sealed partial class SettingsViewModel
                 return new(await ApplyCoreAsync(current, token).ConfigureAwait(false) ? SettingsHintStatus.Saved : SettingsHintStatus.Pending, current);
             var values = current.Values;
             var hinted = new UiPreferencesValues(values.Language, intent.Year, intent.Term, values.DesiredProfile,
-                values.CloseBehavior, values.OnboardingVersion);
+                values.CloseBehavior, values.OnboardingVersion, values.NotificationSoundMuted);
             pendingWrite = new(new(Guid.NewGuid(), current.Revision, hinted), WriteOrigin.Hint, 0);
             var result = await WritePendingAsync(token).ConfigureAwait(false);
             if (result is null || result.Status == UiPreferencesSaveStatus.VersionConflict)

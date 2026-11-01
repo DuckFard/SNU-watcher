@@ -56,7 +56,7 @@ internal static class StoreUiWire
 
     private static object ValuesObject(UiPreferencesValues values) => new
     {
-        version = 1,
+        version = 2,
         language = values.Language switch { UiLanguage.Korean => "ko", UiLanguage.English => "en", _ => throw Invalid() },
         year = values.SelectedYear,
         term = values.TermHint is { } term ? new { year = term.Year, selector = term.Selector } : null,
@@ -64,12 +64,15 @@ internal static class StoreUiWire
         { WatchMonitorProfile.Faster => "faster", WatchMonitorProfile.Normal => "normal", WatchMonitorProfile.LowActivity => "low-activity", _ => throw Invalid() },
         close = values.CloseBehavior switch { UiCloseBehavior.MinimizeToTray => "tray", UiCloseBehavior.Quit => "quit", _ => throw Invalid() },
         onboarding = values.OnboardingVersion,
+        soundMuted = values.NotificationSoundMuted,
     };
 
     private static UiPreferencesValues ReadValuesObject(JsonElement value)
     {
-        Fields(value, "version", "language", "year", "term", "profile", "close", "onboarding");
-        Version(value);
+        var version = Number(value, "version");
+        if (version == 1) Fields(value, "version", "language", "year", "term", "profile", "close", "onboarding");
+        else if (version == 2) Fields(value, "version", "language", "year", "term", "profile", "close", "onboarding", "soundMuted");
+        else throw Invalid();
         var term = value.GetProperty("term");
         AcademicTermHint? hint = null;
         if (term.ValueKind != JsonValueKind.Null)
@@ -82,7 +85,7 @@ internal static class StoreUiWire
             Text(value, "profile") switch
             { "faster" => WatchMonitorProfile.Faster, "normal" => WatchMonitorProfile.Normal, "low-activity" => WatchMonitorProfile.LowActivity, _ => throw Invalid() },
             Text(value, "close") switch { "tray" => UiCloseBehavior.MinimizeToTray, "quit" => UiCloseBehavior.Quit, _ => throw Invalid() },
-            value.GetProperty("onboarding").GetInt32());
+            value.GetProperty("onboarding").GetInt32(), version == 2 && value.GetProperty("soundMuted").GetBoolean());
     }
 
     internal static string Terms(IEnumerable<CachedTermHint> terms) => Serialize(new

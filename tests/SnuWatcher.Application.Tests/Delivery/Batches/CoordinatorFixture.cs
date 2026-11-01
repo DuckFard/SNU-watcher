@@ -83,11 +83,20 @@ internal sealed class BatchPort : IBatchDeliveryStore
 internal sealed class BatchChannel : IBatchDesktopAlertChannel
 {
     internal List<BatchDeliveryEnvelope> Envelopes { get; } = [];
-    internal Func<BatchDeliveryEnvelope, CancellationToken, Task<DesktopAlertOutcome>> Send { get; set; } = (_, _) =>
-        Task.FromResult(DesktopAlertOutcome.OsAccepted);
-    public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken cancellationToken)
+    internal List<BatchDesktopSubmission> Submissions { get; } = [];
+    internal int ReadinessReads { get; private set; }
+    internal Func<CancellationToken, Task<BatchChannelReadiness>> Readiness { get; set; } = _ =>
+        Task.FromResult(BatchChannelReadiness.Ready);
+    internal Func<BatchDeliveryEnvelope, CancellationToken, Task<BatchChannelOutcome>> Send { get; set; } = (_, _) =>
+        Task.FromResult(BatchChannelOutcome.OsAccepted);
+    internal Func<BatchDesktopSubmission, CancellationToken, Task<BatchChannelResult>>? SendResult { get; set; }
+    public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken cancellationToken)
+    { ReadinessReads++; return Readiness(cancellationToken); }
+    public async Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken cancellationToken)
     {
-        Envelopes.Add(envelope);
-        return Send(envelope, cancellationToken);
+        Submissions.Add(submission);
+        Envelopes.Add(submission.Envelope);
+        return SendResult is { } scripted ? await scripted(submission, cancellationToken)
+            : new BatchChannelResult(await Send(submission.Envelope, cancellationToken));
     }
 }

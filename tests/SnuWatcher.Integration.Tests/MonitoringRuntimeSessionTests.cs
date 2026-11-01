@@ -62,7 +62,7 @@ public sealed class MonitoringRuntimeSessionTests
             Assert.DoesNotContain(await fixture.Store.ReadUnresolvedAttemptsAsync(null, 100, default), row => row.AttemptId == old.AttemptId);
             var covered = Assert.Single(await fixture.Store.ReadBatchAttemptCoverageAsync(envelope.AttemptId, 0, 100, default));
             Assert.Equal(1, covered.AttemptsBefore);
-            return DesktopAlertOutcome.OsAccepted;
+            return new BatchChannelResult(BatchChannelOutcome.OsAccepted);
         } };
         await using var session = Session(fixture, source, channel, clock, gate);
 
@@ -81,7 +81,7 @@ public sealed class MonitoringRuntimeSessionTests
         using var gate = new SemaphoreSlim(1, 1);
         var clock = new SessionClock(fixture.Clock);
         var source = new Source(fixture.Store, clock);
-        var channel = new AlertChannel { Handler = (_, _) => Task.FromResult(DesktopAlertOutcome.RetryableFailure) };
+        var channel = new AlertChannel { Handler = (_, _) => Task.FromResult(new BatchChannelResult(BatchChannelOutcome.RetryableFailure)) };
         await using var session = Session(fixture, source, channel, clock, gate);
         await session.StartAsync();
         await UntilAsync(() => Task.FromResult(channel.Envelopes.Length >= 1));
@@ -115,7 +115,7 @@ public sealed class MonitoringRuntimeSessionTests
             catch (OperationCanceledException) { sourceCanceled.TrySetResult(); throw; }
         };
         var sending = NewSignal();
-        var driver = new TaskCompletionSource<DesktopAlertOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var driver = new TaskCompletionSource<BatchChannelResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var channel = new AlertChannel { Handler = (_, _) => { sending.TrySetResult(); return driver.Task; } };
         await using var session = Session(fixture, source, channel, clock, gate);
         await session.StartAsync();
@@ -128,7 +128,7 @@ public sealed class MonitoringRuntimeSessionTests
         await sourceCanceled.Task.WaitAsync(Timeout);
         Assert.False(stop.IsCompleted);
         Assert.False(session.Wake());
-        driver.SetResult(DesktopAlertOutcome.OsAccepted);
+        driver.SetResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted));
         Assert.True((await stop.WaitAsync(Timeout)).IsFinalized);
         Assert.Single(channel.Envelopes);
     }
@@ -246,7 +246,7 @@ public sealed class MonitoringRuntimeSessionTests
             catch (OperationCanceledException) { sourceCanceled.TrySetResult(); throw; }
         };
         var sending = NewSignal();
-        var driver = new TaskCompletionSource<DesktopAlertOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var driver = new TaskCompletionSource<BatchChannelResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var channel = new AlertChannel { Handler = async (_, token) =>
         {
             using var registration = token.Register(() =>
@@ -277,7 +277,7 @@ public sealed class MonitoringRuntimeSessionTests
             await sourceCanceled.Task.WaitAsync(TimeSpan.FromSeconds(3));
             Assert.False(stopping.IsCompleted);
         }
-        finally { releaseCallback.Set(); driver.TrySetResult(DesktopAlertOutcome.OsAccepted); }
+        finally { releaseCallback.Set(); driver.TrySetResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted)); }
         Assert.True((await stopping.WaitAsync(Timeout)).IsFinalized);
     }
 
@@ -379,10 +379,16 @@ public sealed class MonitoringRuntimeSessionTests
         private ImmutableArray<BatchDeliveryEnvelope> _envelopes = [];
         private readonly object _sync = new();
         internal ImmutableArray<BatchDeliveryEnvelope> Envelopes { get { lock (_sync) return _envelopes; } }
-        internal Func<BatchDeliveryEnvelope, CancellationToken, Task<DesktopAlertOutcome>> Handler { get; set; } = (_, _) =>
-            Task.FromResult(DesktopAlertOutcome.OsAccepted);
-        public Task<DesktopAlertOutcome> SendAsync(BatchDeliveryEnvelope envelope, CancellationToken token)
-        { lock (_sync) _envelopes = _envelopes.Add(envelope); return Handler(envelope, token); }
+        internal Func<BatchDeliveryEnvelope, CancellationToken, Task<BatchChannelResult>> Handler { get; set; } = (_, _) =>
+            Task.FromResult(new BatchChannelResult(BatchChannelOutcome.OsAccepted));
+        public Task<BatchChannelReadiness> ReadReadinessAsync(CancellationToken token)
+        { token.ThrowIfCancellationRequested(); return Task.FromResult(BatchChannelReadiness.Ready); }
+        public Task<BatchChannelResult> SendAsync(BatchDesktopSubmission submission, CancellationToken token)
+        {
+            var envelope = submission.Envelope;
+            lock (_sync) _envelopes = _envelopes.Add(envelope);
+            return Handler(envelope, token);
+        }
     }
 
     private sealed class RecordingBatches(IBatchDeliveryStore inner) : IBatchDeliveryStore

@@ -4,6 +4,16 @@ namespace SnuWatcher.Windows.Hosting;
 
 public sealed partial class WindowsMonitoringHost
 {
+    /// <summary>Wakes pending delivery after a known native availability change without source work.</summary>
+    public bool NotifyDeliveryChannelChanged()
+    {
+        lock (_sync)
+        {
+            if (_closing) return false;
+            return _session.NotifyDeliveryChannelChanged();
+        }
+    }
+
     private sealed record SourceControl(bool Recover, long Revision, TaskCompletionSource<SourceAccessResumeResult?> Promise);
 
     private Task<SourceAccessResumeResult?> QueueControlAsync(bool recover, long revision, CancellationToken waiter)

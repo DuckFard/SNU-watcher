@@ -15,7 +15,7 @@ public sealed class StoreLegacyMigrationTests
 
         await using var store = await SqliteWatchStore.OpenAsync(fixture.Factory);
 
-        Assert.Equal(4, fixture.Version);
+        Assert.Equal(5, fixture.Version);
         await AssertSeedPreservedAsync(store);
         var backup = Assert.Single(fixture.Backups());
         StoreLegacyV1Fixture.AssertBackupHeader(backup);
@@ -48,7 +48,7 @@ public sealed class StoreLegacyMigrationTests
         else Assert.Empty(fixture.Backups());
 
         await using var retry = await SqliteWatchStore.OpenAsync(fixture.Factory);
-        Assert.Equal(4, fixture.Version);
+        Assert.Equal(5, fixture.Version);
         await AssertSeedPreservedAsync(retry);
     }
 
@@ -95,7 +95,7 @@ public sealed class StoreLegacyMigrationTests
             finally { releaseFirst.Set(); }
             first = await firstTask.WaitAsync(TimeSpan.FromSeconds(10));
             second = await secondTask.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(4, fixture.Version);
+            Assert.Equal(5, fixture.Version);
             Assert.Single(fixture.Backups());
             await AssertSeedPreservedAsync(first);
             await AssertSeedPreservedAsync(second);

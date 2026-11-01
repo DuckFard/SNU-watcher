@@ -95,6 +95,7 @@ internal static partial class StudentUiValidation
             Require(watch!.Sections.All(section => section.Baseline is not null)
                 && preferences.Revision == proof.PreferencesRevision && preferences.Values.Language == UiLanguage.Korean
                 && preferences.Values.DesiredProfile == WatchMonitorProfile.Faster
+                && preferences.Values.NotificationSoundMuted && proof.SavedSoundMute
                 && reopened.RefreshProfile.AppliedRefreshProfile.PreferencesRevision == preferences.Revision
                 && fresh.Calls == 0 && guard.Calls == 0, "ui_reopen_preferences_or_baseline_changed");
             var result = await reopened.StopAsync();

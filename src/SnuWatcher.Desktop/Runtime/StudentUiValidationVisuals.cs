@@ -24,6 +24,8 @@ using SnuWatcher.Windows.Hosting;
 using SnuWatcher.Windows.Presentation.Common;
 using SnuWatcher.Windows.Presentation.Search;
 using SnuWatcher.Windows.Presentation.Watches;
+using SnuWatcher.Windows.Presentation.Alerts;
+using SnuWatcher.Windows.Presentation.Settings;
 
 namespace SnuWatcher.Desktop.Runtime;
 
@@ -113,11 +115,35 @@ internal static partial class StudentUiValidation
         ct.ThrowIfCancellationRequested();
         Require(leaf is "ui-onboarding-en.png" or "ui-search-en-normal.png" or "ui-search-ko-normal.png"
             or "ui-search-ko-narrow.png" or "ui-watches-en-normal.png" or "ui-watches-ko-narrow.png"
-            or "ui-settings-en-normal.png" or "ui-expired-ko.png", "ui_capture_name_invalid");
+            or "ui-settings-en-normal.png" or "ui-expired-ko.png" or "ui-simulated-native-en.png"
+            or "ui-simulated-native-ko-narrow.png" or "ui-alerts-en-normal.png" or "ui-alerts-ko-narrow.png"
+            or "ui-alerts-ko-details-narrow.png", "ui_capture_name_invalid");
         window.Width = narrow ? Math.Max(window.MinWidth, 700) : 1180;
         window.Height = narrow ? Math.Max(window.MinHeight, 620) : 820;
         foreach (var scroll in Visuals<ScrollViewer>(window)) scroll.ScrollToTop();
         await PumpUiAsync(window);
+        if (leaf.StartsWith("ui-simulated-native-", StringComparison.Ordinal))
+        {
+            var confirmation = Visuals<Button>(window).First(button => button.IsVisible
+                && button.CommandParameter is NativeTestBannerConfirmation.NotSeen);
+            await RequireReachableAsync(confirmation, window, "ui_simulated_confirmation_unreachable");
+        }
+        if (leaf.StartsWith("ui-alerts-", StringComparison.Ordinal))
+        {
+            if (narrow)
+            {
+                InvokeButton(Named<Button>(window, leaf.Contains("details", StringComparison.Ordinal) ? "DetailsNavigation" : "ListNavigation"));
+                await PumpUiAsync(window);
+            }
+            if (!leaf.Contains("details", StringComparison.Ordinal))
+            {
+                var history = Named<DataGrid>(window, "HistoryRows");
+                RequireVisibleRow(history, window, item => item is AlertHistoryRow row
+                    && row.Source.Trigger.Key == StudentUiValidationSource.Key013, "ui_alert_rows_not_visible", requireIdentifier: false);
+                Require(Visuals<TextBlock>(history).Any(block => block.Text == "F32.102 013" && IsRenderedTextVisible(block, window)),
+                    "ui_alert_identifier_not_visible");
+            }
+        }
         if (leaf.StartsWith("ui-search-", StringComparison.Ordinal))
         {
             var panes = Visuals<TabControl>(window).FirstOrDefault(control => control.IsVisible && control.Name == "CompactPaneSelector");

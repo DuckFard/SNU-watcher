@@ -51,6 +51,7 @@ internal static partial class StudentUiValidation
         var source = new StudentUiValidationSource(clock);
         var channel = new StudentUiValidationChannel();
         var actions = new StudentUiValidationActions();
+        var simulatedNative = new StudentUiSimulatedNativeControls(clock);
         var captures = new List<StudentUiCapture>();
         using var bindings = new StudentUiBindingProbe();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
@@ -63,7 +64,9 @@ internal static partial class StudentUiValidation
             var opened = await WindowsMonitoringHost.OpenValidationAsync(profile, () => source, channel, clock, options, deadline.Token);
             host = opened.Host ?? throw new InvalidOperationException("ui_validation_owner_already_owned");
             var dispatcher = new WpfUiDispatcher(System.Windows.Application.Current.Dispatcher);
-            graph = new(host, dispatcher, clock, actions, actions.NativeTestGuard, isDemo: true, observeSystemState: false);
+            graph = new(host, dispatcher, clock, actions, actions.NativeTestGuard, isDemo: true, observeSystemState: false,
+                nativeNotifications: simulatedNative);
+            graph.Settings.PreferencesChanged += simulatedNative.ApplyKnownPreferences;
             var quitRequested = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             window = new(graph.Shell, () => quitRequested.TrySetResult(), enableTray: false) { ShowInTaskbar = false };
             System.Windows.Application.Current.MainWindow = window;
@@ -85,7 +88,8 @@ internal static partial class StudentUiValidation
             _stage = "glyph_guard_self_checks";
             await ProbeGlyphGuardsAsync(window);
             _stage = "journey";
-            var journey = await RunJourneyAsync(profile, window, graph, host, source, clock, actions, bindings, captures, deadline.Token);
+            var journey = await RunJourneyAsync(profile, window, graph, host, source, clock, actions, bindings,
+                simulatedNative, captures, deadline.Token);
             workArea = await VerifyActualWorkAreaAsync(profile, captures, window, graph, source, journey, workArea,
                 progress => workArea = progress, deadline.Token);
             journey = journey with { PreferencesRevision = graph.Settings.Model.State.Stored!.Revision };
@@ -103,11 +107,16 @@ internal static partial class StudentUiValidation
             _stage = "result";
             WriteUiResult(profile, new
             {
-                schemaVersion = 1, codePath = "ui-validation", testStatus = "PASSED", code = "student_ui_validation_passed",
+                schemaVersion = 2, codePath = "ui-validation", testStatus = "PASSED", code = "student_ui_validation_passed",
                 runId = runId.ToString("N"), processId = Environment.ProcessId, profileGuarded = true, isDemo = true,
                 noLiveHttp = true, httpRequests = 0, noOsNotifications = true, nativeNotificationCalls = 0,
                 noBrowser = true, browserCalls = 0, noClipboard = true, clipboardCalls = 0,
-                noSimulatedAcceptance = true, deliveryDisabled = true, channelCalls = channel.Calls,
+                noSimulatedAcceptance = true, noSimulatedAcceptanceScope = "durable-production-delivery-only",
+                noSimulatedDeliveryAcceptance = true, deliveryDisabled = true, channelCalls = channel.Calls,
+                simulatedNativeTest = new { driver = "deterministic-offline-controls", simulatedNative.StatusProbes,
+                    fixtureAcceptedReceipts = simulatedNative.SimulatedTests, programmaticConfirmations = 2,
+                    observationScope = "programmatic-ui-only-no-human-seen-or-heard-evidence", realNativeCalls = 0,
+                    legacyGuardCalls = actions.NativeTestRequests },
                 localStartupOnly = true, initializationJoined = true, graphDrained = true, hostDrained = true,
                 reopenStable = true, ownerHandoff = true, ownerRetainedDuringDrain = stopped.OwnerRetained,
                 sourceDisposed = source.IsDisposed, quitObserved = true, pendingAlertsPreserved = stable.PendingAlerts,
@@ -141,7 +150,7 @@ internal static partial class StudentUiValidation
                 {
                     WriteUiResult(profile, new
                     {
-                        schemaVersion = 1, codePath = "ui-validation", testStatus = "FAILED", code, stage = _stage,
+                        schemaVersion = 2, codePath = "ui-validation", testStatus = "FAILED", code, stage = _stage,
                         runId = runId.ToString("N"), processId = Environment.ProcessId, profileGuarded = true,
                         noLiveHttp = true, httpRequests = 0, noOsNotifications = true, nativeNotificationCalls = 0,
                         noBrowser = true, browserCalls = 0, noClipboard = true, clipboardCalls = 0, channelCalls = channel.Calls,
@@ -175,7 +184,7 @@ internal static partial class StudentUiValidation
 
     private static void WritePrivateError(string code, string status = "FAILED")
     {
-        try { Console.Error.WriteLine(JsonSerializer.Serialize(new { schemaVersion = 1, codePath = "ui-validation",
+        try { Console.Error.WriteLine(JsonSerializer.Serialize(new { schemaVersion = 2, codePath = "ui-validation",
             testStatus = status, code, nativeNotificationCalls = 0, httpRequests = 0, browserCalls = 0, clipboardCalls = 0 })); }
         catch (System.IO.IOException) { /* A closed private pipe never permits native fallthrough. */ }
     }
