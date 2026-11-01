@@ -11,7 +11,7 @@ using SnuWatcher.Windows;
 
 namespace SnuWatcher.Desktop;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private SingleInstanceCoordinator? _instance;
     private NativeNotificationService? _notifications;
@@ -24,6 +24,7 @@ public partial class App : Application
 
     private async void OnStartup(object sender, StartupEventArgs e)
     {
+        if (await Runtime.MonitorRuntimeValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         try
         {
             _coldLaunch = ActivationRequest.IsNotificationLaunch(e.Args);

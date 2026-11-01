@@ -56,7 +56,7 @@ internal sealed class StoreLegacyV1Fixture : IDisposable
 
     internal string DatabasePath => Path.Combine(_directory, "legacy-v1.sqlite3");
     internal SqliteConnectionFactory Factory { get; }
-    internal string[] Backups() => Directory.GetFiles(_directory, "legacy-v1.sqlite3.before-v2-*.sqlite3");
+    internal string[] Backups() => Directory.GetFiles(_directory, "legacy-v1.sqlite3.before-v3-*.sqlite3");
     internal byte[] DatabaseHash()
     {
         using var stream = new FileStream(DatabasePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);

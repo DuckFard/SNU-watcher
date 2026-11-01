@@ -9,15 +9,15 @@ namespace SnuWatcher.Infrastructure.Persistence;
 
 public sealed partial class SqliteWatchStore
 {
-    /// <summary>The completed pre-migration snapshot, if this opener performed a V1 upgrade. Never automatically restored.</summary>
+    /// <summary>The completed original-version snapshot, if this opener upgraded V1/V2. Never automatically restored.</summary>
     public string? MigrationBackupPath { get; private set; }
 
-    private string BackupVersionOne(CancellationToken cancellationToken)
+    private string BackupRecognizedVersion(long sourceVersion, CancellationToken cancellationToken)
     {
         var budget = Stopwatch.StartNew();
         Checkpoint(SqliteStoreWriteStage.MigrationBackupStarted);
         EnsureBackupBudget(budget, cancellationToken);
-        var path = _factory.DatabasePath + ".before-v2-" + Guid.NewGuid().ToString("N") + ".sqlite3";
+        var path = _factory.DatabasePath + ".before-v3-" + Guid.NewGuid().ToString("N") + ".sqlite3";
         var complete = false;
         try
         {
@@ -30,10 +30,10 @@ public sealed partial class SqliteWatchStore
             using (var snapshot = source.BeginTransaction(deferred: true))
             {
                 Run(source, snapshot, "PRAGMA query_only=ON;");
-                if (ValidateSchema(source, snapshot) != 1)
-                    throw new InvalidOperationException("The migration backup source is no longer schema V1.");
+                if (sourceVersion is not (1 or 2) || ValidateSchema(source, snapshot) != sourceVersion)
+                    throw new InvalidOperationException("The migration backup source is no longer the recognized original version.");
                 EnsureBackupBudget(budget, cancellationToken);
-                var expected = BackupRowCounts(source, snapshot, budget, cancellationToken);
+                var expected = BackupRowCounts(source, snapshot, sourceVersion, budget, cancellationToken);
                 using (var destination = new SqliteConnectionFactory(path).Open(SqliteOpenMode.ReadWrite))
                 {
                     Run(destination, null, "PRAGMA synchronous=FULL;");
@@ -46,9 +46,9 @@ public sealed partial class SqliteWatchStore
                 EnsureBackupBudget(budget, cancellationToken);
                 using var verify = new SqliteConnectionFactory(path).Open(SqliteOpenMode.ReadOnly);
                 using var verification = verify.BeginTransaction(deferred: true);
-                if (ValidateSchema(verify, verification) != 1
+                if (ValidateSchema(verify, verification) != sourceVersion
                     || !string.Equals((string?)Scalar(verify, verification, "PRAGMA integrity_check;"), "ok", StringComparison.Ordinal)
-                    || !expected.SequenceEqual(BackupRowCounts(verify, verification, budget, cancellationToken)))
+                    || !expected.SequenceEqual(BackupRowCounts(verify, verification, sourceVersion, budget, cancellationToken)))
                     throw new InvalidOperationException("The completed migration backup could not be verified.");
                 verification.Commit();
                 snapshot.Commit();
@@ -101,8 +101,9 @@ public sealed partial class SqliteWatchStore
         if (finish != raw.SQLITE_OK) throw new IOException($"SQLite migration backup finalization failed with code {finish}.");
     }
 
-    private static long[] BackupRowCounts(SqliteConnection connection, SqliteTransaction transaction,
-        Stopwatch budget, CancellationToken cancellationToken) => BackupCountQueries.Select(sql =>
+    private static long[] BackupRowCounts(SqliteConnection connection, SqliteTransaction transaction, long sourceVersion,
+        Stopwatch budget, CancellationToken cancellationToken) => BackupCountQueries
+        .Concat(sourceVersion >= 2 ? ["SELECT count(*) FROM LegacyImports;"] : Array.Empty<string>()).Select(sql =>
         {
             EnsureBackupBudget(budget, cancellationToken);
             var count = (long)Scalar(connection, transaction, sql)!;
@@ -128,7 +129,7 @@ public sealed partial class SqliteWatchStore
     {
         var source = Path.GetFullPath(_factory.DatabasePath);
         var target = Path.GetFullPath(path);
-        var prefix = Path.GetFileName(source) + ".before-v2-";
+        var prefix = Path.GetFileName(source) + ".before-v3-";
         var name = Path.GetFileName(target);
         if (!string.Equals(Path.GetDirectoryName(source), Path.GetDirectoryName(target), StringComparison.OrdinalIgnoreCase)
             || !name.StartsWith(prefix, StringComparison.Ordinal) || !name.EndsWith(".sqlite3", StringComparison.Ordinal)

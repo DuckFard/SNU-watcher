@@ -76,6 +76,8 @@ public sealed partial class SqliteWatchStore
             if (current is null) return DeliveryWriteResult.NotFound;
             if (current.DeliveryRevision != command.ExpectedRevision || command.Attempts < current.Attempts
                 || current.Status != DeliveryStatus.Pending) return DeliveryWriteResult.VersionConflict;
+            if ((long)Scalar(connection, transaction, "SELECT EXISTS(SELECT 1 FROM DeliveryBatchEvents WHERE eventId=$id);",
+                ("$id", command.EventId.ToString("N")))! != 0) return DeliveryWriteResult.VersionConflict;
             var revision = checked(current.DeliveryRevision + 1);
             Run(connection, transaction, "UPDATE Outbox SET revision=$revision,status=$status,attempts=$attempts WHERE eventId=$id;",
                 ("$revision", revision), ("$status", (int)command.Status), ("$attempts", command.Attempts), ("$id", command.EventId.ToString("N")));

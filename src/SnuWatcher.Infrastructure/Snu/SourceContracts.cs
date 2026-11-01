@@ -27,7 +27,7 @@ public sealed record SourceSectionIdentity
     public string CourseCode { get; }
     public string Section { get; }
     public string SubsubjectCode { get; }
-    internal static bool Valid(string? value) => value is { Length: > 0 and <= 80 } && Regex.IsMatch(value, @"^[A-Za-z0-9.]+$");
+    internal static bool Valid(string? value) => value is { Length: > 0 and <= 80 } && Regex.IsMatch(value, @"\A[A-Za-z0-9.]+\z");
 }
 
 public sealed record SourceDepartment(string Code, string Name, string? EnglishName, string Level);
@@ -39,6 +39,8 @@ public sealed record SourceSearchQuery(SourceTerm Term, string? CourseCode = nul
 public sealed record SourceSection(SourceSectionIdentity Identity, string Name, string? Instructor,
     string? Department, string? Schedule, int? Registered, int? Capacity, int? TotalRegistered, string CountLabel)
 {
+    /// <summary>UTC receipt of this count's complete response body; null for pure-parser or manually constructed rows.</summary>
+    public DateTimeOffset? ObservedAtUtc { get; init; }
     public int? AvailableSeats => Registered.HasValue && Capacity.HasValue ? Math.Max(0, Capacity.Value - Registered.Value) : null;
 }
 
@@ -47,15 +49,27 @@ public sealed record SourceDetails(SourceSectionIdentity Identity, string Name, 
     string? Instructor, string? EnglishInstructor, string? Department, decimal? Credits,
     int? Capacity, string? InstructionLanguage, string? Restrictions, IReadOnlyList<SourceMeeting> Meetings);
 public sealed record SourceSearchResult(IReadOnlyList<SourceSection> Sections, bool IsComplete,
-    IReadOnlyList<SourceFailure> Failures, int PagesFetched);
-public sealed record SourceFailure(SourceFailureKind Kind, string Message, TimeSpan? RetryAfter = null);
-public enum SourceFailureKind { Unavailable, AccessRestricted, RateLimited, ParseChanged, ResponseTooLarge, LimitReached }
+    IReadOnlyList<SourceFailure> Failures, int PagesFetched)
+{
+    /// <summary>UTC query completion, distinct from the receipt times of successfully read pages.</summary>
+    public DateTimeOffset? CompletedAtUtc { get; init; }
+}
+public sealed record SourceFailure(SourceFailureKind Kind, string Message, TimeSpan? RetryAfter = null)
+{
+    private readonly int? httpStatusCode;
+    public int? HttpStatusCode { get => httpStatusCode; init => httpStatusCode = SnuSourceException.ValidateStatus(value); }
+}
+public enum SourceFailureKind { Unavailable, AccessRestricted, RateLimited, ParseChanged, ResponseTooLarge, LimitReached, Maintenance }
 
 /// <summary>A typed source failure; never contains raw response bodies, cookies, or credentials.</summary>
 public sealed class SnuSourceException(SourceFailureKind kind, string message, TimeSpan? retryAfter = null) : Exception(message)
 {
     public SourceFailureKind Kind { get; } = kind;
     public TimeSpan? RetryAfter { get; } = retryAfter;
+    private readonly int? httpStatusCode;
+    public int? HttpStatusCode { get => httpStatusCode; init => httpStatusCode = ValidateStatus(value); }
+    internal static int? ValidateStatus(int? status) => status is < 100 or > 599 ?
+        throw new ArgumentOutOfRangeException(nameof(status)) : status;
 }
 
 /// <summary>Resource bounds. Zero spacing is available to deterministic offline tests only.</summary>

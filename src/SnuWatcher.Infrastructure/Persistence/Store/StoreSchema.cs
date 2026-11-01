@@ -6,7 +6,7 @@ namespace SnuWatcher.Infrastructure.Persistence;
 public sealed partial class SqliteWatchStore
 {
     private const long ApplicationId = 0x534E5557;
-    private const long SchemaVersion = 2;
+    private const long SchemaVersion = 3;
 
     private void Initialize(SqliteConnection connection, CancellationToken cancellationToken)
     {
@@ -30,20 +30,22 @@ public sealed partial class SqliteWatchStore
                 cancellationToken.ThrowIfCancellationRequested();
                 Run(connection, transaction, SchemaSql);
                 Run(connection, transaction, LegacyImportSchemaSql);
-                Run(connection, transaction, "PRAGMA application_id=1397642583; PRAGMA user_version=2;");
+                Run(connection, transaction, BatchSchemaSql);
+                Run(connection, transaction, "PRAGMA application_id=1397642583; PRAGMA user_version=3;");
                 Checkpoint(SqliteStoreWriteStage.SchemaCreated);
             }
-            else if (reservedVersion == 1)
+            else if (reservedVersion is 1 or 2)
             {
                 // The reservation blocks other writers, but the native backup reads from its own
                 // anchored readonly connection. Backing up the writing handle would deadlock.
-                MigrationBackupPath = BackupVersionOne(cancellationToken);
+                MigrationBackupPath = BackupRecognizedVersion(reservedVersion, cancellationToken);
                 Checkpoint(SqliteStoreWriteStage.MigrationBackup);
                 cancellationToken.ThrowIfCancellationRequested();
-                Run(connection, transaction, LegacyImportSchemaSql);
+                if (reservedVersion == 1) Run(connection, transaction, LegacyImportSchemaSql);
+                Run(connection, transaction, BatchSchemaSql);
                 Checkpoint(SqliteStoreWriteStage.MigrationDdl);
                 cancellationToken.ThrowIfCancellationRequested();
-                Run(connection, transaction, "PRAGMA user_version=2;");
+                Run(connection, transaction, "PRAGMA user_version=3;");
                 Checkpoint(SqliteStoreWriteStage.MigrationVersion);
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -85,8 +87,7 @@ public sealed partial class SqliteWatchStore
         {
             var name = reader.GetString(0);
             var type = reader.GetString(1);
-            var index = name is "MembersSection" or "PendingOutbox";
-            if (!expected.Remove(name) || type != (index ? "index" : "table") || reader.IsDBNull(2)
+            if (!expected.Remove(name) || type != (definitions[name].StartsWith("CREATE TABLE ", StringComparison.Ordinal) ? "table" : "index") || reader.IsDBNull(2)
                 || !string.Equals(definitions[name], CanonicalDdl(reader.GetString(2)), StringComparison.Ordinal))
                 throw new InvalidOperationException("The watch database schema differs from its supported producer layout.");
         }
@@ -95,14 +96,15 @@ public sealed partial class SqliteWatchStore
 
     private static Dictionary<string, string> KnownSchemaDefinitions(long version)
     {
-        // These two producer versions have fixed DDL and no quoted semicolon literals. Compare
+        // Recognized producer versions have fixed DDL and no quoted semicolon literals. Compare
         // complete definitions, including columns, constraints, foreign keys and index expressions.
         // Do not remove interior whitespace or change quoted identifiers/literals when recognizing it.
         var definitions = new Dictionary<string, string>(StringComparer.Ordinal);
-        var schema = SchemaSql + (version == 2 ? LegacyImportSchemaSql : "");
+        var schema = SchemaSql + (version >= 2 ? LegacyImportSchemaSql : "") + (version >= 3 ? BatchSchemaSql : "");
         foreach (var statement in schema.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             var prefix = statement.StartsWith("CREATE TABLE ", StringComparison.Ordinal) ? "CREATE TABLE "
+                : statement.StartsWith("CREATE UNIQUE INDEX ", StringComparison.Ordinal) ? "CREATE UNIQUE INDEX "
                 : statement.StartsWith("CREATE INDEX ", StringComparison.Ordinal) ? "CREATE INDEX " : null;
             if (prefix is null) continue;
             var remaining = statement[prefix.Length..];

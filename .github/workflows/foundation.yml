@@ -37,6 +37,12 @@ jobs:
       - name: Published SQLite persistence smoke
         shell: pwsh
         run: ./tests/scripts/Test-PersistencePublish.ps1
+      - name: Published offline monitoring engine smoke
+        shell: pwsh
+        run: ./tests/scripts/Test-MonitoringPublish.ps1
+      - name: Published desktop private runtime validation
+        shell: pwsh
+        run: ./tests/scripts/Test-DesktopRuntime.ps1
       - name: Publish app-local Windows candidate
         shell: pwsh
         run: |
@@ -62,6 +68,8 @@ jobs:
             artifacts/test-results
             artifacts/installer-recovery-tests
             artifacts/persistence-publish
+            artifacts/monitoring-publish
+            artifacts/DesktopRuntime
             artifacts/publish
           retention-days: 14
 

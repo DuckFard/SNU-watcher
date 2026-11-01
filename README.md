@@ -39,7 +39,7 @@ The earlier command-line prototype is preserved in [legacy/python-watcher](legac
 
 ## Develop locally
 
-The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and alert history. The persistence modules are implemented; connecting the scheduler and student interface remains in progress.
+The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and alert history. Persistence and the monitoring runtime are implemented and tested privately. The student interface and production seat-alert integration remain in development.
 
 Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](global.json), then run:
 

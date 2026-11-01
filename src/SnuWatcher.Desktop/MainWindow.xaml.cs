@@ -63,7 +63,7 @@ public partial class MainWindow : Window, IDisposable
 
     private void OnClosing(object? sender, CancelEventArgs args)
     {
-        if (_allowClose || Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose) return;
+        if (_allowClose || System.Windows.Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose) return;
         args.Cancel = true;
         Hide();
     }

@@ -266,7 +266,7 @@ public sealed class SnuSourceTests
     public async Task RequestDeadlineAlsoBoundsAStalledBodyAfterHeadersArrive()
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StalledContent() };
-        using var source = new SnuCourseSource(new HttpClient(new Responses(response)), new(TimeSpan.Zero, RequestTimeout: TimeSpan.FromMilliseconds(20)));
+        using var source = SnuCourseSource.CreateForTesting(new HttpClient(new Responses(response)), new(TimeSpan.Zero, RequestTimeout: TimeSpan.FromMilliseconds(20)));
         var error = await Assert.ThrowsAsync<SnuSourceException>(() => source.GetCatalogAsync(2026).WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.Equal(SourceFailureKind.Unavailable, error.Kind);
     }
@@ -385,7 +385,7 @@ public sealed class SnuSourceTests
     private static HttpResponseMessage Json(string value) => new(HttpStatusCode.OK) { Content = new StringContent(value, Encoding.UTF8, "application/json") };
     private static SnuCourseSource Client(params HttpResponseMessage[] responses) => Client(new Responses(responses));
     private static SnuCourseSource Client(HttpResponseMessage response, int maxBytes) => Client(new Responses(response), maxBytes);
-    private static SnuCourseSource Client(Responses handler, int maxBytes = 2_000_000) => new(new HttpClient(handler), new SnuSourceOptions(TimeSpan.Zero, 25, maxBytes));
+    private static SnuCourseSource Client(Responses handler, int maxBytes = 2_000_000) => SnuCourseSource.CreateForTesting(new HttpClient(handler), new SnuSourceOptions(TimeSpan.Zero, 25, maxBytes));
 
     private sealed class Responses(params HttpResponseMessage[] responses) : HttpMessageHandler
     {

@@ -22,6 +22,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
+    <ProjectReference Include="../SnuWatcher.Application/SnuWatcher.Application.csproj" />
+    <ProjectReference Include="../SnuWatcher.Infrastructure/SnuWatcher.Infrastructure.csproj" />
     <ProjectReference Include="../SnuWatcher.Windows/SnuWatcher.Windows.csproj" />
   </ItemGroup>
 </Project>

@@ -140,4 +140,5 @@ public enum SqliteStoreWriteStage
 {
     SchemaValidated, SchemaCreated, Issued, Subscription, Section, Members, Event, Recipients, Outbox, Receipt, Delivery,
     ImportLedger, MigrationBackupStarted, MigrationBackup, MigrationDdl, MigrationVersion,
+    SourceIssued, SourcePolicyResult, SourceAccessResume, BatchProjected, BatchReserved, BatchMembers, BatchResult,
 }

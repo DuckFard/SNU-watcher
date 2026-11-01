@@ -7,4 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SnuWatcher.Application/SnuWatcher.Application.csproj" />
+    <ProjectReference Include="../SnuWatcher.Infrastructure/SnuWatcher.Infrastructure.csproj" />
+  </ItemGroup>
 </Project>
