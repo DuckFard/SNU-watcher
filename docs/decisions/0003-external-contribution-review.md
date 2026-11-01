@@ -2,7 +2,7 @@
 
 Date: 2026-11-01, Asia/Seoul.
 
-Status: adopt corrected Core library; hold Application engine for revision. M2 remains open. The [domain/persistence contract](0002-domain-persistence.md) and [accepted plan](../DESKTOP_APP_PLAN.md) remain the acceptance criteria.
+Status: adopt corrected Core library; hold the external Application engine for revision. M2 was open during this contribution review and subsequently passed [native acceptance](../native-validation.md) on 2026-11-01. The [domain/persistence contract](0002-domain-persistence.md) and [accepted plan](../DESKTOP_APP_PLAN.md) remain the acceptance criteria.
 
 ## Supplied artifacts and decision
 
@@ -45,4 +45,4 @@ Additional source-review findings require regressions and redesign before adopti
 
 ## Follow-up boundary
 
-Complete M2 native acceptance independently. Before adopting an Application implementation, cover the four reproduced failures and the additional concurrency/timing findings, then verify the remaining ADR 0002 cases with real tests and individual assembly coverage gates. SQLite must additionally prove its actual native engine version/source ID, safe WAL version, transactional rollback, migrations, reopen/crash behavior and read-only live legacy import. No Application, SQLite, UI or native milestone is marked complete by this contribution review.
+M2 native acceptance was completed independently after this review. Before integrating a watch engine, cover the four reproduced failures and the additional concurrency/timing findings, then verify the remaining ADR 0002 cases with real tests and individual assembly coverage gates. SQLite must additionally prove its actual native engine version/source ID, safe WAL version, transactional rollback, migrations, reopen/crash behavior and read-only live legacy import. This contribution review alone does not establish completion of those milestones.

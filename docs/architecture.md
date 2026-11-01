@@ -14,7 +14,7 @@ The solution and shared build properties pin .NET, enable nullable analysis, and
 
 ## Reserved for later milestones
 
-Durable alert/subscription state, groups, expiry application, SQLite migrations, a notification outbox, actual polling, the full student UI and legacy migration remain gated by M1/M2. The external Application patch is held for revision; its storage and scheduling contracts are not adopted. The existing Python reducer/tests remain a behavioral reference, not the desktop host's production engine. PDF import is excluded.
+M1/M2 acceptance is recorded in [development progress](PROGRESS.md). Durable alert/subscription state, groups, expiry application, SQLite migrations and a notification outbox are the current M3 work; actual polling, the full student UI and legacy migration remain unfinished. The external Application patch is held for revision; its storage and scheduling contracts are not adopted. The existing Python reducer/tests remain a behavioral reference, not the desktop host's production engine. PDF import is excluded.
 
 No network, SQL, or source parsing belongs in a WPF event handler. The native shell may invoke its small notification/link adapters for feasibility; future ViewModels call application services once those milestones begin.
 
@@ -26,4 +26,4 @@ The Windows shell runs unelevated and owns a stable installed executable path. R
 
 ## Validation boundary
 
-This developer PC already contains Windows App Runtime packages. Local native success can establish developer-machine behavior only. The self-contained deployment decision remains provisional until the documented clean-machine gate passes. Do not remove shared OS/runtime packages to manufacture that evidence.
+This developer PC already contains Windows App Runtime packages. Local native success can establish developer-machine behavior only. The selected self-contained profile passed the documented clean-VM M2 gate on 2026-11-01; subsequent installer/runtime changes still need appropriate independent regression checks. Do not remove shared OS/runtime packages to manufacture that evidence.
