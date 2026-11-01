@@ -33,13 +33,13 @@ SNU Watcher is an independent project and is not affiliated with or endorsed by 
 
 The first desktop release targets **Windows 11 x64**, with an installer `.exe` distributed through [GitHub Releases](https://github.com/DuckFard/SNU-watcher/releases). The installer is intended to include its required runtimes so students can install the app without setting up development tools.
 
-For now, development installers are unsigned validation builds. The desktop's installation, notification, and lifecycle checks are still in progress; these builds do not monitor courses.
+For now, development installers are unsigned validation builds. The native installation and notification feasibility checks passed on a clean Windows 11 test VM; these builds do not yet monitor courses.
 
 The earlier command-line prototype is preserved in [legacy/python-watcher](legacy/python-watcher/), along with its setup instructions and known limitations.
 
 ## Develop locally
 
-The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications. SQLite is planned for storing watches and alert history locally.
+The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and alert history. The persistence modules are implemented; connecting the scheduler and student interface remains in progress.
 
 Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](global.json), then run:
 

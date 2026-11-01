@@ -11,18 +11,19 @@ public sealed partial class SqliteWatchStore : IWatchStore, IAsyncDisposable
     private readonly SqliteCommandLane _lane;
     private readonly TimeProvider _time;
     private readonly Action<SqliteStoreWriteStage>? _fault;
+    private readonly SqliteConnectionFactory _factory;
 
-    private SqliteWatchStore(SqliteCommandLane lane, TimeProvider time, Action<SqliteStoreWriteStage>? fault)
-    { _lane = lane; _time = time; _fault = fault; }
+    private SqliteWatchStore(SqliteCommandLane lane, SqliteConnectionFactory factory, TimeProvider time, Action<SqliteStoreWriteStage>? fault)
+    { _lane = lane; _factory = factory; _time = time; _fault = fault; }
 
     public static async Task<SqliteWatchStore> OpenAsync(SqliteConnectionFactory factory, TimeProvider? timeProvider = null,
         Action<SqliteStoreWriteStage>? faultInjector = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        var store = new SqliteWatchStore(new SqliteCommandLane(factory), timeProvider ?? TimeProvider.System, faultInjector);
+        var store = new SqliteWatchStore(new SqliteCommandLane(factory), factory, timeProvider ?? TimeProvider.System, faultInjector);
         try
         {
-            await store._lane.ExecuteAsync(connection => { store.Initialize(connection); return true; }, cancellationToken).ConfigureAwait(false);
+            await store._lane.ExecuteAsync(connection => { store.Initialize(connection, cancellationToken); return true; }, cancellationToken).ConfigureAwait(false);
             return store;
         }
         catch { await store.DisposeAsync().ConfigureAwait(false); throw; }
@@ -135,4 +136,8 @@ public sealed partial class SqliteWatchStore : IWatchStore, IAsyncDisposable
 }
 
 /// <summary>Optional narrow test fault boundary. Production callers leave the observer absent.</summary>
-public enum SqliteStoreWriteStage { SchemaValidated, SchemaCreated, Issued, Subscription, Section, Members, Event, Recipients, Outbox, Receipt, Delivery }
+public enum SqliteStoreWriteStage
+{
+    SchemaValidated, SchemaCreated, Issued, Subscription, Section, Members, Event, Recipients, Outbox, Receipt, Delivery,
+    ImportLedger, MigrationBackupStarted, MigrationBackup, MigrationDdl, MigrationVersion,
+}

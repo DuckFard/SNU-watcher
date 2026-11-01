@@ -107,6 +107,11 @@
           "SQLitePCLRaw.core": "3.0.5"
         }
       },
+      "Tomlyn": {
+        "type": "Transitive",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      },
       "xunit.abstractions": {
         "type": "Transitive",
         "resolved": "2.0.3",
@@ -163,7 +168,8 @@
           "Microsoft.Data.Sqlite.Core": "[10.0.14, )",
           "SQLite": "[3.54.1, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
-          "SnuWatcher.Application": "[1.0.0, )"
+          "SnuWatcher.Application": "[1.0.0, )",
+          "Tomlyn": "[2.10.1, )"
         }
       }
     }

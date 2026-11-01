@@ -1,4 +1,4 @@
-# SQLite dependency and runtime identity
+# Persistence dependencies and SQLite runtime identity
 
 Verified on 2026-11-01 with the pinned .NET SDK. This records the persistence dependencies; it does not claim completion of the watch engine or qualification of a new installed desktop build.
 
@@ -7,6 +7,7 @@ Verified on 2026-11-01 with the pinned .NET SDK. This records the persistence de
 | Microsoft.Data.Sqlite.Core | 10.0.14 | [MIT notice](third-party/Microsoft.Data.Sqlite-LICENSE.txt) |
 | SQLitePCLRaw.bundle_e_sqlite3 and its core/config/provider | 3.0.5 | [Apache-2.0 license](third-party/SQLitePCLRaw-LICENSE.txt) |
 | SQLite native package | 3.54.1 | [Public domain](https://www.nuget.org/packages/SQLite/3.54.1/License) |
+| Tomlyn (legacy TOML reader) | 2.10.1 | [BSD-2-Clause notice](third-party/Tomlyn-LICENSE.txt) |
 
 Microsoft's [custom-version guidance](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/custom-versions) supports using `.Core` with an explicitly selected native provider. The [bundle dependency graph](https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/3.0.5) otherwise permits native SQLite 3.53.4; the explicit direct pin and lock files select 3.54.1.
 
@@ -23,3 +24,5 @@ The production factory verifies this native version and source ID in memory befo
 `tests/scripts/Test-PersistencePublish.ps1` additionally verifies the actual production factory/store/preparer/owner helper in a self-contained win-x64 executable. It passes with app-local native loading, one persisted event across reopen/replay, a zero child exit and no stderr. This published-code test is separate from qualification of a later installed desktop build.
 
 The notice files preserve the [driver's exact tagged license](https://raw.githubusercontent.com/dotnet/efcore/v10.0.14/LICENSE.txt) and [SQLitePCLRaw's exact tagged license](https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v3.0.5/LICENSE.TXT). A desktop distribution that includes these libraries must carry those licenses and applicable notices. The MIT license for SNU Watcher's own code does not replace dependency licenses; the full distribution notice review remains part of packaging acceptance.
+
+The optional legacy import reader uses [Tomlyn 2.10.1](https://www.nuget.org/packages/Tomlyn/2.10.1) with bounded input and nesting. Its [tagged BSD-2-Clause license](https://raw.githubusercontent.com/xoofx/Tomlyn/2.10.1/license.txt) is preserved above. It parses explicitly selected local configuration; it does not execute the old watcher or resolve its environment variables.

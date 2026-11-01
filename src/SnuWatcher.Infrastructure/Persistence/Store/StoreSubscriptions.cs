@@ -13,32 +13,37 @@ public sealed partial class SqliteWatchStore
         return _lane.ExecuteAsync(connection =>
         {
             using var transaction = BeginWrite(connection);
-            var id = command.Id.ToString("N");
-            var facts = StoreWire.CreateFacts(command);
-            var original = (string?)Scalar(connection, transaction, "SELECT createFacts FROM Subscriptions WHERE id=$id;", ("$id", id));
-            if (original is not null)
-            {
-                if (!string.Equals(original, facts, StringComparison.Ordinal))
-                    throw new InvalidOperationException("This subscription identity was created with different original details.");
-                var replay = ReadSubscription(connection, transaction, command.Id)!;
-                transaction.Commit();
-                return replay;
-            }
-            if (command.Expiry?.IsExpiredAt(_time.GetUtcNow()) == true)
-                throw new InvalidOperationException("The selected watch end date has already passed.");
-            if ((long)Scalar(connection, transaction, "SELECT count(*) FROM Subscriptions;")! >= PersistenceLimits.MaxSections)
-                throw new InvalidOperationException("The watch collection has reached its bound.");
-            var watermark = Metadata(connection, transaction, "issuedOrdinal");
-            var snapshot = new SubscriptionSnapshot(command.Id, 1, 1, command.Kind, command.Label, WatchStatus.Active,
-                command.InitialNoticeEnabled, command.Expiry, command.CreatedAtUtc, command.Sections.Select(k => new MemberSnapshot(k, watermark, null)));
-            Run(connection, transaction, "INSERT INTO Subscriptions(id,createFacts,snapshot) VALUES($id,$facts,$snapshot);",
-                ("$id", id), ("$facts", facts), ("$snapshot", StoreWire.Subscription(snapshot)));
-            InsertMembers(connection, transaction, snapshot);
-            AdvanceCatalog(connection, transaction);
-            Checkpoint(SqliteStoreWriteStage.Subscription);
+            var result = CreateWithinTransaction(connection, transaction, command);
             transaction.Commit();
-            return snapshot;
+            return result.Subscription;
         }, cancellationToken);
+    }
+
+    private (SubscriptionSnapshot Subscription, bool Created) CreateWithinTransaction(SqliteConnection connection,
+        SqliteTransaction transaction, NewSubscription command)
+    {
+        var id = command.Id.ToString("N");
+        var facts = StoreWire.CreateFacts(command);
+        var original = (string?)Scalar(connection, transaction, "SELECT createFacts FROM Subscriptions WHERE id=$id;", ("$id", id));
+        if (original is not null)
+        {
+            if (!string.Equals(original, facts, StringComparison.Ordinal))
+                throw new InvalidOperationException("This subscription identity was created with different original details.");
+            return (ReadSubscription(connection, transaction, command.Id)!, false);
+        }
+        if (command.Expiry?.IsExpiredAt(_time.GetUtcNow()) == true)
+            throw new InvalidOperationException("The selected watch end date has already passed.");
+        if ((long)Scalar(connection, transaction, "SELECT count(*) FROM Subscriptions;")! >= PersistenceLimits.MaxSections)
+            throw new InvalidOperationException("The watch collection has reached its bound.");
+        var watermark = Metadata(connection, transaction, "issuedOrdinal");
+        var snapshot = new SubscriptionSnapshot(command.Id, 1, 1, command.Kind, command.Label, WatchStatus.Active,
+            command.InitialNoticeEnabled, command.Expiry, command.CreatedAtUtc, command.Sections.Select(k => new MemberSnapshot(k, watermark, null)));
+        Run(connection, transaction, "INSERT INTO Subscriptions(id,createFacts,snapshot) VALUES($id,$facts,$snapshot);",
+            ("$id", id), ("$facts", facts), ("$snapshot", StoreWire.Subscription(snapshot)));
+        InsertMembers(connection, transaction, snapshot);
+        AdvanceCatalog(connection, transaction);
+        Checkpoint(SqliteStoreWriteStage.Subscription);
+        return (snapshot, true);
     }
 
     public Task<SubscriptionSnapshot> ChangeSubscriptionAsync(SubscriptionChange command, CancellationToken cancellationToken = default)

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using SnuWatcher.Core;
+using SnuWatcher.Application.Migration;
 
 namespace SnuWatcher.Application.Persistence;
 
@@ -30,4 +31,10 @@ public interface IWatchStore
     Task<DeliveryContext> ReadDeliveryContextAsync(Guid eventId, CancellationToken cancellationToken);
     /// <summary>CAS delivery revision; attempts cannot regress and terminal results cannot return to pending.</summary>
     Task<DeliveryWriteResult> RecordDeliveryResultAsync(DeliveryResultCommand command, CancellationToken cancellationToken);
+    /// <summary>
+    /// Imports a confirmed batch atomically. Ledger identity is legacy format/four-part identity plus full target,
+    /// independent of paths/counts/labels. Existing mappings retain their current status and preferences.
+    /// Historical provenance never initializes baselines, members, events or delivery acknowledgement.
+    /// </summary>
+    Task<LegacyImportReceipt> ImportLegacyBatchAsync(LegacyImportBatch command, CancellationToken cancellationToken);
 }

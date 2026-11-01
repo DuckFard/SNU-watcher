@@ -6,9 +6,9 @@ namespace SnuWatcher.Infrastructure.Persistence;
 public sealed partial class SqliteWatchStore
 {
     private const long ApplicationId = 0x534E5557;
-    private const long SchemaVersion = 1;
+    private const long SchemaVersion = 2;
 
-    private void Initialize(SqliteConnection connection)
+    private void Initialize(SqliteConnection connection, CancellationToken cancellationToken)
     {
         long version;
         using (var inspection = connection.BeginTransaction(deferred: true))
@@ -18,18 +18,35 @@ public sealed partial class SqliteWatchStore
             version = ValidateSchema(connection, inspection);
             inspection.Commit();
         }
-        if (version == 0)
+        if (version < SchemaVersion)
         {
             Checkpoint(SqliteStoreWriteStage.SchemaValidated);
             using var transaction = BeginWrite(connection);
             // Another opener may have initialized the empty database while this connection waited
             // for its write reservation. Recheck under that reservation before executing any DDL.
-            if (ValidateSchema(connection, transaction) == 0)
+            var reservedVersion = ValidateSchema(connection, transaction);
+            if (reservedVersion == 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 Run(connection, transaction, SchemaSql);
-                Run(connection, transaction, "PRAGMA application_id=1397642583; PRAGMA user_version=1;");
+                Run(connection, transaction, LegacyImportSchemaSql);
+                Run(connection, transaction, "PRAGMA application_id=1397642583; PRAGMA user_version=2;");
                 Checkpoint(SqliteStoreWriteStage.SchemaCreated);
             }
+            else if (reservedVersion == 1)
+            {
+                // The reservation blocks other writers, but the native backup reads from its own
+                // anchored readonly connection. Backing up the writing handle would deadlock.
+                MigrationBackupPath = BackupVersionOne(cancellationToken);
+                Checkpoint(SqliteStoreWriteStage.MigrationBackup);
+                cancellationToken.ThrowIfCancellationRequested();
+                Run(connection, transaction, LegacyImportSchemaSql);
+                Checkpoint(SqliteStoreWriteStage.MigrationDdl);
+                cancellationToken.ThrowIfCancellationRequested();
+                Run(connection, transaction, "PRAGMA user_version=2;");
+                Checkpoint(SqliteStoreWriteStage.MigrationVersion);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
         }
         // Native identity has already been verified by the factory. Never mutate a future/foreign database.
@@ -42,15 +59,90 @@ public sealed partial class SqliteWatchStore
     {
         var version = (long)Scalar(connection, transaction, "PRAGMA user_version;")!;
         var application = (long)Scalar(connection, transaction, "PRAGMA application_id;")!;
-        var tables = (long)Scalar(connection, transaction, "SELECT count(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%';")!;
-        if (version > SchemaVersion || (version != 0 && version != SchemaVersion)
+        var objects = (long)Scalar(connection, transaction, "SELECT count(*) FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*';")!;
+        if (version > SchemaVersion || version < 0
             || (application != 0 && application != ApplicationId)
-            || (version == 0 && (application != 0 || tables != 0))
-            || (version == SchemaVersion && application != ApplicationId))
+            || (version == 0 && (application != 0 || objects != 0))
+            || (version > 0 && application != ApplicationId))
             throw new InvalidOperationException("This database has an unsupported or unrecognized schema. It was not changed.");
-        if (version == SchemaVersion && (long?)Scalar(connection, transaction, "SELECT count(*) FROM StoreMetadata WHERE id=1;") != 1)
-            throw new InvalidOperationException("The watch database metadata is invalid.");
+        if (version > 0)
+        {
+            ValidateOwnedObjects(connection, transaction, version);
+            if ((long?)Scalar(connection, transaction, "SELECT count(*) FROM StoreMetadata WHERE id=1;") != 1)
+                throw new InvalidOperationException("The watch database metadata is invalid.");
+        }
         return version;
+    }
+
+    private static void ValidateOwnedObjects(SqliteConnection connection, SqliteTransaction? transaction, long version)
+    {
+        var definitions = KnownSchemaDefinitions(version);
+        var expected = definitions.Keys.ToHashSet(StringComparer.Ordinal);
+        using var command = Command(connection, transaction,
+            "SELECT name,type,sql FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*';");
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var name = reader.GetString(0);
+            var type = reader.GetString(1);
+            var index = name is "MembersSection" or "PendingOutbox";
+            if (!expected.Remove(name) || type != (index ? "index" : "table") || reader.IsDBNull(2)
+                || !string.Equals(definitions[name], CanonicalDdl(reader.GetString(2)), StringComparison.Ordinal))
+                throw new InvalidOperationException("The watch database schema differs from its supported producer layout.");
+        }
+        if (expected.Count != 0) throw new InvalidOperationException("The watch database schema is incomplete.");
+    }
+
+    private static Dictionary<string, string> KnownSchemaDefinitions(long version)
+    {
+        // These two producer versions have fixed DDL and no quoted semicolon literals. Compare
+        // complete definitions, including columns, constraints, foreign keys and index expressions.
+        // Do not remove interior whitespace or change quoted identifiers/literals when recognizing it.
+        var definitions = new Dictionary<string, string>(StringComparer.Ordinal);
+        var schema = SchemaSql + (version == 2 ? LegacyImportSchemaSql : "");
+        foreach (var statement in schema.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var prefix = statement.StartsWith("CREATE TABLE ", StringComparison.Ordinal) ? "CREATE TABLE "
+                : statement.StartsWith("CREATE INDEX ", StringComparison.Ordinal) ? "CREATE INDEX " : null;
+            if (prefix is null) continue;
+            var remaining = statement[prefix.Length..];
+            var end = remaining.IndexOfAny([' ', '(']);
+            definitions.Add(remaining[..end], CanonicalDdl(statement));
+        }
+        return definitions;
+    }
+
+    private static string CanonicalDdl(string sql)
+    {
+        // Git checkout line endings survive C# raw literals. Normalize only unquoted CRLF;
+        // all token spacing and every quoted identifier/literal character remain exact.
+        var value = new System.Text.StringBuilder(sql.Length);
+        var quote = '\0';
+        for (var index = 0; index < sql.Length; index++)
+        {
+            var character = sql[index];
+            if (quote != '\0')
+            {
+                value.Append(character);
+                if (character == quote)
+                {
+                    if (index + 1 < sql.Length && sql[index + 1] == quote) value.Append(sql[++index]);
+                    else quote = '\0';
+                }
+            }
+            else if (character is '\'' or '"' or '`' or '[')
+            {
+                quote = character == '[' ? ']' : character;
+                value.Append(character);
+            }
+            else if (character == '\r' && index + 1 < sql.Length && sql[index + 1] == '\n')
+            {
+                value.Append('\n');
+                index++;
+            }
+            else value.Append(character);
+        }
+        return value.ToString().Trim().TrimEnd(';').Trim();
     }
 
     private static void EnsureIdentity(SqliteConnection connection, SqliteTransaction transaction, SectionKey key) =>
@@ -75,5 +167,16 @@ public sealed partial class SqliteWatchStore
         CREATE TABLE DeliveryAttempts(eventId TEXT NOT NULL REFERENCES Events(id),revision INTEGER NOT NULL,status INTEGER NOT NULL,attempts INTEGER NOT NULL,recordedUtc TEXT NOT NULL,PRIMARY KEY(eventId,revision));
         CREATE INDEX MembersSection ON Members(sectionKey);
         CREATE INDEX PendingOutbox ON Outbox(status);
+        """;
+
+    private const string LegacyImportSchemaSql = """
+        CREATE TABLE LegacyImports(
+            legacyKey TEXT NOT NULL,
+            targetKey TEXT NOT NULL REFERENCES SectionIdentities(sectionKey),
+            subscriptionId TEXT NOT NULL REFERENCES Subscriptions(id),
+            importedUtc TEXT NOT NULL,
+            provenance TEXT,
+            PRIMARY KEY(legacyKey,targetKey)
+        );
         """;
 }
