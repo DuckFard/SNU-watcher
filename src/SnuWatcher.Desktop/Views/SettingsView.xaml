@@ -1,0 +1,67 @@
+<UserControl x:Class="SnuWatcher.Desktop.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:prefs="clr-namespace:SnuWatcher.Application.Presentation.Preferences;assembly=SnuWatcher.Application"
+             xmlns:monitor="clr-namespace:SnuWatcher.Application.Monitoring.Scheduling;assembly=SnuWatcher.Application"
+             xmlns:presentation="clr-namespace:SnuWatcher.Desktop.Presentation">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Settings.BooleanVisibility"/>
+  </UserControl.Resources>
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="20" MaxWidth="760" HorizontalAlignment="Stretch">
+      <TextBlock Text="{DynamicResource Ui.Settings}" Style="{StaticResource Student.Title}"/>
+      <Border Style="{StaticResource Student.Card}">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.Language}" Style="{StaticResource Student.Label}"/>
+          <ComboBox Style="{StaticResource Student.Select}" SelectedValuePath="Tag"
+                    SelectedValue="{Binding Language, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    IsEnabled="{Binding Model.State.CanEdit}" AutomationProperties.Name="{DynamicResource Ui.Language}">
+            <ComboBoxItem Content="English" Tag="{x:Static prefs:UiLanguage.English}"/>
+            <ComboBoxItem Content="한국어" Tag="{x:Static prefs:UiLanguage.Korean}"/>
+          </ComboBox>
+          <TextBlock Text="{DynamicResource Ui.RefreshTarget}" Style="{StaticResource Student.Label}"/>
+          <ComboBox Style="{StaticResource Student.Select}" SelectedValuePath="Tag"
+                    SelectedValue="{Binding DesiredProfile, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    IsEnabled="{Binding Model.State.CanEdit}" AutomationProperties.Name="{DynamicResource Ui.RefreshTarget}">
+            <ComboBoxItem Content="{DynamicResource Ui.Faster}" Tag="{x:Static monitor:WatchMonitorProfile.Faster}"/>
+            <ComboBoxItem Content="{DynamicResource Ui.Normal}" Tag="{x:Static monitor:WatchMonitorProfile.Normal}"/>
+            <ComboBoxItem Content="{DynamicResource Ui.LowActivity}" Tag="{x:Static monitor:WatchMonitorProfile.LowActivity}"/>
+          </ComboBox>
+          <WrapPanel Margin="0,0,0,8">
+            <TextBlock Text="{DynamicResource Ui.AppliedRefreshTarget}" Style="{StaticResource Student.Label}" Margin="0,0,10,0"/>
+            <TextBlock Text="{Binding Model.State.Applied.TargetInterval.TotalSeconds, StringFormat={}{0:0}, FallbackValue=—}" Style="{StaticResource Student.Label}"/>
+            <TextBlock Text="{DynamicResource Ui.Seconds}" Style="{StaticResource Student.Label}" Margin="5,0,0,0"/>
+          </WrapPanel>
+          <TextBlock Text="{DynamicResource Ui.RefreshNote}" Style="{StaticResource Student.Label}" Margin="0,0,0,14"/>
+          <TextBlock Text="{DynamicResource Ui.CloseBehavior}" Style="{StaticResource Student.Label}"/>
+          <ComboBox Style="{StaticResource Student.Select}" SelectedValuePath="Tag"
+                    SelectedValue="{Binding CloseBehavior, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    IsEnabled="{Binding Model.State.CanEdit}" AutomationProperties.Name="{DynamicResource Ui.CloseBehavior}">
+            <ComboBoxItem Content="{DynamicResource Ui.KeepInTray}" Tag="{x:Static prefs:UiCloseBehavior.MinimizeToTray}"/>
+            <ComboBoxItem Content="{DynamicResource Ui.Quit}" Tag="{x:Static prefs:UiCloseBehavior.Quit}"/>
+          </ComboBox>
+          <TextBlock Text="{DynamicResource Ui.UnsavedChanges}" Style="{StaticResource Student.Label}" Margin="0,0,0,10"
+                     Visibility="{Binding Model.State.IsDirty, Converter={StaticResource Settings.BooleanVisibility}}"/>
+          <TextBlock presentation:ResourceText.Key="{Binding Model.State.IssueKey}" Style="{StaticResource Student.Label}"
+                     AutomationProperties.LiveSetting="Polite" Margin="0,0,0,10"/>
+          <TextBlock Text="{DynamicResource Ui.SettingsPending}" Style="{StaticResource Student.Label}" Margin="0,0,0,10"
+                     Visibility="{Binding Model.State.IsApplyPending, Converter={StaticResource Settings.BooleanVisibility}}"/>
+          <WrapPanel>
+            <Button Content="{DynamicResource Ui.SaveSettings}" Command="{Binding SaveCommand}" Style="{StaticResource Student.PrimaryButton}" IsDefault="True"/>
+            <Button Content="{DynamicResource Ui.Reload}" Command="{Binding ReloadCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.DiscardChanges}" Command="{Binding DiscardChangesCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.RetryApply}" Command="{Binding RetryApplyCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+      <Border Style="{StaticResource Student.Card}">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.NativeTest}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="SemiBold"/>
+          <TextBlock Text="{DynamicResource Ui.NativeTestNote}" Style="{StaticResource Student.Label}" Margin="0,8,0,12"/>
+          <Button Content="{DynamicResource Ui.SendTest}" Command="{Binding NativeTestCommand}" Style="{StaticResource Student.SecondaryButton}" HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Border>
+      <TextBlock Text="{DynamicResource Ui.AlertsInactive}" Style="{StaticResource Student.Label}"/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,6 +1,6 @@
 # Desktop architecture
 
-This document describes the implemented libraries and monitoring composition in the [desktop plan](DESKTOP_APP_PLAN.md). Milestone acceptance and measured verification belong in [development progress](PROGRESS.md); this document does not independently pass a milestone. M4 implements the monitoring runtime and owner-first Windows host. The default desktop launch still opens the M2 feasibility shell, with a separate private runtime-validation entry. Student screens (M5), the runtime's real native delivery channel (M6), and release retention/qualification remain later work.
+This document describes the libraries, monitoring composition and developing student interface in the [desktop plan](DESKTOP_APP_PLAN.md). Milestone acceptance and measured verification belong in [development progress](PROGRESS.md); this document does not independently pass a milestone. The owner-first Windows host and monitoring runtime are implemented. The M5 working tree adds the student window; its UI and display-scaling gates remain open. Production native delivery (M6) and release retention/qualification remain later work.
 
 ## Implemented module responsibilities
 
@@ -8,10 +8,20 @@ This document describes the implemented libraries and monitoring composition in 
 - `SnuWatcher.Application`: source and persistence ports, pure observation/delivery/health projections, legacy confirmation, watch management, query planning, the monotonic monitor, batch recovery/pump, and `MonitoringRuntimeSession`. It owns logical work and its ordering without depending on SQLite, HTTP or Windows.
 - `SnuWatcher.Infrastructure`: bounded anonymous SNU transport/parsers, the shared physical-request dispatcher, stored source policy and metadata gateway, plus the SQLite factory/command lane, transactional watch store and explicit read-only legacy reader. HTML/JSON and selected legacy files are untrusted input. It does not collect SNU credentials or submit registrations.
 - `SnuWatcher.Windows`: validated activation, session-local UI forwarding, the separate current-user-only global database-owner gate, fixed runtime profiles and `WindowsMonitoringHost`. The host owns concrete store/source/gateway resources and composes the Application session; its alert channel is injected.
-- `SnuWatcher.Desktop`: the existing WPF feasibility window, tray lifecycle and native notification boundary, plus an early private validation route for the monitoring host. It does not yet expose course-search/watchlist screens or connect the monitoring pump to native notifications.
+- `SnuWatcher.Desktop`: WPF course-search, watchlist and settings views, localized resources, tray lifecycle and fixed browser/clipboard action adapters. Early guarded private routes validate the runtime and student interface without native initialization or the normal profile. The original feasibility window remains available for native validation. The monitoring pump is not yet connected to native notifications in the normal student host.
 - Four xUnit projects validate Core policies, Application behavior, source/real SQLite integration and Windows ownership/hosting. Direct native display and browser clicks require the interactive acceptance protocol; a fake channel cannot establish those outcomes.
 
 The solution and shared build properties pin .NET, enable nullable analysis, and preserve locked dependency graphs. CI has read-only repository permissions and runs offline relative to SNU. It does not send notifications or publish a public release.
+
+## Student-interface ownership
+
+Windows presentation controllers publish immutable snapshots through an explicit UI dispatcher. Search editing does not request data; catalog loading and search are explicit owned commands. A section can enter a watch only through its catalog-confirmed full identity and the current verified search results. Saved counts, current availability, loading status and failed source evidence remain separate. The offline term-label cache cannot establish a valid source selector.
+
+`StudentDesktopSession` owns search, watchlist, settings and shell controllers, a local age timer, and a bounded operating-system state bridge. It consumes runtime hints and marshals UI updates; age ticks do not query SQLite or SNU. The shell coalesces committed-change hints into watchlist reloads and preserves failed reloads for retry. Preference updates use revision-checked storage and preserve unrelated draft edits.
+
+The app owns both the desktop session and `WindowsMonitoringHost`. It supervises failures from each, closes admission, starts their drains concurrently, and retains ownership when finalization is blocked. The graph never disposes the host. Actual host workers and observers are joined before process shutdown; an asynchronous wrapper completing is not permission to release a still-running owner.
+
+Views own visual resources and input routing. They use system colors, English/Korean resource dictionaries, independently bounded result/detail panes and compact navigation for small work areas. External actions resolve a closed destination enum to fixed official registration or SNU Genie pages; source strings cannot become executable markup, arbitrary browser URLs or shell commands. Alerts history remains an explicit placeholder until M6.
 
 ## Domain state and persistence
 
@@ -61,7 +71,7 @@ Shutdown closes admission, cancels and awaits actual monitor/refresh/delivery wo
 
 Cancellation is not proof that underlying HTTP, channel or SQLite work ended. If a known result cannot be saved, the session/host reports `StopBlocked`, retains canonical commands and the required resources/owner, and rejects disposal. Explicit finalization retry retries retained writes and resource closure; it does not restart actors or startup recovery. Private Desktop validation keeps a strong host reference while blocked rather than claiming a clean exit.
 
-No network, SQL or source parsing belongs in a WPF event handler. Future ViewModels call the admitted runtime services and consume immutable projections; the existing shell invokes its small notification/link adapters only for feasibility.
+No network, SQL or source parsing belongs in a WPF event handler. The student controllers call admitted runtime services and consume immutable projections. The shell's native test adapter remains a feasibility operation, separate from pending course-opening events.
 
 ## External boundaries
 
@@ -69,7 +79,7 @@ SNU course data uses a replaceable internal-site adapter. Registration links ope
 
 The Windows shell runs unelevated and owns a stable installed executable path. Registration notification body/button clicks open the fixed official HTTPS URL through Windows directly; they do not start the app or provide it a click receipt. Ordinary application launches route to the existing UI owner. Ordinary shell exit releases live handlers; uninstall removes persistent notification registration before removing the executable. The monitoring host's separate gate excludes another database owner even across sessions. The retained COM callback path is best-effort; its observed failure and protocol redecision are recorded in [ADR 0001](decisions/0001-windows-deployment.md).
 
-The private `--monitor-validation` route runs before native/M2 initialization, accepts only a canonical marked run identity, and rejects malformed prefixes without falling through to ordinary startup. Its fake source/channel exercise the actual host and isolated SQLite state without HTTP or native popups. This route does not enable monitoring in the normal student profile or connect runtime alerts to the shell's native adapter. An alert never reserves a seat; registration remains a student action on the official site.
+The private `--monitor-validation` and `--ui-validation` routes run before native/normal-profile initialization, accept only canonical marked run identities, and reject malformed prefixes without falling through to ordinary startup. Their fake ports exercise the actual host and isolated SQLite state without HTTP or native popups. Normal student startup uses the production source with delivery disabled until M6; private results never establish that live SNU data or real opening popups work. An alert never reserves a seat; registration remains a student action on the official site.
 
 ## Validation boundary
 

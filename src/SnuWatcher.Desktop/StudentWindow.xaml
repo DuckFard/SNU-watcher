@@ -1,0 +1,98 @@
+<Window x:Class="SnuWatcher.Desktop.StudentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:SnuWatcher.Desktop.Views"
+        xmlns:ui="clr-namespace:SnuWatcher.Desktop.Presentation"
+        xmlns:search="clr-namespace:SnuWatcher.Windows.Presentation.Search;assembly=SnuWatcher.Windows"
+        xmlns:watches="clr-namespace:SnuWatcher.Windows.Presentation.Watches;assembly=SnuWatcher.Windows"
+        xmlns:settings="clr-namespace:SnuWatcher.Windows.Presentation.Settings;assembly=SnuWatcher.Windows"
+        xmlns:shell="clr-namespace:SnuWatcher.Windows.Presentation.Shell;assembly=SnuWatcher.Windows"
+        Title="SNU Watcher" Width="1180" Height="820" MinWidth="680" MinHeight="480" SizeChanged="OnWindowSizeChanged"
+        FontFamily="Segoe UI, Malgun Gothic" FontSize="14"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+        Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="Student.Visible"/>
+    <DataTemplate DataType="{x:Type search:CourseSearchViewModel}"><views:FindCoursesView/></DataTemplate>
+    <DataTemplate DataType="{x:Type watches:WatchListViewModel}"><views:MyWatchesView/></DataTemplate>
+    <DataTemplate DataType="{x:Type settings:SettingsViewModel}"><views:SettingsView/></DataTemplate>
+    <DataTemplate DataType="{x:Type shell:StudentAlertsPlaceholder}">
+      <Border Style="{DynamicResource Student.Card}" VerticalAlignment="Top">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.Alerts}" Style="{DynamicResource Student.Title}"/>
+          <TextBlock ui:ResourceText.Key="{Binding MessageKey}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+          <TextBlock Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </Window.Resources>
+  <Grid x:Name="RootLayout" Margin="16" SizeChanged="OnWindowSizeChanged">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <!-- Only the chrome scrolls at small work areas. The page keeps a finite row viewport. -->
+    <ScrollViewer x:Name="ChromeScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel>
+    <DockPanel x:Name="HeaderPanel" Margin="0,0,0,10">
+      <Button x:Name="QuitButton" DockPanel.Dock="Right" Content="{DynamicResource Ui.Quit}" Click="OnQuit"
+              Style="{DynamicResource Student.SecondaryButton}" VerticalAlignment="Top"/>
+      <StackPanel x:Name="BrandingPanel">
+        <TextBlock x:Name="BrandingTitle" Text="SNU Watcher" FontWeight="SemiBold" FontSize="21"/>
+        <TextBlock x:Name="BrandingSubtitle" Text="{DynamicResource Ui.Unofficial}" TextWrapping="Wrap" FontSize="12"/>
+        <TextBlock x:Name="DemoLabel" Text="{DynamicResource Ui.Demo}" FontWeight="Bold" Margin="0,2,0,0" FontSize="12"
+                   Visibility="{Binding State.IsDemo, Converter={StaticResource Student.Visible}}"/>
+      </StackPanel>
+    </DockPanel>
+    <StackPanel>
+      <UniformGrid x:Name="NavigationPanel" Columns="4" Margin="0,0,0,8">
+        <RadioButton x:Name="FindNavigation" GroupName="Pages" Content="{DynamicResource Ui.FindCourses}"
+                     Tag="{x:Static shell:StudentPage.FindCourses}" Checked="OnNavigate" IsChecked="True" Style="{DynamicResource Student.Navigation}"/>
+        <RadioButton x:Name="WatchesNavigation" GroupName="Pages" Content="{DynamicResource Ui.MyWatches}"
+                     Tag="{x:Static shell:StudentPage.MyWatches}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
+        <RadioButton x:Name="AlertsNavigation" GroupName="Pages" Content="{DynamicResource Ui.Alerts}"
+                     Tag="{x:Static shell:StudentPage.Alerts}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
+        <RadioButton x:Name="SettingsNavigation" GroupName="Pages" Content="{DynamicResource Ui.Settings}"
+                     Tag="{x:Static shell:StudentPage.Settings}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
+      </UniformGrid>
+      <Expander x:Name="SourceStatusExpander" Header="{DynamicResource Ui.SourceStatus}" Margin="0,0,0,8">
+        <StackPanel Margin="10">
+          <TextBlock ui:ResourceText.Key="{Binding State.Source.MessageKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+          <WrapPanel Margin="0,8,0,0">
+            <Button Content="{DynamicResource Ui.Reload}" Command="{Binding RefreshSourceCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.SourceResume}" Command="{Binding ResumeAccessCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.RecoverSavedState}" Command="{Binding RecoverPolicyCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
+          </WrapPanel>
+          <TextBlock Text="{DynamicResource Ui.Unofficial}" TextWrapping="Wrap" FontSize="12"/>
+          <TextBlock Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0"/>
+        </StackPanel>
+      </Expander>
+      <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+      <TextBlock x:Name="LifecycleText" TextWrapping="Wrap" Visibility="Collapsed" AutomationProperties.LiveSetting="Assertive"/>
+    </StackPanel>
+    </StackPanel>
+    </ScrollViewer>
+    <ContentControl x:Name="PageContent" Grid.Row="1" Content="{Binding PageContent}"/>
+    <TextBlock x:Name="ReservationFooter" Grid.Row="2" Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"/>
+    <Border x:Name="Onboarding" Grid.RowSpan="3" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="1" Padding="24"
+            Visibility="{Binding State.ShowOnboarding, Converter={StaticResource Student.Visible}}">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="620" VerticalAlignment="Center">
+          <TextBlock Text="SNU Watcher" FontSize="32" FontWeight="SemiBold" Margin="0,0,0,18"/>
+          <TextBlock Text="{DynamicResource Ui.OnboardingTitle}" Style="{DynamicResource Student.Title}"/>
+          <TextBlock Text="{DynamicResource Ui.OnboardingNote}" TextWrapping="Wrap" Margin="0,0,0,18"/>
+          <TextBlock Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" Margin="0,0,0,18"/>
+          <TextBlock Text="{DynamicResource Ui.AlertsInactive}" TextWrapping="Wrap" Margin="0,0,0,18"/>
+          <WrapPanel>
+            <Button Content="English" Click="OnEnglish" Style="{DynamicResource Student.SecondaryButton}"/>
+            <Button Content="한국어" Click="OnKorean" Style="{DynamicResource Student.SecondaryButton}"/>
+          </WrapPanel>
+          <Button Content="{DynamicResource Ui.GetStarted}" Command="{Binding CompleteOnboardingCommand}" HorizontalAlignment="Left"
+                  Style="{DynamicResource Student.PrimaryButton}"/>
+          <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</Window>

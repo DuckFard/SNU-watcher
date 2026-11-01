@@ -1,0 +1,130 @@
+<UserControl x:Class="SnuWatcher.Desktop.Views.WatchSelectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:SnuWatcher.Desktop.Presentation"
+             xmlns:search="clr-namespace:SnuWatcher.Windows.Presentation.Search;assembly=SnuWatcher.Windows"
+             AutomationProperties.Name="{DynamicResource Ui.WatchSelected}" FontSize="14">
+  <UserControl.Resources>
+    <Style x:Key="Selection.Name" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+    </Style>
+  </UserControl.Resources>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    <TextBlock Text="{DynamicResource Ui.WatchSelected}" Style="{DynamicResource Student.Title}"/>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Padding="0,0,8,0" AutomationProperties.Name="{DynamicResource Ui.WatchSelected}">
+      <StackPanel>
+        <TextBlock Text="{DynamicResource Ui.WatchSelectionEmpty}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><DataTrigger Binding="{Binding Model.State.Rows.IsEmpty}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <WrapPanel Margin="0,0,0,8">
+          <TextBlock Text="{DynamicResource Ui.MemberCount}" Style="{DynamicResource Student.Label}" Margin="0,0,8,0"/>
+          <TextBlock Text="{Binding Model.State.Rows.Length}" Style="{DynamicResource Student.Label}" FontWeight="SemiBold"/>
+        </WrapPanel>
+        <WrapPanel Margin="0,0,0,10">
+          <TextBlock Text="{Binding Model.State.Year}" Style="{DynamicResource Student.Label}" Margin="0,0,10,0"/>
+          <TextBlock Text="{Binding Model.State.TermName}" Style="{DynamicResource Student.Label}"/>
+        </WrapPanel>
+        <!-- A finite viewport keeps the explicit immutable membership list recyclable. -->
+        <ListBox ItemsSource="{Binding Model.State.Rows}" MaxHeight="240" MinHeight="72" Margin="0,0,0,14"
+                 ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                 HorizontalContentAlignment="Stretch" AutomationProperties.Name="{DynamicResource Ui.SelectSections}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Margin="4,6">
+                <TextBlock Text="{Binding Name}" Style="{StaticResource Selection.Name}"/>
+                <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" FontFamily="Consolas"
+                           AutomationProperties.Name="{DynamicResource Ui.CopyIdentifier}">
+                  <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} ({1})">
+                      <Binding Path="Key.CourseCode"/><Binding Path="Key.Section"/>
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Expander Header="{DynamicResource Ui.AdvancedIdentity}" IsExpanded="False" Margin="0,0,0,14">
+          <StackPanel Margin="0,8,0,0">
+            <TextBlock Text="{DynamicResource Ui.FullIdentifier}" Style="{DynamicResource Student.Label}"/>
+            <ListBox ItemsSource="{Binding Model.State.Rows}" MaxHeight="240" ScrollViewer.CanContentScroll="True"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
+                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+              <ListBox.ItemTemplate><DataTemplate>
+                <TextBlock TextWrapping="Wrap" FontFamily="Consolas" Margin="0,6,0,0">
+                  <TextBlock.Text><MultiBinding StringFormat="{}{0} / {1} / {2} / {3} / {4} / {5}">
+                    <Binding Path="Key.Year"/><Binding Path="Key.SemesterCode"/><Binding Path="Key.DetailSemesterCode"/>
+                    <Binding Path="Key.CourseCode"/><Binding Path="Key.Section"/><Binding Path="Key.SubsubjectCode"/>
+                  </MultiBinding></TextBlock.Text>
+                </TextBlock>
+              </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </Expander>
+        <StackPanel>
+          <StackPanel.Style>
+            <Style TargetType="StackPanel">
+              <Setter Property="IsEnabled" Value="{Binding Model.State.CanEdit}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saved}"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Style>
+          <Label Content="{DynamicResource Ui.WatchLabel}" Target="{Binding ElementName=WatchLabelField}" Padding="0"/>
+          <TextBox x:Name="WatchLabelField" Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}" MaxLength="120"
+                   Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.WatchLabel}"/>
+          <CheckBox IsChecked="{Binding InitialNoticeEnabled}" Margin="0,0,0,14" AutomationProperties.Name="{DynamicResource Ui.InitialNotice}">
+            <TextBlock Text="{DynamicResource Ui.InitialNotice}" TextWrapping="Wrap"/>
+          </CheckBox>
+          <CheckBox IsChecked="{Binding UseExpiry}" Margin="0,0,0,8" AutomationProperties.Name="{DynamicResource Ui.ThroughDate}">
+            <TextBlock Text="{DynamicResource Ui.ThroughDate}" TextWrapping="Wrap"/>
+          </CheckBox>
+          <DatePicker SelectedDate="{Binding ExpiryDate}" IsEnabled="{Binding UseExpiry}" Margin="0,0,10,8" MinHeight="34"
+                      AutomationProperties.Name="{DynamicResource Ui.ThroughDate}"/>
+          <TextBlock Text="{DynamicResource Ui.NoExpiry}" Margin="0,0,0,8">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}"><Style.Triggers>
+                <DataTrigger Binding="{Binding UseExpiry}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+              </Style.Triggers></Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <TextBlock Text="{DynamicResource Ui.ExpiryInclusive}" Style="{DynamicResource Student.Label}" Margin="0,0,0,14"/>
+        </StackPanel>
+        <TextBlock Text="{DynamicResource Ui.NoReservation}" Style="{DynamicResource Student.Label}" Margin="0,0,0,10"/>
+        <TextBlock Text="{DynamicResource Ui.Eligibility}" Style="{DynamicResource Student.Label}" Margin="0,0,0,14"/>
+        <Button Command="{Binding SaveCommand}" Style="{DynamicResource Student.PrimaryButton}"
+                HorizontalContentAlignment="Left" AutomationProperties.Name="{DynamicResource Ui.ConfirmWatch}">
+          <TextBlock Text="{DynamicResource Ui.ConfirmWatch}" TextWrapping="Wrap"/>
+        </Button>
+        <TextBlock AutomationProperties.LiveSetting="Polite">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saving}">
+                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.Loading}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saved}">
+                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.WatchSaved}"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <TextBlock ui:ResourceText.Key="{Binding Model.State.IssueKey}" Style="{DynamicResource Student.Label}" AutomationProperties.LiveSetting="Polite"/>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

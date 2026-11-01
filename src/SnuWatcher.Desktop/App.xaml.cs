@@ -24,7 +24,9 @@ public partial class App : System.Windows.Application
 
     private async void OnStartup(object sender, StartupEventArgs e)
     {
+        if (await Runtime.StudentUiValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         if (await Runtime.MonitorRuntimeValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
+        _useStudentInterface = !e.Args.Contains("--native-validation", StringComparer.Ordinal);
         try
         {
             _coldLaunch = ActivationRequest.IsNotificationLaunch(e.Args);
@@ -130,10 +132,16 @@ public partial class App : System.Windows.Application
             {
                 // The SDK stores the first cold payload in lifecycle Data rather than raising NotificationInvoked.
                 // Later clicks are delivered through the already registered NotificationInvoked handler.
+                ActivationRequest? dispatchedRequest = null;
                 if (NotificationActivationRouter.DispatchStartup(isNotificationActivation,
                     (startupActivation?.Data as AppNotificationActivatedEventArgs)?.Argument,
-                    HandleActivation))
+                    request => { dispatchedRequest = request; HandleActivation(request); }))
+                {
+                    if (_owner && _useStudentInterface
+                        && dispatchedRequest?.Action is ActivationAction.Show or ActivationAction.ViewSection)
+                        await StartStudentInterfaceAsync();
                     return;
+                }
             }
             catch (ArgumentException)
             {
@@ -147,7 +155,8 @@ public partial class App : System.Windows.Application
                 Shutdown(2);
                 return;
             }
-            ShowWindow();
+            if (_useStudentInterface) await StartStudentInterfaceAsync();
+            else ShowWindow();
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
@@ -188,9 +197,14 @@ public partial class App : System.Windows.Application
             {
                 NativeDiagnostics.Write("activation-browser-failed", error.GetType().Name + $" (0x{error.HResult:X8})", _owner);
                 UpdateStatus("The default browser could not be opened. Use the official SNU registration website.");
-                ShowWindow();
+                if (_owner && _useStudentInterface)
+                {
+                    await StartStudentInterfaceAsync();
+                    _studentWindow?.ShowStatusKey("Ui.BrowserFailed");
+                }
+                else ShowWindow();
             }
-            if (_coldLaunch && _window is null) Shutdown();
+            if (_coldLaunch && _window is null && _studentWindow is null) Shutdown();
             return;
         }
         var activated = ShowWindow();
@@ -202,6 +216,7 @@ public partial class App : System.Windows.Application
 
     private bool ShowWindow()
     {
+        if (_useStudentInterface) return ShowStudentWindow();
         if (_window is null)
         {
             _window = new MainWindow(SendTestNotification, Quit);
@@ -234,10 +249,12 @@ public partial class App : System.Windows.Application
     {
         _status = message;
         _window?.SetStatus(message);
+        _studentWindow?.ShowStatus(message);
     }
 
     private void Quit()
     {
+        if (_useStudentInterface) { BeginStudentQuit(); return; }
         if (_quitting) return;
         _quitting = true;
         _window?.AllowClose();
@@ -246,6 +263,9 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _studentWindow?.Dispose();
+        _studentStartupStop.Dispose();
+        _studentLifetimeStop.Dispose();
         _window?.Dispose();
         _notifications?.Dispose();
         _instance?.DisposeAsync().AsTask().GetAwaiter().GetResult();

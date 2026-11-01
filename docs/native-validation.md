@@ -1,6 +1,8 @@
 # Native Windows validation
 
-This is an M2 feasibility candidate, not a course-monitoring release. It intentionally does not start polling or show synthetic live course counts. The existing Python watcher is unchanged.
+This guide records the M2 native-feasibility candidate and its binary-specific acceptance, not a finished course-monitoring release. That candidate does not poll or show synthetic live counts. The developing M5 student window has separate UI gates in [development progress](PROGRESS.md); historical M2 results do not qualify the newer app.
+
+In a new development build, `--native-validation` selects the original feasibility window. Ordinary launch selects the student interface and its monitoring-only host. Native diagnostic/test/cleanup arguments retain their dedicated behavior. Keep those tests separate from `--ui-validation=<runId>`, which is an offline private-profile journey with no native notification initialization.
 
 ## Automated checks
 
