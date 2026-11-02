@@ -346,7 +346,8 @@ function Invoke-OwnedStudentUi([string]$Exe, [string]$Argument, [string]$Name, [
         $ownedHandle = $process.Handle
         if ($null -eq $ownedHandle -or $ownedHandle -eq [IntPtr]::Zero) { throw 'The private UI process handle is unavailable.' }
         $ownedProcessId = $process.Id
-        $timedOut = !$process.WaitForExit(90000)
+        # Fixed whole-journey UI budget is 180 seconds; allow startup and actual failure/drain cleanup before the owner deadline.
+        $timedOut = !$process.WaitForExit(210000)
         if ($timedOut) {
             $process.Refresh()
             if (!$process.HasExited) {
@@ -363,7 +364,7 @@ function Invoke-OwnedStudentUi([string]$Exe, [string]$Argument, [string]$Name, [
         $evidence = [PSCustomObject]@{ runId=[IO.Path]::GetFileName($RunRoot); processId=$ownedProcessId; exitCode=$exitCode; executablePath=$Exe; handleObtained=$true;
             timedOut=$timedOut; startedAtUtc=$started.ToString('O'); exitedAtUtc=[DateTimeOffset]::UtcNow.ToString('O') }
         [IO.File]::WriteAllText((Join-Path $RunRoot ($Name + '-process.json')), ($evidence | ConvertTo-Json -Compress), [Text.UTF8Encoding]::new($false))
-        if ($timedOut) { throw 'Private UI validation exceeded 90 seconds; its artifacts and profile are preserved.' }
+        if ($timedOut) { throw 'Private UI validation exceeded 210 seconds; its artifacts and profile are preserved.' }
         return [PSCustomObject]@{ ProcessId=$ownedProcessId; ExitCode=$exitCode; Stdout=$stdout; Stderr=$stderr }
     } finally { $process.Dispose() }
 }

@@ -12,5 +12,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" PrivateAssets="all" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" PrivateAssets="all" />
     <ProjectReference Include="../../src/SnuWatcher.Windows/SnuWatcher.Windows.csproj" />
+    <Compile Include="../../src/SnuWatcher.Desktop/Runtime/StudentUiValidationFailureDiagnostics.cs" Link="StudentUiValidationFailureDiagnostics.cs" />
   </ItemGroup>
 </Project>

@@ -77,6 +77,8 @@ Double-click the verified installer as an ordinary user. Keep the default per-us
 
 ## 4. Run the acceptance checks
 
+The private offline student UI journey has a fixed 180-second budget and a 210-second owned-process deadline in `tests/scripts/Test-StudentUi.ps1`, allowing time for startup, failure capture and actual drain. Failed results report a fixed failure category, the original deadline state and monotonic elapsed time before cleanup. An expired timer alone does not relabel a file, access or validation failure as cancellation. These bounds do not change the app's monitoring rate, UI assertions or pass verifier; source changes still require a new exact candidate and its own qualification.
+
 Follow the full [interactive checklist](native-validation.md#required-interactive-clean-pc-checklist), recording a result for each case:
 
 | Case | What to observe |

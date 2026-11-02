@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -54,7 +55,8 @@ internal static partial class StudentUiValidation
         var simulatedNative = new StudentUiSimulatedNativeControls(clock);
         var captures = new List<StudentUiCapture>();
         using var bindings = new StudentUiBindingProbe();
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var elapsed = Stopwatch.StartNew();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(StudentUiValidationFailureDiagnostics.BudgetSeconds));
         try
         {
             _stage = "profile";
@@ -108,6 +110,7 @@ internal static partial class StudentUiValidation
             WriteUiResult(profile, new
             {
                 schemaVersion = 2, codePath = "ui-validation", testStatus = "PASSED", code = "student_ui_validation_passed",
+                elapsedMilliseconds = elapsed.ElapsedMilliseconds, budgetSeconds = StudentUiValidationFailureDiagnostics.BudgetSeconds,
                 runId = runId.ToString("N"), processId = Environment.ProcessId, profileGuarded = true, isDemo = true,
                 noLiveHttp = true, httpRequests = 0, noOsNotifications = true, nativeNotificationCalls = 0,
                 noBrowser = true, browserCalls = 0, noClipboard = true, clipboardCalls = 0,
@@ -132,6 +135,10 @@ internal static partial class StudentUiValidation
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
+            // Observe the original failure before diagnostic rendering/drain can consume time or expire the deadline.
+            var failureElapsedMilliseconds = elapsed.ElapsedMilliseconds;
+            var deadlineCancelled = deadline.IsCancellationRequested;
+            var failureKind = StudentUiValidationFailureDiagnostics.Classify(error, deadlineCancelled, deadline.Token);
             if (error is WindowsMonitoringHostStartupException retained) host = retained.Host;
             if (error is StudentUiRetainedHostException blocked) host = blocked.Host;
             if (profile is not null && window?.IsVisible == true)
@@ -143,7 +150,8 @@ internal static partial class StudentUiValidation
             source.ReleaseDetails();
             var drained = await TryCleanupUiAsync(graph, host);
             if (drained && window is not null) { window.AllowClose(); window.Close(); window.Dispose(); }
-            var code = error is InvalidOperationException && IsPrivateUiCode(error.Message) ? error.Message : "student_ui_validation_failed";
+            var code = error is InvalidOperationException && StudentUiValidationFailureDiagnostics.IsPrivateUiCode(error.Message)
+                ? error.Message : "student_ui_validation_failed";
             if (profile is not null)
             {
                 try
@@ -151,6 +159,8 @@ internal static partial class StudentUiValidation
                     WriteUiResult(profile, new
                     {
                         schemaVersion = 2, codePath = "ui-validation", testStatus = "FAILED", code, stage = _stage,
+                        failureKind = failureKind.ToString(), deadlineCancelled, elapsedMilliseconds = failureElapsedMilliseconds,
+                        budgetSeconds = StudentUiValidationFailureDiagnostics.BudgetSeconds,
                         runId = runId.ToString("N"), processId = Environment.ProcessId, profileGuarded = true,
                         noLiveHttp = true, httpRequests = 0, noOsNotifications = true, nativeNotificationCalls = 0,
                         noBrowser = true, browserCalls = 0, noClipboard = true, clipboardCalls = 0, channelCalls = channel.Calls,
@@ -168,10 +178,6 @@ internal static partial class StudentUiValidation
             else Interlocked.Exchange(ref _blocked, new(host, graph, window)); // Actual work/owner survives until the owned script deadline.
         }
     }
-
-    private static bool IsPrivateUiCode(string value) => value is { Length: > 0 and <= 128 }
-        && value.StartsWith("ui_", StringComparison.Ordinal)
-        && value.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '.' or '-');
 
     private static void WriteUiResult(RuntimeProfile profile, object value)
     {
