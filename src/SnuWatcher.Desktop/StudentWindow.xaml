@@ -8,12 +8,20 @@
         xmlns:settings="clr-namespace:SnuWatcher.Windows.Presentation.Settings;assembly=SnuWatcher.Windows"
         xmlns:alerts="clr-namespace:SnuWatcher.Windows.Presentation.Alerts;assembly=SnuWatcher.Windows"
         xmlns:shell="clr-namespace:SnuWatcher.Windows.Presentation.Shell;assembly=SnuWatcher.Windows"
-        Title="SNU Watcher" Width="1180" Height="820" MinWidth="680" MinHeight="480" SizeChanged="OnWindowSizeChanged"
+        Title="SNU Watcher" Width="1180" Height="820" MinWidth="680" MinHeight="480" SizeChanged="OnWindowSizeChanged" Loaded="OnWindowLoaded"
         FontFamily="Segoe UI, Malgun Gothic" FontSize="14"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
         Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="Student.Visible"/>
+    <!-- A visual overlay alone does not remove covered controls from keyboard navigation. -->
+    <Style x:Key="Student.CoveredInteraction" TargetType="{x:Type FrameworkElement}">
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding ElementName=Onboarding, Path=Visibility}" Value="Visible">
+          <Setter Property="IsEnabled" Value="False"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
     <DataTemplate DataType="{x:Type search:CourseSearchViewModel}"><views:FindCoursesView/></DataTemplate>
     <DataTemplate DataType="{x:Type watches:WatchListViewModel}"><views:MyWatchesView/></DataTemplate>
     <DataTemplate DataType="{x:Type settings:SettingsViewModel}"><views:SettingsView/></DataTemplate>
@@ -34,7 +42,7 @@
       <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <!-- Only the chrome scrolls at small work areas. The page keeps a finite row viewport. -->
-    <ScrollViewer x:Name="ChromeScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="ChromeScrollViewer" Style="{StaticResource Student.CoveredInteraction}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel>
     <DockPanel x:Name="HeaderPanel" Margin="0,0,0,10">
       <Button x:Name="QuitButton" DockPanel.Dock="Right" Content="{DynamicResource Ui.Quit}" Click="OnQuit"
@@ -74,10 +82,11 @@
     </StackPanel>
     </StackPanel>
     </ScrollViewer>
-    <ContentControl x:Name="PageContent" Grid.Row="1" Content="{Binding PageContent}"/>
+    <ContentControl x:Name="PageContent" Style="{StaticResource Student.CoveredInteraction}" Grid.Row="1" Content="{Binding PageContent}"/>
     <TextBlock x:Name="ReservationFooter" Grid.Row="2" Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"/>
     <Border x:Name="Onboarding" Grid.RowSpan="3" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
             BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="1" Padding="24"
+            KeyboardNavigation.TabNavigation="Cycle" IsVisibleChanged="OnOnboardingVisibilityChanged"
             Visibility="{Binding State.ShowOnboarding, Converter={StaticResource Student.Visible}}">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel MaxWidth="620" VerticalAlignment="Center">
@@ -90,7 +99,7 @@
             <Button Content="English" Click="OnEnglish" Style="{DynamicResource Student.SecondaryButton}"/>
             <Button Content="한국어" Click="OnKorean" Style="{DynamicResource Student.SecondaryButton}"/>
           </WrapPanel>
-          <Button Content="{DynamicResource Ui.GetStarted}" Command="{Binding CompleteOnboardingCommand}" HorizontalAlignment="Left"
+          <Button x:Name="GetStartedButton" Content="{DynamicResource Ui.GetStarted}" Command="{Binding CompleteOnboardingCommand}" HorizontalAlignment="Left"
                   Style="{DynamicResource Student.PrimaryButton}"/>
           <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
         </StackPanel>

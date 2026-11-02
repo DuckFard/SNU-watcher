@@ -78,6 +78,23 @@ public partial class StudentWindow : Window, IDisposable
 
     internal void AllowClose() => _allowClose = true;
 
+    private void OnWindowLoaded(object sender, RoutedEventArgs args) => QueueWelcomeFocus();
+
+    private void OnOnboardingVisibilityChanged(object sender, DependencyPropertyChangedEventArgs args) => QueueWelcomeFocus();
+
+    private void QueueWelcomeFocus()
+    {
+        // Wait for visibility bindings to enable the destination. Recheck the active window so
+        // an auxiliary or closing window never takes focus from another application.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
+        {
+            if (!IsLoaded || !IsVisible || !IsActive) return;
+            UIElement target = Onboarding.Visibility == Visibility.Visible ? GetStartedButton
+                : _finishing || _model is null ? QuitButton : FindNavigation;
+            target.Focus();
+        }));
+    }
+
     internal void SetStopping()
     {
         Dispatcher.VerifyAccess();

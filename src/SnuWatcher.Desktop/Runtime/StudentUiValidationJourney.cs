@@ -60,15 +60,22 @@ internal static partial class StudentUiValidation
         var proof = new StudentUiJourney();
         _stage = "onboarding";
         Require(graph.Shell.State.IsDemo && graph.Shell.State.ShowOnboarding, "ui_demo_onboarding_missing");
+        Require(ReferenceEquals(Keyboard.FocusedElement, Named<Button>(window, "GetStartedButton")),
+            "ui_onboarding_initial_focus_missing");
         await ProbeTerminalFirstRunAsync(graph, window);
+        await ProbeOnboardingKeyboardAsync(window);
         proof = proof with { TerminalStoppingVisible = true };
         captures.Add(await CaptureAsync(profile, window, "ui-onboarding-en.png", false, ct));
         await ClickLanguageAsync(window, graph, UiLanguage.Korean, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "설정", "ui_korean_resources_missing");
+        await ProbeOnboardingKeyboardAsync(window);
         await ClickLanguageAsync(window, graph, UiLanguage.English, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "Settings", "ui_english_resources_missing");
         await InvokeCommandAsync(window, graph.Shell.CompleteOnboardingCommand, ct);
         await EventuallyAsync(() => !graph.Shell.State.ShowOnboarding, ct);
+        await PumpUiAsync(window);
+        Require(ReferenceEquals(Keyboard.FocusedElement, Named<RadioButton>(window, "FindNavigation")),
+            "ui_onboarding_completion_focus_missing");
         proof = proof with { Onboarding = true, EnglishKorean = true };
 
         _stage = "filters_validation";
@@ -250,6 +257,8 @@ internal static partial class StudentUiValidation
             Require(graph.Shell.State.ShowOnboarding && onboarding?.Visibility == Visibility.Collapsed
                 && status?.IsVisible == true && status.Text == terminal.TryFindResource("Ui.Stopping") as string
                 && page?.IsEnabled == false, "ui_terminal_onboarding_hid_stopping");
+            Require(Named<Button>(terminal, "QuitButton").IsEnabled,
+                "ui_terminal_onboarding_blocked_quit");
         }
         finally
         {
