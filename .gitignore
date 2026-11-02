@@ -10,6 +10,9 @@ bin/
 obj/
 .vs/
 .idea/
+TestResults/
+*.trx
+coverage.cobertura.xml
 
 # Private configuration, runtime state and diagnostics
 watcher.toml
@@ -22,6 +25,8 @@ watcher.toml
 .env
 .env.*
 !.env.example
+*.pfx
+*.p12
 
 # Private documents and temporary/release output
 *.pdf

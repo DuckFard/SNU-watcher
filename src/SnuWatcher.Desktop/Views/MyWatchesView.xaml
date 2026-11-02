@@ -1,0 +1,215 @@
+<UserControl x:Class="SnuWatcher.Desktop.Views.MyWatchesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:present="clr-namespace:SnuWatcher.Desktop.Presentation"
+             SizeChanged="OnViewSizeChanged">
+  <UserControl.Resources>
+    <CollectionViewSource x:Key="WatchGroups" Source="{Binding State.Rows}">
+      <CollectionViewSource.GroupDescriptions>
+        <PropertyGroupDescription PropertyName="Term"/>
+      </CollectionViewSource.GroupDescriptions>
+    </CollectionViewSource>
+    <Style x:Key="Watch.Fact" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+      <Setter Property="Margin" Value="0,2,0,6"/>
+    </Style>
+    <Style x:Key="Watch.NavigationButton" TargetType="Button" BasedOn="{StaticResource Student.SecondaryButton}">
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="10,5"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+    </Style>
+  </UserControl.Resources>
+  <Grid x:Name="LayoutGrid">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <StackPanel x:Name="CompactNavigation" Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6" Visibility="Collapsed">
+      <Button x:Name="ListNavigation" Content="{DynamicResource Ui.MyWatches}" Click="OnShowList" Style="{StaticResource Watch.NavigationButton}"/>
+      <Button x:Name="DetailsNavigation" Content="{DynamicResource Ui.Details}" Click="OnShowDetails" Style="{StaticResource Watch.NavigationButton}"/>
+    </StackPanel>
+    <Border x:Name="ListPanel" Grid.Row="1" Grid.Column="0" Style="{StaticResource Student.Card}" Padding="10" Margin="0,0,12,0">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DockPanel LastChildFill="True" Margin="0,0,0,4">
+          <Button DockPanel.Dock="Right" Content="{DynamicResource Ui.Reload}" Command="{Binding ReloadCommand}" Style="{StaticResource Watch.NavigationButton}" Margin="6,0,0,0"/>
+          <TextBlock Text="{DynamicResource Ui.MyWatches}" Style="{StaticResource Student.Title}" FontSize="22" Margin="0" VerticalAlignment="Center"/>
+        </DockPanel>
+        <StackPanel Grid.Row="1" Margin="0,0,0,4">
+          <TextBlock present:ResourceText.Key="{Binding State.MessageKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock present:ResourceText.Key="{Binding State.PagingNoticeKey}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+          <TextBlock Text="{DynamicResource Ui.NoWatches}" TextWrapping="Wrap">
+            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><MultiDataTrigger><MultiDataTrigger.Conditions>
+                <Condition Binding="{Binding State.IsLoaded}" Value="True"/><Condition Binding="{Binding State.Rows.Length}" Value="0"/>
+              </MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger></Style.Triggers>
+            </Style></TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+        <DataGrid x:Name="WatchRows" Grid.Row="2" ItemsSource="{Binding Source={StaticResource WatchGroups}}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
+                  SelectionChanged="OnWatchSelectionChanged"
+                  AutomationProperties.Name="{DynamicResource Ui.MyWatches}" SelectionMode="Single"
+                  VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+          <DataGrid.Style><Style TargetType="DataGrid" BasedOn="{StaticResource Student.Results}">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding State.IsLoading}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+              <DataTrigger Binding="{Binding State.IsMutating}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+            </Style.Triggers>
+          </Style></DataGrid.Style>
+          <DataGrid.GroupStyle><GroupStyle>
+            <GroupStyle.HeaderTemplate><DataTemplate>
+              <Border Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Padding="6" Margin="0,4,0,0">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="{Binding Name.Year}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Items[0].TermLabel}" TextWrapping="Wrap"/>
+                  <TextBlock Grid.Column="1" Text="{DynamicResource Ui.TermUnknown}" TextWrapping="Wrap">
+                    <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers><DataTrigger Binding="{Binding Items[0].TermLabel}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                    </Style></TextBlock.Style>
+                  </TextBlock>
+                </Grid>
+              </Border>
+            </DataTemplate></GroupStyle.HeaderTemplate>
+          </GroupStyle></DataGrid.GroupStyle>
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Width="*" MinWidth="120">
+              <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.WatchLabel}"/></DataGridTemplateColumn.Header>
+              <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4">
+                <TextBlock Text="{Binding Label}" ToolTip="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Identifier}" TextTrimming="CharacterEllipsis" FontSize="12"/>
+              </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Binding="{Binding MemberCount}" Width="82">
+              <DataGridTextColumn.Header><TextBlock Text="{DynamicResource Ui.MemberCountShort}" TextTrimming="CharacterEllipsis"/></DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTemplateColumn Width="95">
+              <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.LastKnown}" TextWrapping="Wrap"/></DataGridTemplateColumn.Header>
+              <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding CountsText}" Margin="4" Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Width="110">
+              <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.SourceStatus}" TextTrimming="CharacterEllipsis"/></DataGridTemplateColumn.Header>
+              <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4">
+                <TextBlock present:ResourceText.Key="{Binding StatusKey}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock present:ResourceText.Key="{Binding AvailabilityKey}" TextTrimming="CharacterEllipsis">
+                  <TextBlock.ToolTip><TextBlock present:ResourceText.Key="{Binding AvailabilityKey}" MaxWidth="280" TextWrapping="Wrap"/></TextBlock.ToolTip>
+                </TextBlock>
+                <TextBlock present:ResourceText.Key="{Binding DataStateKey}" TextTrimming="CharacterEllipsis" FontSize="12">
+                  <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
+                    <DataTrigger Binding="{Binding DataStateKey}" Value="Ui.Current"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                    <DataTrigger Binding="{Binding DataStateKey}" Value="Ui.Unknown"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                    <DataTrigger Binding="{Binding Health}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                  </Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
+              </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+        <WrapPanel Grid.Row="3" Margin="0,6,0,0" VerticalAlignment="Center">
+          <Button Content="{DynamicResource Ui.FirstPage}" Command="{Binding FirstCommand}" Style="{StaticResource Watch.NavigationButton}"/>
+          <Button Content="{DynamicResource Ui.Previous}" Command="{Binding PreviousCommand}" Style="{StaticResource Watch.NavigationButton}"/>
+          <TextBlock Text="{DynamicResource Ui.PageNumber}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+          <TextBlock Text="{Binding State.PageNumber}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+          <Button Content="{DynamicResource Ui.Next}" Command="{Binding NextCommand}" Style="{StaticResource Watch.NavigationButton}"/>
+        </WrapPanel>
+      </Grid>
+    </Border>
+    <Border x:Name="DetailsPanel" Grid.Row="1" Grid.Column="1" Style="{StaticResource Student.Card}" Padding="10" Margin="0">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.SelectWatch}">
+            <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}"><Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><DataTrigger Binding="{Binding State.Details}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+            </Style></TextBlock.Style>
+          </TextBlock>
+          <TextBlock Text="{DynamicResource Ui.Loading}" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite">
+            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><DataTrigger Binding="{Binding State.SelectionPending}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+            </Style></TextBlock.Style>
+          </TextBlock>
+          <StackPanel>
+            <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Visible"/>
+              <Style.Triggers><DataTrigger Binding="{Binding State.Details}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+            </Style></StackPanel.Style>
+            <TextBlock Text="{Binding State.Details.Label}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            <WrapPanel Margin="0,0,0,10">
+              <TextBlock present:ResourceText.Key="{Binding State.Details.StatusKey}" FontWeight="SemiBold" Margin="0,0,12,0"/>
+              <TextBlock present:ResourceText.Key="{Binding State.Details.AvailabilityKey}" Margin="0,0,12,0"/>
+              <TextBlock Text="{DynamicResource Ui.Coverage}" Margin="0,0,5,0"/>
+              <TextBlock Text="{Binding State.Details.CoverageText}"/>
+            </WrapPanel>
+            <WrapPanel>
+              <Button Content="{DynamicResource Ui.Pause}" Command="{Binding PauseCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+              <Button Content="{DynamicResource Ui.Resume}" Command="{Binding ResumeCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+              <Button Content="{DynamicResource Ui.Remove}" Command="{Binding RemoveCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+            </WrapPanel>
+            <Label Content="{DynamicResource Ui.WatchLabel}" Target="{Binding ElementName=RenameField}" Padding="0"/>
+            <DockPanel LastChildFill="True">
+              <Button DockPanel.Dock="Right" Content="{DynamicResource Ui.Rename}" Command="{Binding RenameCommand}" Style="{StaticResource Student.SecondaryButton}" Margin="8,4,0,10"/>
+              <TextBox x:Name="RenameField" Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}" MaxLength="120"
+                       AutomationProperties.Name="{DynamicResource Ui.WatchLabel}">
+                <TextBox.Style><Style TargetType="TextBox" BasedOn="{StaticResource Student.Field}"><Style.Triggers>
+                  <DataTrigger Binding="{Binding State.IsMutating}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+                </Style.Triggers></Style></TextBox.Style>
+              </TextBox>
+            </DockPanel>
+            <CheckBox Content="{DynamicResource Ui.NoExpiry}" IsChecked="{Binding NoExpiry}" Margin="0,2,0,8">
+              <CheckBox.Style><Style TargetType="CheckBox"><Style.Triggers>
+                <DataTrigger Binding="{Binding State.IsMutating}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+              </Style.Triggers></Style></CheckBox.Style>
+            </CheckBox>
+            <Label Content="{DynamicResource Ui.ThroughDate}" Target="{Binding ElementName=ExpiryField}" Padding="0"/>
+            <WrapPanel Margin="0,4,0,10">
+              <DatePicker x:Name="ExpiryField" SelectedDate="{Binding ExpiryDate}" MinHeight="34" MinWidth="150" Margin="0,0,8,8"
+                          AutomationProperties.Name="{DynamicResource Ui.ThroughDate}">
+                <DatePicker.Style><Style TargetType="DatePicker"><Style.Triggers>
+                  <DataTrigger Binding="{Binding NoExpiry}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+                  <DataTrigger Binding="{Binding State.IsMutating}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+                </Style.Triggers></Style></DatePicker.Style>
+              </DatePicker>
+              <Button Content="{DynamicResource Ui.SaveExpiry}" Command="{Binding SaveExpiryCommand}" Style="{StaticResource Student.SecondaryButton}"/>
+            </WrapPanel>
+            <CheckBox Content="{DynamicResource Ui.InitialNotice}" IsChecked="{Binding State.Details.Source.Subscription.InitialNoticeEnabled, Mode=OneWay}"
+                      IsHitTestVisible="False" Focusable="False" Margin="0,0,0,12"/>
+            <DataGrid ItemsSource="{Binding State.Details.Members}" SelectedItem="{Binding SelectedMember, Mode=TwoWay}"
+                      Style="{StaticResource Student.Results}" MaxHeight="240" MinHeight="120" SelectionMode="Single"
+                      AutomationProperties.Name="{DynamicResource Ui.Results}">
+              <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding Identifier}" Width="130">
+                  <DataGridTextColumn.Header><TextBlock Text="{DynamicResource Ui.Section}"/></DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTextColumn Binding="{Binding CountsText}" Width="95">
+                  <DataGridTextColumn.Header><TextBlock Text="{DynamicResource Ui.LastKnown}" TextWrapping="Wrap"/></DataGridTextColumn.Header>
+                </DataGridTextColumn>
+                <DataGridTemplateColumn Width="105">
+                  <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.SourceStatus}" TextWrapping="Wrap"/></DataGridTemplateColumn.Header>
+                  <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4">
+                    <TextBlock present:ResourceText.Key="{Binding AvailabilityKey}" TextWrapping="Wrap"/>
+                    <TextBlock present:ResourceText.Key="{Binding DataStateKey}" TextWrapping="Wrap" FontSize="12"/>
+                  </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+            <Button Content="{DynamicResource Ui.CheckSelectedSection}" Command="{Binding RefreshSelectedMemberCommand}"
+                    Style="{StaticResource Student.PrimaryButton}" HorizontalAlignment="Left" Margin="0,10,0,12"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Text="{DynamicResource Ui.LastCheck}" Style="{StaticResource Watch.Fact}" Margin="0,2,12,6"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedMember.LastCheckText}" Style="{StaticResource Watch.Fact}"/>
+              <TextBlock Grid.Row="1" Text="{DynamicResource Ui.LastSuccess}" Style="{StaticResource Watch.Fact}" Margin="0,2,12,6"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedMember.LastSuccessText}" Style="{StaticResource Watch.Fact}"/>
+              <TextBlock Grid.Row="2" Text="{DynamicResource Ui.LatestOutcome}" Style="{StaticResource Watch.Fact}" Margin="0,2,12,6"/>
+              <TextBlock Grid.Row="2" Grid.Column="1" present:ResourceText.Key="{Binding SelectedMember.OutcomeKey}" Style="{StaticResource Watch.Fact}"/>
+              <TextBlock Grid.Row="3" Text="{DynamicResource Ui.Age}" Style="{StaticResource Watch.Fact}" Margin="0,2,12,6"/>
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedMember.AgeText}" Style="{StaticResource Watch.Fact}"/>
+              <TextBlock Grid.Row="4" Text="{DynamicResource Ui.Seats}" Style="{StaticResource Watch.Fact}" Margin="0,2,12,6"/>
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedMember.CurrentSeatsText}" Style="{StaticResource Watch.Fact}"/>
+            </Grid>
+            <TextBlock Text="{DynamicResource Ui.NoReservation}" Style="{StaticResource Student.Label}" Margin="0,14,0,5"/>
+            <TextBlock Text="{DynamicResource Ui.Eligibility}" Style="{StaticResource Student.Label}" FontSize="12"/>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</UserControl>
