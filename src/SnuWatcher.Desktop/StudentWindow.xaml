@@ -82,7 +82,13 @@
     </StackPanel>
     </StackPanel>
     </ScrollViewer>
-    <ContentControl x:Name="PageContent" Style="{StaticResource Student.CoveredInteraction}" Grid.Row="1" Content="{Binding PageContent}"/>
+    <!-- The page normally fills its viewport. A very short work area (200% on 1280x800) gives the page a minimum
+         height and scrolls it, rather than collapsing result rows beneath fixed chrome. -->
+    <ScrollViewer x:Name="PageScrollViewer" Grid.Row="1" Style="{StaticResource Student.CoveredInteraction}" Focusable="False"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <ContentControl x:Name="PageContent" Style="{StaticResource Student.CoveredInteraction}" Content="{Binding PageContent}"
+                      Height="{Binding ViewportHeight, ElementName=PageScrollViewer}"/>
+    </ScrollViewer>
     <TextBlock x:Name="ReservationFooter" Grid.Row="2" Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"/>
     <Border x:Name="Onboarding" Grid.RowSpan="3" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
             BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="1" Padding="24"
