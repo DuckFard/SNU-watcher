@@ -130,11 +130,7 @@ internal static partial class StudentUiValidation
         }
         if (leaf.StartsWith("ui-alerts-", StringComparison.Ordinal))
         {
-            if (narrow)
-            {
-                InvokeButton(Named<Button>(window, leaf.Contains("details", StringComparison.Ordinal) ? "DetailsNavigation" : "ListNavigation"));
-                await PumpUiAsync(window);
-            }
+            await ShowCompactPaneAsync(window, leaf.Contains("details", StringComparison.Ordinal) ? "DetailsNavigation" : "ListNavigation", narrow);
             if (!leaf.Contains("details", StringComparison.Ordinal))
             {
                 var history = Named<DataGrid>(window, "HistoryRows");
@@ -154,17 +150,28 @@ internal static partial class StudentUiValidation
         }
         if (leaf.StartsWith("ui-watches-", StringComparison.Ordinal))
         {
-            if (narrow)
-            {
-                InvokeButton(Named<Button>(window, "ListNavigation"));
-                await PumpUiAsync(window);
-            }
+            var compact = await ShowCompactPaneAsync(window, "ListNavigation", narrow);
             var grid = Visuals<DataGrid>(window).FirstOrDefault(candidate => candidate.IsVisible && candidate.Items.OfType<WatchRow>().Any())
                 ?? throw new InvalidOperationException("ui_watch_list_missing");
             RequireVisibleRow(grid, window, item => item is WatchRow, "ui_watch_rows_not_visible", requireIdentifier: false);
-            if (!narrow) RequireVisibleWatchMember(window);
+            // Two panes show the list and its selected member together; compact panes show them separately.
+            if (!compact) RequireVisibleWatchMember(window);
         }
         return WriteCapture(profile, window, leaf);
+    }
+
+    /// <summary>
+    /// Selects one compact list/details pane. Narrow references require compact mode; a normal reference size can
+    /// exceed a small actual work area (for example 200% on 1280x800), where production keeps its compact panes.
+    /// </summary>
+    private static async Task<bool> ShowCompactPaneAsync(Window window, string name, bool required)
+    {
+        var pane = required ? Named<Button>(window, name)
+            : Visuals<Button>(window).FirstOrDefault(button => button.IsVisible && button.Name == name);
+        if (pane is null) return false;
+        InvokeButton(pane);
+        await PumpUiAsync(window);
+        return true;
     }
 
     private static async Task<StudentUiCapture> CaptureActualAsync(RuntimeProfile profile, StudentWindow window,

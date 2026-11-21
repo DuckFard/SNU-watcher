@@ -79,14 +79,15 @@
                 <TextBlock Text="{Binding Identifier}" TextTrimming="CharacterEllipsis" FontSize="12"/>
               </StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Binding="{Binding MemberCount}" Width="82">
+            <!-- Fixed widths are also minimums: an empty list first laid out narrow must not collapse its headers. -->
+            <DataGridTextColumn Binding="{Binding MemberCount}" Width="82" MinWidth="82">
               <DataGridTextColumn.Header><TextBlock Text="{DynamicResource Ui.MemberCountShort}" TextTrimming="CharacterEllipsis"/></DataGridTextColumn.Header>
             </DataGridTextColumn>
-            <DataGridTemplateColumn Width="95">
+            <DataGridTemplateColumn Width="95" MinWidth="95">
               <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.LastKnown}" TextWrapping="Wrap"/></DataGridTemplateColumn.Header>
               <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding CountsText}" Margin="4" Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Width="110">
+            <DataGridTemplateColumn Width="110" MinWidth="110">
               <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.SourceStatus}" TextTrimming="CharacterEllipsis"/></DataGridTemplateColumn.Header>
               <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="4">
                 <TextBlock present:ResourceText.Key="{Binding StatusKey}" TextTrimming="CharacterEllipsis"/>
