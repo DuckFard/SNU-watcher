@@ -2,9 +2,9 @@
 
 **Watch the courses you want. Hear when a seat opens.**
 
-SNU Watcher is a Windows desktop app being built for Seoul National University students who are waiting for a place in a full class. It is designed to check the sections you choose, alert you when a seat becomes available, and take you to the official SNU registration page so you can try to register.
+SNU Watcher is a Windows desktop app for Seoul National University students who are waiting for a place in a full class. It checks the sections you choose, alerts you when a seat becomes available, and takes you to the official SNU registration page so you can try to register.
 
-**Unsigned preview in qualification:** version `0.1.0-preview.1` includes course search, watchlists, native alert delivery, saved alert history and notification testing. The live SNU adapter has been rechecked successfully. Installed Windows, notification and accessibility checks still gate publication; a compiled installer alone is not a qualified download. Follow the [development progress](docs/PROGRESS.md) for current evidence.
+**Unsigned preview available:** [SNU Watcher 0.1.0-preview.1](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.1) is a Windows 11 x64 prerelease with course search, watchlists, native seat alerts, saved alert history and notification testing. Its exact installer passed installed Windows, notification and accessibility checks before publication. Read the release notes for known limitations, and the [development progress](docs/PROGRESS.md) for the evidence.
 
 ## Preview features
 
@@ -20,22 +20,28 @@ SNU Watcher is a Windows desktop app being built for Seoul National University s
 | Explore further | Open SNU Genie in your browser for additional course information. |
 | Check local health | Read cached notification/source status and storage sizes, and export a small privacy-safe diagnostic summary locally. |
 
-## How it will work
+## How it works
 
 1. Select the academic term and find the course you want.
 2. Add a section, or a group of acceptable sections, to your watchlist.
 3. Keep SNU Watcher running while it checks for availability changes.
 4. When a seat opens, click the notification to open the [official SNU registration site](https://sugang.snu.ac.kr/sugang/co/co010.action) and register yourself.
 
-**An alert does not reserve a seat.** Another student may register first, and registration restrictions still apply. SNU Watcher will leave registration to you on the official site.
+**An alert does not reserve a seat.** Another student may register first, and registration restrictions still apply. SNU Watcher leaves registration to you on the official site.
 
 SNU Watcher is an independent project and is not affiliated with or endorsed by Seoul National University.
 
 ## Downloads and platform
 
-The first desktop release targets **Windows 11 x64**, with an installer `.exe` distributed through [GitHub Releases](https://github.com/DuckFard/SNU-watcher/releases). The installer is intended to include its required runtimes so students can install the app without setting up development tools.
+The first preview targets **Windows 11 x64**. Download `SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe` and `SHA256SUMS.txt` from the [0.1.0-preview.1 release](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.1). The installer includes its runtimes, so no development tools are needed. Before running it, check that its SHA-256 matches `SHA256SUMS.txt`:
 
-The owner selected an **unsigned GitHub prerelease** for the first preview. Unsigned builds may show Windows publisher or reputation warnings. Use only this repository's release assets and compare their SHA-256 checksums. Dependency notices, a scoped SBOM and build metadata accompany the installer. The earlier feasibility build passed its own clean Windows checks; the current preview requires its exact-binary qualification before publication.
+```powershell
+Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe' -Algorithm SHA256
+```
+
+The expected value is `83A9B7FA82EB39BE6A9EEE955755A4758588A29AE2B6218B5199C623F36C3533`.
+
+This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer.
 
 The preview uses manual upgrades from GitHub Releases. Automatic updates/startup, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
 
@@ -43,7 +49,7 @@ The earlier command-line prototype is preserved in [legacy/python-watcher](legac
 
 ## Develop locally
 
-The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and delivery records. Search, watch management and English/Korean settings use owned asynchronous controllers; availability and the last successful check remain separate from loading and error states. The notification integration records Windows acceptance separately from a student's confirmation that a test banner appeared. Its current source still needs installed-app qualification.
+The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and delivery records. Search, watch management and English/Korean settings use owned asynchronous controllers; availability and the last successful check remain separate from loading and error states. The notification integration records Windows acceptance separately from a student's confirmation that a test banner appeared. Installed-app qualification for the published preview is recorded in [native validation](docs/native-validation.md).
 
 The **2026-11-02** live recheck passed catalog, two-page search, exact section details and previous-year metadata through the production gateway. The adapter now follows SNU's observed catalog initialization flow and validates source-reported academic years. Unsupported responses still produce unavailable data rather than invented availability. See the [integration evidence](docs/integrations/snu.md); these reads do not establish an institution-approved polling rate.
 
