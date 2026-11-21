@@ -141,6 +141,7 @@ internal static partial class StudentUiValidation
         captures.Add(await CaptureAsync(profile, window, "ui-search-ko-normal.png", false, ct));
         captures.Add(await CaptureAsync(profile, window, "ui-search-ko-narrow.png", true, ct));
         await SaveLanguageAsync(window, graph, UiLanguage.English, ct);
+        await VerifyEmptyWatchColumnsAsync(window, graph, ct);
         await NavigateAsync(window, graph, StudentPage.FindCourses);
 
         _stage = "group_selection";
@@ -178,6 +179,8 @@ internal static partial class StudentUiValidation
         proof = proof with { GroupWatch = true, AutoRoutedWatch = true, WatchId = created.Id };
         await PumpUiAsync(window);
         captures.Add(await CaptureAsync(profile, window, "ui-watches-en-normal.png", false, ct));
+        // A compact reference capture selects the list; lifecycle actions belong to the details pane.
+        await ShowCompactPaneAsync(window, "DetailsNavigation", required: false);
 
         _stage = "lifecycle";
         await InvokeCommandAsync(window, graph.Watches.PauseCommand, ct);
@@ -277,6 +280,21 @@ internal static partial class StudentUiValidation
         selection.SetCurrentValue(Selector.SelectedItemProperty, term);
         selection.GetBindingExpression(Selector.SelectedItemProperty)?.UpdateSource();
         Require(graph.Search.SelectedTerm == term, "ui_term_binding_not_applied");
+    }
+
+    private static async Task VerifyEmptyWatchColumnsAsync(StudentWindow window, StudentDesktopSession graph, CancellationToken ct)
+    {
+        _stage = "empty_watch_columns";
+        // A first empty-list layout narrower than its columns (as at 200% on 1280x800) must keep fixed headers readable.
+        window.Width = Math.Max(window.MinWidth, 700);
+        window.Height = Math.Max(window.MinHeight, 620);
+        await NavigateAsync(window, graph, StudentPage.MyWatches);
+        await EventuallyAsync(() => graph.Watches.State.IsLoaded && !graph.Watches.State.IsLoading, ct);
+        Require(graph.Watches.State.Rows.Length == 0, "ui_watch_list_not_empty");
+        await PumpUiAsync(window);
+        var grid = Named<DataGrid>(window, "WatchRows");
+        Require(grid.Columns.Count == 4 && grid.Columns.All(column => column.ActualWidth + 0.5
+            >= (column.Width.IsAbsolute ? column.Width.Value : column.MinWidth)), "ui_watch_columns_collapsed");
     }
 
     private static async Task ShowSearchPaneAsync(StudentWindow window, bool details)
