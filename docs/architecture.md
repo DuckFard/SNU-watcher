@@ -21,7 +21,7 @@ Windows presentation controllers publish immutable snapshots through an explicit
 
 The app owns both the desktop session and `WindowsMonitoringHost`. It supervises failures from each, closes admission, starts their drains concurrently, and retains ownership when finalization is blocked. The graph never disposes the host. Actual host workers and observers are joined before process shutdown; an asynchronous wrapper completing is not permission to release a still-running owner.
 
-Views own visual resources and input routing. They use system colors, English/Korean resource dictionaries, independently bounded result/detail panes and compact navigation for small work areas. External actions resolve a closed destination enum to fixed official registration or SNU Genie pages; source strings cannot become executable markup, arbitrary browser URLs or shell commands. Alerts history remains an explicit placeholder until M6.
+Views own visual resources and input routing. They use system colors, English/Korean resource dictionaries, independently bounded result/detail panes and compact navigation for small work areas. External actions resolve a closed destination enum to fixed official registration or SNU Genie pages; source strings cannot become executable markup, arbitrary browser URLs or shell commands. The Alerts page reads saved opening events, recipients and delivery records from the local store; it reports historical availability and delivery state, not current seats.
 
 ## Domain state and persistence
 
