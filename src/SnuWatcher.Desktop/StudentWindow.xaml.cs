@@ -114,6 +114,8 @@ public partial class StudentWindow : Window, IDisposable
         RootLayout.Margin = new Thickness(compact ? 6 : 16);
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
         ChromeScrollViewer.MaxHeight = compact ? Math.Max(56, RootLayout.ActualHeight - 250) : double.PositiveInfinity;
+        // Enough for a compact list pane's header, rows and paging; 150% on 1280x800 still fits without scrolling.
+        PageContent.MinHeight = compact ? 340 : 0;
         HeaderPanel.Margin = new Thickness(0, 0, 0, compact ? 2 : 10);
         BrandingPanel.Orientation = compact ? Orientation.Horizontal : Orientation.Vertical;
         BrandingTitle.FontSize = compact ? 18 : 21;

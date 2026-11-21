@@ -130,7 +130,41 @@ internal static partial class StudentUiValidation
         result = result with { SettingsControlsReachable = true, QuitControlReachable = true }; progress(result);
         captures.Add(await CaptureActualAsync(profile, window, "ui-actual-settings.png", ct));
         Require(graph.LastErrorCode is null, "ui_actual_work_area_graph_failed");
+        await VerifySmallWorkAreaAsync(window, graph, proof, ct);
         return result;
+    }
+
+    /// <summary>
+    /// Windows 200% on a 1280x800 display leaves a 640x352 DIP work area. Every development display can still check
+    /// that geometry: result, watch and alert rows must stay reachable instead of collapsing beneath fixed chrome.
+    /// </summary>
+    private static async Task VerifySmallWorkAreaAsync(StudentWindow window, StudentDesktopSession graph,
+        StudentUiJourney proof, CancellationToken ct)
+    {
+        _stage = "small_work_area";
+        var restore = new Rect(window.Left, window.Top, window.Width, window.Height);
+        var minimum = new Size(window.MinWidth, window.MinHeight);
+        window.MinWidth = 640; window.MinHeight = 352; window.Width = 640; window.Height = 352;
+        await PumpUiAsync(window);
+        await NavigateAsync(window, graph, StudentPage.FindCourses);
+        await ShowSearchPaneAsync(window, details: false);
+        RequireVisibleRow(Named<DataGrid>(window, "ResultsGrid"), window,
+            item => item is CourseSearchItem row && row.Row.Key == StudentUiValidationSource.Key012,
+            "ui_small_search_row_unreachable", requireIdentifier: true);
+        await NavigateAsync(window, graph, StudentPage.MyWatches);
+        await EventuallyAsync(() => !graph.Watches.State.IsLoading && !graph.Watches.State.SelectionPending, ct);
+        await ShowCompactPaneAsync(window, "ListNavigation", required: true);
+        RequireVisibleRow(Named<DataGrid>(window, "WatchRows"), window, item => item is WatchRow row && row.Id == proof.WatchId,
+            "ui_small_watch_row_unreachable", requireIdentifier: false);
+        await NavigateAsync(window, graph, StudentPage.Alerts);
+        await EventuallyAsync(() => graph.Alerts.State.IsLoaded && !graph.Alerts.State.IsLoading, ct);
+        await ShowCompactPaneAsync(window, "ListNavigation", required: true);
+        RequireVisibleRow(Named<DataGrid>(window, "HistoryRows"), window,
+            item => item is SnuWatcher.Windows.Presentation.Alerts.AlertHistoryRow row && row.Source.Trigger.Key == StudentUiValidationSource.Key013,
+            "ui_small_alert_row_unreachable", requireIdentifier: false);
+        window.MinWidth = minimum.Width; window.MinHeight = minimum.Height;
+        window.Width = restore.Width; window.Height = restore.Height; window.Left = restore.Left; window.Top = restore.Top;
+        await PumpUiAsync(window);
     }
 
     private static async Task ExpandFiltersAsync(StudentWindow window)
