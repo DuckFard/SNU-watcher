@@ -28,7 +28,7 @@ public sealed class ShellCommittedRefreshTests
         Task<WatchPageReadResult> BlockedNext() { entered.TrySetResult(); return release.Task; }
         await fixture.Shell.LoadInitialAsync();
         await fixture.Dispatcher.InvokeAsync(() => fixture.Shell.Navigate(StudentPage.MyWatches));
-        await ShellFixture.EventuallyAsync(() => fixture.Watches.State.HasNext && !fixture.Watches.ReloadCommand.IsExecuting);
+        await ShellFixture.EventuallyAsync(() => fixture.Watches.State.HasNext && fixture.Watches.NextCommand.CanExecute(null));
         var reloadBefore = fixture.Watches.SuccessfulReloadVersion;
         var pageBefore = fixture.Watches.SuccessfulPageReadVersion;
         var next = fixture.Watches.NextCommand.ExecuteAsync();
