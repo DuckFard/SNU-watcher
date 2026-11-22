@@ -48,6 +48,32 @@ public sealed class ShellCommittedRefreshTests
         Assert.Equal(4, fixture.Ports.PageReads);
     }
 
+    /// <summary>
+    /// A retry requested the moment a failed reload is reported must start. The observer runs inside the very UI action
+    /// that publishes the failure, so this is deterministic: before the fix, that action still marked a reload as
+    /// running and the retry for the same generation was dropped with nothing left to retry it.
+    /// </summary>
+    [Fact]
+    public async Task ARetryRequestedWhileTheFailureIsReportedStartsANewReload()
+    {
+        await using var fixture = new ShellFixture();
+        await fixture.Shell.LoadInitialAsync();
+        fixture.Ports.PageHandler = _ => throw new IOException("private failed reload");
+        var retried = 0;
+        fixture.Shell.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName != nameof(StudentShellViewModel.State) || fixture.Shell.State.IssueKey != "Ui.CommandFailed"
+                || Interlocked.Exchange(ref retried, 1) != 0) return;
+            fixture.Ports.PageHandler = _ => Task.FromResult(ShellPorts.EmptyPage());
+            fixture.Shell.UpdateRuntime(null, null, 5);
+        };
+        await fixture.Dispatcher.InvokeAsync(() =>
+        { fixture.Shell.UpdateRuntime(null, null, 5); fixture.Shell.Navigate(StudentPage.MyWatches); });
+        await ShellFixture.EventuallyAsync(() => fixture.Ports.PageReads == 2 && fixture.Watches.State.IsLoaded
+            && !fixture.Watches.ReloadCommand.IsExecuting && fixture.Shell.State.IssueKey is null);
+        Assert.Equal(1, retried);
+    }
+
     [Fact]
     public async Task FailedReadDoesNotConsumeDirtyHintAndSameGenerationCanRetryWithoutStatusPolling()
     {
