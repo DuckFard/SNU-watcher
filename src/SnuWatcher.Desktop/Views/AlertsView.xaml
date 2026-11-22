@@ -15,7 +15,7 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel>
           <TextBlock Text="{DynamicResource Ui.Alerts}" Style="{StaticResource Student.Title}" FontSize="22"/>
-          <TextBlock Text="{DynamicResource Ui.AlertHistoryNotice}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+          <TextBlock Text="{DynamicResource Ui.AlertHistoryNotice}" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource Snu.InkSecondary}"/>
           <WrapPanel><TextBlock Text="{DynamicResource Ui.AlertLastRead}" Margin="0,0,6,0"/><TextBlock Text="{Binding State.LastSuccessfulReadAtUtc}"/></WrapPanel>
         </StackPanel>
         <StackPanel Grid.Row="1" Margin="0,6,0,6">
@@ -50,7 +50,7 @@
             </Style></TextBlock.Style>
           </TextBlock>
           <TextBlock present:ResourceText.Key="{Binding State.DetailsMessageKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
-          <TextBlock Text="{Binding State.Details.Identifier}" Style="{StaticResource Student.Title}" FontSize="20"/>
+          <TextBlock Text="{Binding State.Details.Identifier}" Style="{StaticResource Student.Title}" FontSize="20" Foreground="{DynamicResource Snu.Heading}"/>
           <TextBlock Text="{DynamicResource Ui.AlertOriginalOpening}" FontWeight="SemiBold"/>
           <WrapPanel><TextBlock Text="{DynamicResource Ui.AlertOriginalSeats}" Margin="0,0,6,0"/><TextBlock Text="{Binding State.Details.OriginalSeatsText}"/></WrapPanel>
           <TextBlock Text="{Binding State.Details.ObservedAtText}" TextWrapping="Wrap"/>
@@ -67,7 +67,7 @@
           <TextBlock Text="{DynamicResource Ui.AlertRecordBuckets}" FontWeight="SemiBold" Margin="0,12,0,4"/>
           <TextBlock Text="{DynamicResource Ui.AlertRecordsNotChronological}" TextWrapping="Wrap"/>
           <TextBlock present:ResourceText.Key="{Binding State.AttemptMessageKey}" TextWrapping="Wrap"/>
-          <ItemsControl ItemsSource="{Binding State.Attempts}"><ItemsControl.ItemTemplate><DataTemplate><Border Padding="5" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"><StackPanel><TextBlock present:ResourceText.Key="{Binding OriginKey}" FontWeight="SemiBold"/><TextBlock present:ResourceText.Key="{Binding ContextKey}" TextWrapping="Wrap"/><TextBlock present:ResourceText.Key="{Binding OutcomeKey}" TextWrapping="Wrap"/><TextBlock Text="{Binding RecordedAtText}" TextWrapping="Wrap"/><TextBlock Text="{Binding BatchCountsText}"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+          <ItemsControl ItemsSource="{Binding State.Attempts}"><ItemsControl.ItemTemplate><DataTemplate><Border Padding="5" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Snu.Divider}"><StackPanel><TextBlock present:ResourceText.Key="{Binding OriginKey}" FontWeight="SemiBold"/><TextBlock present:ResourceText.Key="{Binding ContextKey}" TextWrapping="Wrap"/><TextBlock present:ResourceText.Key="{Binding OutcomeKey}" TextWrapping="Wrap"/><TextBlock Text="{Binding RecordedAtText}" TextWrapping="Wrap"/><TextBlock Text="{Binding BatchCountsText}"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
           <WrapPanel><Button Content="{DynamicResource Ui.FirstPage}" Command="{Binding AttemptFirstCommand}" Style="{StaticResource Student.SecondaryButton}"/><Button Content="{DynamicResource Ui.Previous}" Command="{Binding AttemptPreviousCommand}" Style="{StaticResource Student.SecondaryButton}"/><TextBlock Text="{Binding State.AttemptPageNumber}" VerticalAlignment="Center" Margin="6,0"/><Button Content="{DynamicResource Ui.Next}" Command="{Binding AttemptNextCommand}" Style="{StaticResource Student.SecondaryButton}"/></WrapPanel>
         </StackPanel>
       </ScrollViewer>

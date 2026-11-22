@@ -111,28 +111,32 @@ public partial class StudentWindow : Window, IDisposable
     {
         if (RootLayout is null || ChromeScrollViewer is null) return;
         var compact = ActualHeight < 560;
-        RootLayout.Margin = new Thickness(compact ? 6 : 16);
+        var gutter = compact ? 8 : 20;
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
         ChromeScrollViewer.MaxHeight = compact ? Math.Max(56, RootLayout.ActualHeight - 250) : double.PositiveInfinity;
         // Enough for a compact list pane's header, rows and paging; 150% on 1280x800 still fits without scrolling.
         PageContent.MinHeight = compact ? 340 : 0;
-        HeaderPanel.Margin = new Thickness(0, 0, 0, compact ? 2 : 10);
+        PageScrollViewer.Margin = compact ? new Thickness(6, 4, 6, 2) : new Thickness(16, 12, 16, 6);
+        HeaderBand.Padding = compact ? new Thickness(gutter, 3, gutter, 3) : new Thickness(gutter, 12, gutter, 10);
+        NavigationBand.Padding = new Thickness(gutter, 0, gutter, 0);
+        StatusBand.Padding = new Thickness(gutter, compact ? 1 : 4, gutter, compact ? 1 : 4);
+        BrandMark.Width = BrandMark.Height = compact ? 26 : 38;
+        BrandMark.CornerRadius = new CornerRadius(compact ? 13 : 19);
         BrandingPanel.Orientation = compact ? Orientation.Horizontal : Orientation.Vertical;
-        BrandingTitle.FontSize = compact ? 18 : 21;
+        BrandingPanel.Margin = new Thickness(compact ? 8 : 11, 0, 0, 0);
+        BrandingTitle.FontSize = compact ? 16 : 21;
         BrandingSubtitle.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        DemoLabel.Margin = compact ? new Thickness(8, 0, 0, 0) : new Thickness(0, 2, 0, 0);
-        DemoLabel.VerticalAlignment = compact ? VerticalAlignment.Center : VerticalAlignment.Top;
+        DemoBadge.Margin = compact ? new Thickness(8, 0, 0, 0) : new Thickness(0, 4, 0, 0);
+        DemoBadge.VerticalAlignment = compact ? VerticalAlignment.Center : VerticalAlignment.Top;
         DemoLabel.FontSize = compact ? 11 : 12;
-        QuitButton.MinHeight = compact ? 28 : 36;
-        QuitButton.Padding = compact ? new Thickness(8, 3, 8, 3) : new Thickness(14, 9, 14, 9);
-        QuitButton.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 8, 8);
-        NavigationPanel.Margin = new Thickness(0, 0, 0, compact ? 2 : 8);
-        SourceStatusExpander.Margin = new Thickness(0, 0, 0, compact ? 2 : 8);
-        ReservationFooter.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        QuitButton.MinHeight = compact ? 26 : 32;
+        QuitButton.Padding = compact ? new Thickness(10, 2, 10, 2) : new Thickness(14, 5, 14, 5);
+        FooterBand.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         foreach (var navigation in new[] { FindNavigation, WatchesNavigation, AlertsNavigation, SettingsNavigation })
         {
-            navigation.MinHeight = compact ? 28 : 36;
-            navigation.Padding = compact ? new Thickness(8, 3, 8, 3) : new Thickness(10, 6, 10, 6);
+            navigation.MinHeight = compact ? 28 : 38;
+            navigation.Padding = compact ? new Thickness(2, 3, 2, 3) : new Thickness(2, 8, 2, 8);
+            navigation.Margin = new Thickness(0, 0, compact ? 18 : 26, 0);
         }
     }
 

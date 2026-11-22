@@ -86,17 +86,20 @@ public partial class FindCoursesView : UserControl
         SideColumn.Width = compactLayout ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         ResultRow.Height = new GridLength(1, GridUnitType.Star);
         SideRow.Height = new GridLength(0);
-        Grid.SetColumn(SidePanel, compactLayout ? 0 : 1);
-        Grid.SetRow(SidePanel, 0);
-        ResultPanel.Margin = compactLayout ? new Thickness(0) : new Thickness(0, 0, 8, 0);
+        Grid.SetColumn(SideStack, compactLayout ? 0 : 1);
+        Grid.SetRow(SideStack, 0);
+        ResultPanel.Margin = compactLayout ? new Thickness(0) : new Thickness(0, 0, 12, 0);
+        // The navy action panel needs a side column; compact layouts keep the same action beside the list.
+        ActionPanel.Visibility = compactLayout ? Visibility.Collapsed : Visibility.Visible;
+        CompactWatchButton.Visibility = compactLayout ? Visibility.Visible : Visibility.Collapsed;
         ApplyPaneVisibility();
     }
 
     private void ApplyPaneVisibility()
     {
-        if (ResultPanel is null || SidePanel is null) return;
+        if (ResultPanel is null || SideStack is null) return;
         var showResults = !compactLayout || CompactPaneSelector.SelectedIndex != 1;
         ResultPanel.Visibility = showResults ? Visibility.Visible : Visibility.Collapsed;
-        SidePanel.Visibility = !compactLayout || !showResults ? Visibility.Visible : Visibility.Collapsed;
+        SideStack.Visibility = !compactLayout || !showResults ? Visibility.Visible : Visibility.Collapsed;
     }
 }

@@ -57,7 +57,7 @@
           </Style></DataGrid.Style>
           <DataGrid.GroupStyle><GroupStyle>
             <GroupStyle.HeaderTemplate><DataTemplate>
-              <Border Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Padding="6" Margin="0,4,0,0">
+              <Border Background="{DynamicResource Snu.SubBar}" Padding="8,6" Margin="0,4,0,0">
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                   <TextBlock Text="{Binding Name.Year}" FontWeight="SemiBold" Margin="0,0,8,0"/>
@@ -85,7 +85,7 @@
             </DataGridTextColumn>
             <DataGridTemplateColumn Width="95" MinWidth="95">
               <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.LastKnown}" TextWrapping="Wrap"/></DataGridTemplateColumn.Header>
-              <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding CountsText}" Margin="4" Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+              <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding CountsText}" Margin="4" Foreground="{DynamicResource Snu.Accent}" FontWeight="SemiBold"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
             <DataGridTemplateColumn Width="110" MinWidth="110">
               <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource Ui.SourceStatus}" TextTrimming="CharacterEllipsis"/></DataGridTemplateColumn.Header>
@@ -131,7 +131,7 @@
             <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Visible"/>
               <Style.Triggers><DataTrigger Binding="{Binding State.Details}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
             </Style></StackPanel.Style>
-            <TextBlock Text="{Binding State.Details.Label}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            <TextBlock Text="{Binding State.Details.Label}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource Snu.Heading}"/>
             <WrapPanel Margin="0,0,0,10">
               <TextBlock present:ResourceText.Key="{Binding State.Details.StatusKey}" FontWeight="SemiBold" Margin="0,0,12,0"/>
               <TextBlock present:ResourceText.Key="{Binding State.Details.AvailabilityKey}" Margin="0,0,12,0"/>

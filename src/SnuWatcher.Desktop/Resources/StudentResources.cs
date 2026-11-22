@@ -28,13 +28,34 @@ internal sealed class StudentResources
         if (application.Resources.Contains(marker)) return;
         var replacement = new ResourceDictionary();
         replacement.MergedDictionaries.Add(application.Resources);
+        var palette = Palette(SystemParameters.HighContrast);
+        replacement.MergedDictionaries.Add(palette);
         replacement.MergedDictionaries.Add(new ResourceDictionary
         {
             Source = new Uri("/SnuWatcher.Desktop;component/Resources/StudentTheme.xaml", UriKind.Relative),
         });
         replacement.Add(marker, true);
         application.Resources = replacement;
+        // Styles read every color dynamically, so swapping the palette restyles open windows in place.
+        SystemParameters.StaticPropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName != nameof(SystemParameters.HighContrast)) return;
+            application.Dispatcher.BeginInvoke(() =>
+            {
+                var index = replacement.MergedDictionaries.IndexOf(palette);
+                if (index < 0) return;
+                palette = Palette(SystemParameters.HighContrast);
+                replacement.MergedDictionaries[index] = palette;
+            });
+        };
     }
+
+    private static ResourceDictionary Palette(bool highContrast) => new()
+    {
+        Source = new Uri(highContrast
+            ? "/SnuWatcher.Desktop;component/Resources/StudentPalette.HighContrast.xaml"
+            : "/SnuWatcher.Desktop;component/Resources/StudentPalette.xaml", UriKind.Relative),
+    };
 
     internal void Apply(UiLanguage language)
     {

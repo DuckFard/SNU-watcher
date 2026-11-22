@@ -7,7 +7,9 @@
   <UserControl.Resources>
     <Style x:Key="Detail.Caption" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Margin" Value="0,12,0,4"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
+      <Setter Property="Margin" Value="0,12,0,3"/>
     </Style>
     <Style x:Key="Detail.Value" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
       <Setter Property="Text" Value="{Binding}"/>
@@ -38,7 +40,6 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <TextBlock Text="{DynamicResource Ui.Details}" Style="{DynamicResource Student.Title}"/>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                   CanContentScroll="False" Padding="0,0,8,0"
                   AutomationProperties.Name="{DynamicResource Ui.Details}">
@@ -78,7 +79,7 @@
               </Style.Triggers>
             </Style>
           </StackPanel.Style>
-          <TextBlock TextWrapping="Wrap" FontSize="18" FontWeight="SemiBold">
+          <TextBlock TextWrapping="Wrap" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Snu.Heading}">
             <TextBlock.Text>
               <MultiBinding StringFormat="{}{0} ({1})">
                 <Binding Path="Model.State.Key.CourseCode"/><Binding Path="Model.State.Key.Section"/>
@@ -133,7 +134,7 @@
           <ItemsControl ItemsSource="{Binding Model.State.Read.Data.Meetings}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
+                <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Snu.Divider}"
                         Padding="0,4,0,8" Margin="0,0,0,4">
                   <StackPanel>
                     <TextBlock DataContext="{Binding Time}" Style="{StaticResource Detail.Value}"/>
@@ -148,7 +149,7 @@
           <TextBlock Text="{DynamicResource Ui.Restrictions}" Style="{StaticResource Detail.Caption}"/>
           <TextBlock DataContext="{Binding Model.State.Read.Data.Restrictions}" Style="{StaticResource Detail.Value}"/>
 
-          <Border Style="{DynamicResource Student.Card}" Margin="0,14,0,0" Padding="12">
+          <Border Style="{DynamicResource Student.Band}" Margin="0,14,0,0" Padding="12">
             <StackPanel>
               <TextBlock Text="{DynamicResource Ui.MetadataCapacity}" Style="{StaticResource Detail.Caption}" Margin="0,0,0,4"/>
               <TextBlock DataContext="{Binding Model.State.Read.Data.Capacity}" Style="{StaticResource Detail.Value}"/>
