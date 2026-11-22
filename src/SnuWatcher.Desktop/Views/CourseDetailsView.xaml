@@ -1,0 +1,189 @@
+<UserControl x:Class="SnuWatcher.Desktop.Views.CourseDetailsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:search="clr-namespace:SnuWatcher.Windows.Presentation.Search;assembly=SnuWatcher.Windows"
+             AutomationProperties.Name="{DynamicResource Ui.Details}"
+             FontSize="14">
+  <UserControl.Resources>
+    <Style x:Key="Detail.Caption" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,12,0,4"/>
+    </Style>
+    <Style x:Key="Detail.Value" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+      <Setter Property="Text" Value="{Binding}"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+          <Setter Property="Text" Value="{DynamicResource Ui.Unknown}"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding}" Value="">
+          <Setter Property="Text" Value="{DynamicResource Ui.Unknown}"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="Detail.Optional" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+      <Setter Property="Text" Value="{Binding}"/>
+      <Setter Property="Margin" Value="0,4,0,0"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+          <Setter Property="Visibility" Value="Collapsed"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding}" Value="">
+          <Setter Property="Visibility" Value="Collapsed"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+  </UserControl.Resources>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    <TextBlock Text="{DynamicResource Ui.Details}" Style="{DynamicResource Student.Title}"/>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  CanContentScroll="False" Padding="0,0,8,0"
+                  AutomationProperties.Name="{DynamicResource Ui.Details}">
+      <StackPanel>
+        <TextBlock AutomationProperties.LiveSetting="Polite" Margin="0,0,0,8" TextWrapping="Wrap">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:CourseUiLoadState.Idle}">
+                  <Setter Property="Visibility" Value="Visible"/>
+                  <Setter Property="Text" Value="{DynamicResource Ui.SelectSection}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:CourseUiLoadState.Loading}">
+                  <Setter Property="Visibility" Value="Visible"/>
+                  <Setter Property="Text" Value="{DynamicResource Ui.Loading}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:CourseUiLoadState.Failed}">
+                  <Setter Property="Visibility" Value="Visible"/>
+                  <Setter Property="Text" Value="{DynamicResource Ui.DataUnavailable}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:CourseUiLoadState.Canceled}">
+                  <Setter Property="Visibility" Value="Visible"/>
+                  <Setter Property="Text" Value="{DynamicResource Ui.Canceled}"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <StackPanel>
+          <StackPanel.Style>
+            <Style TargetType="StackPanel">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Model.State.Key}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Style>
+          <TextBlock TextWrapping="Wrap" FontSize="18" FontWeight="SemiBold">
+            <TextBlock.Text>
+              <MultiBinding StringFormat="{}{0} ({1})">
+                <Binding Path="Model.State.Key.CourseCode"/><Binding Path="Model.State.Key.Section"/>
+              </MultiBinding>
+            </TextBlock.Text>
+          </TextBlock>
+          <WrapPanel Margin="0,8,0,4">
+            <TextBlock Text="{Binding Model.State.Key.Year}" Style="{DynamicResource Student.Label}" Margin="0,0,10,0"/>
+            <TextBlock DataContext="{Binding Model.State.TermName}" Style="{StaticResource Detail.Value}"/>
+          </WrapPanel>
+          <Expander Header="{DynamicResource Ui.AdvancedIdentity}" IsExpanded="False" Margin="0,8,0,0">
+            <StackPanel Margin="0,8,0,0">
+              <TextBlock Text="{DynamicResource Ui.FullIdentifier}" Style="{DynamicResource Student.Label}"/>
+              <TextBlock TextWrapping="Wrap" FontFamily="Consolas" Margin="0,4,0,0">
+                <TextBlock.Text><MultiBinding StringFormat="{}{0} / {1} / {2} / {3} / {4} / {5}">
+                  <Binding Path="Model.State.Key.Year"/><Binding Path="Model.State.Key.SemesterCode"/><Binding Path="Model.State.Key.DetailSemesterCode"/>
+                  <Binding Path="Model.State.Key.CourseCode"/><Binding Path="Model.State.Key.Section"/><Binding Path="Model.State.Key.SubsubjectCode"/>
+                </MultiBinding></TextBlock.Text>
+              </TextBlock>
+            </StackPanel>
+          </Expander>
+
+          <TextBlock Text="{DynamicResource Ui.CourseName}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.Name}" Style="{StaticResource Detail.Value}" FontWeight="SemiBold"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.EnglishName}" Style="{StaticResource Detail.Optional}"/>
+          <TextBlock Text="{DynamicResource Ui.Instructor}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.Instructor}" Style="{StaticResource Detail.Value}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.EnglishInstructor}" Style="{StaticResource Detail.Optional}"/>
+          <TextBlock Text="{DynamicResource Ui.Department}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.Department}" Style="{StaticResource Detail.Value}"/>
+          <TextBlock Text="{DynamicResource Ui.Credits}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.Credits}" Style="{StaticResource Detail.Value}"/>
+          <TextBlock Text="{DynamicResource Ui.Language}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.InstructionLanguage}" Style="{StaticResource Detail.Value}"/>
+
+          <TextBlock Text="{DynamicResource Ui.Schedule}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock Text="{DynamicResource Ui.Unknown}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Model.State.Read.Data}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Model.State.Read.Data.Meetings.Length}" Value="0">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <ItemsControl ItemsSource="{Binding Model.State.Read.Data.Meetings}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
+                        Padding="0,4,0,8" Margin="0,0,0,4">
+                  <StackPanel>
+                    <TextBlock DataContext="{Binding Time}" Style="{StaticResource Detail.Value}"/>
+                    <TextBlock DataContext="{Binding Type}" Style="{StaticResource Detail.Optional}"/>
+                    <TextBlock Text="{DynamicResource Ui.Location}" Style="{DynamicResource Student.Label}" Margin="0,4,0,2"/>
+                    <TextBlock DataContext="{Binding Room}" Style="{StaticResource Detail.Value}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{DynamicResource Ui.Restrictions}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.Restrictions}" Style="{StaticResource Detail.Value}"/>
+
+          <Border Style="{DynamicResource Student.Card}" Margin="0,14,0,0" Padding="12">
+            <StackPanel>
+              <TextBlock Text="{DynamicResource Ui.MetadataCapacity}" Style="{StaticResource Detail.Caption}" Margin="0,0,0,4"/>
+              <TextBlock DataContext="{Binding Model.State.Read.Data.Capacity}" Style="{StaticResource Detail.Value}"/>
+              <TextBlock Text="{DynamicResource Ui.MetadataCapacityNote}" Style="{DynamicResource Student.Label}" Margin="0,6,0,0"/>
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{DynamicResource Ui.DetailsReceived}" Style="{StaticResource Detail.Caption}"/>
+          <TextBlock>
+            <TextBlock.Style>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+                <Setter Property="Text" Value="{Binding Model.State.Read.CompletedAtUtc, StringFormat={}{0:u}}"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Model.State.Read}" Value="{x:Null}">
+                    <Setter Property="Text" Value="{DynamicResource Ui.NotChecked}"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <TextBlock Text="{DynamicResource Ui.Eligibility}" Style="{DynamicResource Student.Label}" Margin="0,14,0,8"/>
+          <TextBlock Text="{DynamicResource Ui.NoReservation}" Style="{DynamicResource Student.Label}" Margin="0,0,0,12"/>
+          <Button Command="{Binding CopyIdentifierCommand}" Style="{DynamicResource Student.SecondaryButton}"
+                  HorizontalContentAlignment="Left" AutomationProperties.Name="{DynamicResource Ui.CopyIdentifier}">
+            <TextBlock Text="{DynamicResource Ui.CopyIdentifier}" TextWrapping="Wrap"/>
+          </Button>
+          <Button Command="{Binding OpenRegistrationCommand}" Style="{DynamicResource Student.PrimaryButton}"
+                  HorizontalContentAlignment="Left" AutomationProperties.Name="{DynamicResource Ui.OpenRegistration}">
+            <TextBlock Text="{DynamicResource Ui.OpenRegistration}" TextWrapping="Wrap"/>
+          </Button>
+          <Button Command="{Binding OpenGenieCommand}" Style="{DynamicResource Student.SecondaryButton}"
+                  HorizontalContentAlignment="Left" AutomationProperties.Name="{DynamicResource Ui.OpenGenie}">
+            <TextBlock Text="{DynamicResource Ui.OpenGenie}" TextWrapping="Wrap"/>
+          </Button>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

@@ -1,0 +1,53 @@
+<Window x:Class="SnuWatcher.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SNU Watcher" Width="1060" Height="720" MinWidth="800" MinHeight="580"
+        Background="#F5F7FB" FontFamily="Segoe UI" FontSize="14" WindowStartupLocation="CenterScreen">
+  <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="214"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Border Background="#14213D" Padding="24,30">
+      <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top">
+          <TextBlock Text="SNU" Foreground="#93C5FD" FontWeight="Bold" FontSize="18" />
+          <TextBlock Text="Watcher" Foreground="White" FontWeight="SemiBold" FontSize="26" Margin="0,2,0,34"/>
+          <TextBlock Text="DESKTOP FOUNDATION" Foreground="#93A4BE" FontSize="10" FontWeight="Bold" Margin="0,0,0,22"/>
+          <TextBlock Text="Native validation" Foreground="White" FontWeight="SemiBold" Margin="0,0,0,20"/>
+          <TextBlock Text="Course search" Foreground="#9AA8BF" Margin="0,0,0,20"/>
+          <TextBlock Text="My watches" Foreground="#9AA8BF" Margin="0,0,0,20"/>
+          <TextBlock Text="Alert history" Foreground="#9AA8BF"/>
+        </StackPanel>
+        <StackPanel VerticalAlignment="Bottom">
+          <TextBlock Text="M2 feasibility candidate" Foreground="#B4C2DA" FontSize="12"/>
+          <TextBlock Text="Not monitoring courses yet" Foreground="#93A4BE" FontSize="11" Margin="0,8,0,0"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="38,34,38,28">
+        <TextBlock Text="WINDOWS NATIVE VALIDATION" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+        <TextBlock Text="A reliable alert starts here." Foreground="#14213D" FontWeight="SemiBold" FontSize="29" Margin="0,12,0,12"/>
+        <TextBlock Text="This first development build checks Windows notifications, click activation and one-instance behavior before course monitoring is enabled." Foreground="#475569" LineHeight="23" Margin="0,0,0,25"/>
+        <Border Background="White" BorderBrush="#DFE5EF" BorderThickness="1" CornerRadius="10" Padding="24" Margin="0,0,0,20">
+          <StackPanel>
+            <TextBlock Text="Test your notification channel" FontSize="19" FontWeight="SemiBold" Foreground="#14213D"/>
+            <TextBlock Text="The banner identifies SNU Watcher. Clicking Open registration uses your default browser and does not submit a registration." Foreground="#64748B" LineHeight="22" Margin="0,12,0,20"/>
+            <WrapPanel>
+              <Button Content="Send test notification" Click="OnTestNotification" AutomationProperties.Name="Send native test notification"/>
+              <Button Content="Open official SNU" Click="OnOpenSnu" Background="#EAF0FC" Foreground="#1D4ED8" AutomationProperties.Name="Open official SNU registration website"/>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+        <Border Background="#EAF0FC" CornerRadius="10" Padding="22" Margin="0,0,0,20">
+          <StackPanel>
+            <TextBlock Text="Native status" FontWeight="SemiBold" Foreground="#1E3A8A"/>
+            <TextBlock x:Name="StatusText" Foreground="#334155" Margin="0,10,0,0" LineHeight="22" AutomationProperties.LiveSetting="Polite"/>
+          </StackPanel>
+        </Border>
+        <TextBlock Text="What to verify" FontSize="17" FontWeight="SemiBold" Foreground="#14213D" Margin="0,0,0,10"/>
+        <TextBlock Text="1. A visible banner and sound, if enabled in Windows.&#x0a;2. The banner opens the official page, including after this app exits.&#x0a;3. A second launch focuses this window. Closing it keeps the tray icon; Quit stops the app." Foreground="#475569" LineHeight="25"/>
+        <TextBlock Text="An alert never reserves a seat. The full course interface follows the clean-PC validation gate." Foreground="#64748B" FontSize="12" Margin="0,22,0,20"/>
+        <Button Content="Quit application" Click="OnQuit" HorizontalAlignment="Left" Background="#E2E8F0" Foreground="#334155"/>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Window>

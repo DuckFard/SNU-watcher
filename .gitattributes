@@ -1,0 +1,3 @@
+# Preserve the exact upstream legal text and its pinned checksum.
+docs/third-party/AngleSharp-LICENSE.txt -text -whitespace
+docs/third-party/Windows-SDK-LICENSE.txt -text -whitespace
