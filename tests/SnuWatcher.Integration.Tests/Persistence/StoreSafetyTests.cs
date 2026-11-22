@@ -69,6 +69,10 @@ public sealed class StoreSafetyTests
         Assert.Equal(2L, Scalar(verify, "PRAGMA synchronous;"));
     }
 
+    // Upper bounds only: the fixture normally finishes in milliseconds, but each store's worker runs on the
+    // thread pool and the first one is deliberately blocked, so a loaded CI runner can delay the second.
+    private static readonly TimeSpan FixtureDeadline = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task ConcurrentFreshOpenRechecksSchemaAfterAcquiringTheWriteTransaction()
     {
@@ -81,19 +85,41 @@ public sealed class StoreSafetyTests
         {
             if (stage != SqliteStoreWriteStage.SchemaCreated) return;
             firstCreated.SetResult();
-            if (!releaseFirst.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Concurrent schema fixture was not released.");
+            if (!releaseFirst.Wait(FixtureDeadline)) throw new TimeoutException("Concurrent schema fixture was not released.");
         });
-        await firstCreated.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var secondTask = SqliteWatchStore.OpenAsync(factory, faultInjector: stage =>
+        Task<SqliteWatchStore>? secondTask = null;
+        try
         {
-            if (stage == SqliteStoreWriteStage.SchemaValidated) secondValidated.TrySetResult();
-        });
-        try { await secondValidated.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
-        finally { releaseFirst.Set(); }
+            await firstCreated.Task.WaitAsync(FixtureDeadline);
+            secondTask = SqliteWatchStore.OpenAsync(factory, faultInjector: stage =>
+            {
+                if (stage != SqliteStoreWriteStage.SchemaValidated) return;
+                secondValidated.TrySetResult();
+                // The second opener has read the empty schema and next waits for the write reservation.
+                // Releasing here keeps that wait independent of when the test continuation is scheduled.
+                releaseFirst.Set();
+            });
+            await secondValidated.Task.WaitAsync(FixtureDeadline);
+        }
+        catch
+        {
+            // Both openers may still be using watch.db. Close them before the directory is removed, so the
+            // original failure is reported instead of a locked-file cleanup error.
+            releaseFirst.Set();
+            await CloseAfterFixtureFailureAsync(firstTask);
+            if (secondTask is not null) await CloseAfterFixtureFailureAsync(secondTask);
+            throw;
+        }
         await using var first = await firstTask;
         await using var second = await secondTask;
         Assert.Empty(await first.ListSubscriptionsAsync(default));
         Assert.Empty(await second.ListSubscriptionsAsync(default));
+    }
+
+    private static async Task CloseAfterFixtureFailureAsync(Task<SqliteWatchStore> opening)
+    {
+        try { await (await opening.WaitAsync(FixtureDeadline)).DisposeAsync(); }
+        catch (Exception) { /* The caller rethrows the fixture failure; an opener that failed holds no store. */ }
     }
 
     private static object? Scalar(SqliteConnection connection, string sql)
