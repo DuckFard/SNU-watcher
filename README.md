@@ -2,13 +2,13 @@
 
 **Watch the courses you want. Hear when a seat opens.**
 
-SNU Watcher is a Windows desktop app being built for Seoul National University students who are waiting for a place in a full class. It is designed to check the sections you choose, alert you when a seat becomes available, and take you to the official SNU registration page so you can try to register.
+SNU Watcher is a Windows desktop app for Seoul National University students who are waiting for a place in a full class. It checks the sections you choose, alerts you when a seat becomes available, and takes you to the official SNU registration page so you can try to register.
 
-**Currently in development:** the desktop build is an installation and notification test app. Course search, watchlists, and automatic availability checks are still being developed. A public desktop release is not available yet. Follow the [development progress](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/PROGRESS.md) for the current status.
+**Unsigned preview available:** [SNU Watcher 0.1.0-preview.1](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.1) is a Windows 11 x64 prerelease with course search, watchlists, native seat alerts, saved alert history and notification testing. Its exact installer passed installed Windows, notification and accessibility checks before publication. Read the release notes for known limitations, and the [development progress](docs/PROGRESS.md) for the evidence.
 
-## Planned features
+## Preview features
 
-| Feature | What it will do |
+| Feature | What it does |
 | --- | --- |
 | Find courses | Search by course code, name, department, instructor, or keyword using the SNU course catalog. |
 | Compare sections | View instructors, schedules, locations, enrollment, capacity, and available seats. |
@@ -16,32 +16,44 @@ SNU Watcher is a Windows desktop app being built for Seoul National University s
 | Get seat alerts | Receive a Windows popup identifying the course and section, with a shortcut to official SNU registration. |
 | Manage your watches | Add, pause, resume, or remove watches, and choose when they expire. |
 | Check data freshness | See the last successful check and clear status messages when information is delayed or unavailable. |
+| Review alerts | Browse saved opening events and delivery status, test Windows notifications, and choose whether alerts make a sound. |
 | Explore further | Open SNU Genie in your browser for additional course information. |
+| Check local health | Read cached notification/source status and storage sizes, and export a small privacy-safe diagnostic summary locally. |
 
-## How it will work
+## How it works
 
 1. Select the academic term and find the course you want.
 2. Add a section, or a group of acceptable sections, to your watchlist.
 3. Keep SNU Watcher running while it checks for availability changes.
 4. When a seat opens, click the notification to open the [official SNU registration site](https://sugang.snu.ac.kr/sugang/co/co010.action) and register yourself.
 
-**An alert does not reserve a seat.** Another student may register first, and registration restrictions still apply. SNU Watcher will leave registration to you on the official site.
+**An alert does not reserve a seat.** Another student may register first, and registration restrictions still apply. SNU Watcher leaves registration to you on the official site.
 
 SNU Watcher is an independent project and is not affiliated with or endorsed by Seoul National University.
 
 ## Downloads and platform
 
-The first desktop release targets **Windows 11 x64**, with an installer `.exe` distributed through [GitHub Releases](https://github.com/DuckFard/SNU-watcher/releases). The installer is intended to include its required runtimes so students can install the app without setting up development tools.
+The first preview targets **Windows 11 x64**. Download `SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe` and `SHA256SUMS.txt` from the [0.1.0-preview.1 release](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.1). The installer includes its runtimes, so no development tools are needed. Before running it, check that its SHA-256 matches `SHA256SUMS.txt`:
 
-For now, development installers are unsigned validation builds. The desktop's installation, notification, and lifecycle checks are still in progress; these builds do not monitor courses.
+```powershell
+Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe' -Algorithm SHA256
+```
+
+The expected value is `83A9B7FA82EB39BE6A9EEE955755A4758588A29AE2B6218B5199C623F36C3533`.
+
+This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer.
+
+The preview uses manual upgrades from GitHub Releases. Automatic updates/startup, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
 
 The earlier command-line prototype is preserved in [legacy/python-watcher](legacy/python-watcher/), along with its setup instructions and known limitations.
 
 ## Develop locally
 
-The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications. SQLite is planned for storing watches and alert history locally.
+The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and SQLite for local watches and delivery records. Search, watch management and English/Korean settings use owned asynchronous controllers; availability and the last successful check remain separate from loading and error states. The notification integration records Windows acceptance separately from a student's confirmation that a test banner appeared. Installed-app qualification for the published preview is recorded in [native validation](docs/native-validation.md).
 
-Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/global.json), then run:
+The **2026-11-02** live recheck passed catalog, two-page search, exact section details and previous-year metadata through the production gateway. The adapter now follows SNU's observed catalog initialization flow and validates source-reported academic years. Unsupported responses still produce unavailable data rather than invented availability. See the [integration evidence](docs/integrations/snu.md); these reads do not establish an institution-approved polling rate.
+
+Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](global.json), then run:
 
 ```powershell
 git clone --branch development/windows-foundation https://github.com/DuckFard/SNU-watcher.git
@@ -51,15 +63,17 @@ cd SNU-watcher
 
 The script restores locked dependencies, builds the solution, and runs the offline foundation tests with an 80% line and branch coverage requirement. These tests do not log into SNU, submit registrations, or send Windows notifications.
 
-See [native validation](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/native-validation.md) for instructions to build the current test app and installer. Installer builds also require Inno Setup.
+See [native validation](docs/native-validation.md) for instructions to build the current test app and installer. Installer builds also require Inno Setup.
 
 ## Project documentation
 
-- [Development progress](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/PROGRESS.md) — implemented work, test evidence, and open milestones.
-- [Implementation plan](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/DESKTOP_APP_PLAN.md) — feature scope, monitoring behavior, and release requirements.
-- [Architecture](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/architecture.md) — application structure and design decisions.
-- [SNU integration](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/integrations/snu.md) — data sources, verified behavior, and limitations.
-- [Testing](https://github.com/DuckFard/SNU-watcher/blob/development/windows-foundation/docs/testing.md) — automated checks and coverage requirements.
+- [Development progress](docs/PROGRESS.md) — implemented work, test evidence, and open milestones.
+- [Implementation plan](docs/DESKTOP_APP_PLAN.md) — feature scope, monitoring behavior, and release requirements.
+- [Architecture](docs/architecture.md) — application structure and design decisions.
+- [SNU integration](docs/integrations/snu.md) — data sources, verified behavior, and limitations.
+- [Testing](docs/testing.md) — automated checks and coverage requirements.
+- [Privacy](docs/privacy.md) and [security policy](SECURITY.md) — local data, diagnostic sharing and vulnerability reporting.
+- [Preview releases](docs/releases.md) — unsigned packaging, verification, manual upgrade and recovery limits.
 
 ## License
 
