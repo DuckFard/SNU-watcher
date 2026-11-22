@@ -55,7 +55,6 @@ public sealed partial class StudentShellViewModel
                 {
                     routeStop.Token.ThrowIfCancellationRequested();
                     await WatchRefreshFailedAsync().ConfigureAwait(false);
-                    await dispatcher.InvokeAsync(() => watchReloadRunning = false).ConfigureAwait(false);
                     return;
                 }
                 await dispatcher.InvokeAsync(() =>
@@ -67,17 +66,18 @@ public sealed partial class StudentShellViewModel
             }
         }
         catch (OperationCanceledException) when (routeStop.IsCancellationRequested) { }
-        catch (Exception)
-        {
-            await WatchRefreshFailedAsync().ConfigureAwait(false);
-            await dispatcher.InvokeAsync(() => watchReloadRunning = false).ConfigureAwait(false);
-        }
+        catch (Exception) { await WatchRefreshFailedAsync().ConfigureAwait(false); }
     }
 
     private bool NeedsWatchReload => forcedReloadGeneration != settledForcedGeneration || dirtyGeneration > settledGeneration;
 
+    /// <summary>
+    /// Ends this reload and reports its failure in one UI action. Admission reopens before the failure is published,
+    /// so a retry prompted by the report (or arriving right after it) starts a new reload instead of being dropped.
+    /// </summary>
     private Task WatchRefreshFailedAsync() => dispatcher.InvokeAsync(() =>
     {
+        watchReloadRunning = false;
         if (closed) return;
         Model.Replace(State with { IssueKey = "Ui.CommandFailed" });
         Report("ui_shell_watch_refresh_failed");
