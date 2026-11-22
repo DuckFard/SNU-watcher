@@ -111,32 +111,30 @@ public partial class StudentWindow : Window, IDisposable
     {
         if (RootLayout is null || ChromeScrollViewer is null) return;
         var compact = ActualHeight < 560;
+        var narrow = ActualWidth < 860;
         var gutter = compact ? 8 : 20;
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
         ChromeScrollViewer.MaxHeight = compact ? Math.Max(56, RootLayout.ActualHeight - 250) : double.PositiveInfinity;
         // Enough for a compact list pane's header, rows and paging; 150% on 1280x800 still fits without scrolling.
         PageContent.MinHeight = compact ? 340 : 0;
-        PageScrollViewer.Margin = compact ? new Thickness(6, 4, 6, 2) : new Thickness(16, 12, 16, 6);
-        HeaderBand.Padding = compact ? new Thickness(gutter, 3, gutter, 3) : new Thickness(gutter, 12, gutter, 10);
-        NavigationBand.Padding = new Thickness(gutter, 0, gutter, 0);
-        StatusBand.Padding = new Thickness(gutter, compact ? 1 : 4, gutter, compact ? 1 : 4);
-        BrandMark.Width = BrandMark.Height = compact ? 26 : 38;
-        BrandMark.CornerRadius = new CornerRadius(compact ? 13 : 19);
-        BrandingPanel.Orientation = compact ? Orientation.Horizontal : Orientation.Vertical;
-        BrandingPanel.Margin = new Thickness(compact ? 8 : 11, 0, 0, 0);
-        BrandingTitle.FontSize = compact ? 16 : 21;
+        PageScrollViewer.Margin = compact ? new Thickness(6, 2, 6, 2) : new Thickness(16, 8, 16, 6);
+        UtilityBand.Padding = new Thickness(gutter, compact ? 1 : 3, compact ? 2 : gutter - 8, compact ? 1 : 3);
+        HeaderBand.Padding = new Thickness(gutter, compact ? 2 : 10, gutter, 0);
+        StatusBand.Padding = new Thickness(gutter, compact ? 0 : 4, gutter, 0);
+        BrandMark.Width = BrandMark.Height = compact ? 24 : 36;
+        BrandMark.CornerRadius = new CornerRadius(compact ? 12 : 18);
+        BrandingPanel.Margin = new Thickness(0, 0, compact ? 12 : 24, compact ? 4 : 10);
+        BrandingTitle.FontSize = compact || narrow ? 17 : 21;
         BrandingSubtitle.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        DemoBadge.Margin = compact ? new Thickness(8, 0, 0, 0) : new Thickness(0, 4, 0, 0);
-        DemoBadge.VerticalAlignment = compact ? VerticalAlignment.Center : VerticalAlignment.Top;
-        DemoLabel.FontSize = compact ? 11 : 12;
-        QuitButton.MinHeight = compact ? 26 : 32;
-        QuitButton.Padding = compact ? new Thickness(10, 2, 10, 2) : new Thickness(14, 5, 14, 5);
+        DemoLabel.FontSize = compact ? 11 : 11.5;
+        QuitButton.MinHeight = compact ? 20 : 24;
         FooterBand.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         foreach (var navigation in new[] { FindNavigation, WatchesNavigation, AlertsNavigation, SettingsNavigation })
         {
-            navigation.MinHeight = compact ? 28 : 38;
-            navigation.Padding = compact ? new Thickness(2, 3, 2, 3) : new Thickness(2, 8, 2, 8);
-            navigation.Margin = new Thickness(0, 0, compact ? 18 : 26, 0);
+            navigation.MinHeight = compact ? 30 : 42;
+            navigation.FontSize = compact || narrow ? 14.5 : 16;
+            navigation.Padding = compact ? new Thickness(2, 4, 2, 5) : new Thickness(2, 10, 2, 10);
+            if (!ReferenceEquals(navigation, SettingsNavigation)) navigation.Margin = new Thickness(0, 0, compact || narrow ? 18 : 28, 0);
         }
     }
 
@@ -150,6 +148,8 @@ public partial class StudentWindow : Window, IDisposable
     private void ModelChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (_model is null) return;
+        // A quick fade marks a page change; pages never slide (top-level transitions stay calm).
+        if (args.PropertyName == nameof(StudentShellViewModel.SelectedPage)) Presentation.Motion.FadeInPage(PageContent);
         _syncingNavigation = true;
         try
         {

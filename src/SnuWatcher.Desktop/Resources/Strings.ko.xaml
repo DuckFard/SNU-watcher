@@ -222,6 +222,7 @@
   <sys:String x:Key="Ui.TotalShort">총수강인원</sys:String>
   <sys:String x:Key="Ui.SelectedSections">선택한 강좌</sys:String>
   <sys:String x:Key="Ui.ResultCountSuffix">개 강좌가 검색되었습니다</sys:String>
+  <sys:String x:Key="Ui.AdvancedSearch">상세 검색</sys:String>
   <sys:String x:Key="Ui.QuotaLabel">사이트의 원래 정원 구분</sys:String>
   <sys:String x:Key="Ui.AdvancedIdentity">추가 식별 정보</sys:String>
   <sys:String x:Key="Ui.Current">현재</sys:String>

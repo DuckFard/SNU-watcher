@@ -9,7 +9,7 @@
         xmlns:alerts="clr-namespace:SnuWatcher.Windows.Presentation.Alerts;assembly=SnuWatcher.Windows"
         xmlns:shell="clr-namespace:SnuWatcher.Windows.Presentation.Shell;assembly=SnuWatcher.Windows"
         Title="SNU Watcher" Width="1180" Height="820" MinWidth="680" MinHeight="480" SizeChanged="OnWindowSizeChanged" Loaded="OnWindowLoaded"
-        FontFamily="Noto Sans KR, Segoe UI, Malgun Gothic" FontSize="14"
+        FontFamily="Pretendard, Noto Sans KR, Segoe UI, Malgun Gothic" FontSize="14"
         Background="{DynamicResource Snu.Page}" Foreground="{DynamicResource Snu.Ink}">
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="Student.Visible"/>
@@ -43,58 +43,59 @@
     <!-- Only the chrome scrolls at small work areas. The page keeps a finite row viewport. -->
     <ScrollViewer x:Name="ChromeScrollViewer" Style="{StaticResource Student.CoveredInteraction}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel>
-      <Border x:Name="HeaderBand" Background="{DynamicResource Snu.Surface}" BorderBrush="{DynamicResource Snu.Divider}" BorderThickness="0,0,0,1" Padding="20,12,20,10">
-        <DockPanel x:Name="HeaderPanel">
+      <!-- Navy utility strip, as on SNU's portals: the unofficial notice and app-level actions. -->
+      <Border x:Name="UtilityBand" Background="{DynamicResource Snu.Navy}" Padding="20,3">
+        <DockPanel>
           <Button x:Name="QuitButton" DockPanel.Dock="Right" Content="{DynamicResource Ui.Quit}" Click="OnQuit"
-                  Style="{DynamicResource Student.QuietButton}" VerticalAlignment="Center"/>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  Style="{DynamicResource Student.UtilityButton}" VerticalAlignment="Center"/>
+          <WrapPanel VerticalAlignment="Center">
+            <TextBlock x:Name="BrandingSubtitle" Text="{DynamicResource Ui.Unofficial}" FontSize="12" Foreground="{DynamicResource Snu.OnNavyMuted}"
+                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Border x:Name="DemoBadge" Background="{DynamicResource Snu.DemoTint}" CornerRadius="4" Padding="7,0" VerticalAlignment="Center"
+                    Visibility="{Binding State.IsDemo, Converter={StaticResource Student.Visible}}">
+              <TextBlock x:Name="DemoLabel" Text="{DynamicResource Ui.Demo}" FontWeight="SemiBold" FontSize="11.5" Foreground="{DynamicResource Snu.DemoText}"/>
+            </Border>
+          </WrapPanel>
+        </DockPanel>
+      </Border>
+      <Border x:Name="HeaderBand" Background="{DynamicResource Snu.Surface}" BorderBrush="{DynamicResource Snu.Divider}" BorderThickness="0,0,0,1" Padding="20,10,20,0">
+        <DockPanel x:Name="HeaderPanel">
+          <StackPanel x:Name="NavigationPanel" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
+            <RadioButton x:Name="FindNavigation" GroupName="Pages" Content="{DynamicResource Ui.FindCourses}"
+                         Tag="{x:Static shell:StudentPage.FindCourses}" Checked="OnNavigate" IsChecked="True" Style="{DynamicResource Student.Navigation}"/>
+            <RadioButton x:Name="WatchesNavigation" GroupName="Pages" Content="{DynamicResource Ui.MyWatches}"
+                         Tag="{x:Static shell:StudentPage.MyWatches}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
+            <RadioButton x:Name="AlertsNavigation" GroupName="Pages" Content="{DynamicResource Ui.Alerts}"
+                         Tag="{x:Static shell:StudentPage.Alerts}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
+            <RadioButton x:Name="SettingsNavigation" GroupName="Pages" Content="{DynamicResource Ui.Settings}"
+                         Tag="{x:Static shell:StudentPage.Settings}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}" Margin="0"/>
+          </StackPanel>
+          <StackPanel x:Name="BrandingPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,10">
             <!-- The app's own mark: never an SNU emblem or logo. -->
-            <Border x:Name="BrandMark" Width="38" Height="38" CornerRadius="19" Background="{DynamicResource Snu.Navy}" VerticalAlignment="Center"
-                    AutomationProperties.Name="SNU Watcher">
-              <TextBlock Text="&#xEA8F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource Snu.OnNavy}"
+            <Border x:Name="BrandMark" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource Snu.Navy}" VerticalAlignment="Center">
+              <TextBlock Text="&#xEA8F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="17" Foreground="{DynamicResource Snu.OnNavy}"
                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <StackPanel x:Name="BrandingPanel" Margin="11,0,0,0" VerticalAlignment="Center">
-              <TextBlock x:Name="BrandingTitle" Text="SNU Watcher" FontWeight="SemiBold" FontSize="21" Foreground="{DynamicResource Snu.Heading}"
-                         VerticalAlignment="Center"/>
-              <TextBlock x:Name="BrandingSubtitle" Text="{DynamicResource Ui.Unofficial}" TextWrapping="Wrap" FontSize="12"
-                         Foreground="{DynamicResource Snu.InkSecondary}"/>
-              <Border x:Name="DemoBadge" Background="{DynamicResource Snu.DemoTint}" BorderBrush="{DynamicResource Snu.DemoText}" BorderThickness="1"
-                      CornerRadius="10" Padding="8,1" Margin="0,4,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
-                      Visibility="{Binding State.IsDemo, Converter={StaticResource Student.Visible}}">
-                <TextBlock x:Name="DemoLabel" Text="{DynamicResource Ui.Demo}" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource Snu.DemoText}"
-                           TextWrapping="Wrap"/>
-              </Border>
-            </StackPanel>
+            <TextBlock x:Name="BrandingTitle" Text="SNU Watcher" FontWeight="Bold" FontSize="21" Foreground="{DynamicResource Snu.Heading}"
+                       VerticalAlignment="Center" Margin="10,0,0,0"/>
           </StackPanel>
         </DockPanel>
       </Border>
-      <Border x:Name="NavigationBand" Background="{DynamicResource Snu.Surface}" BorderBrush="{DynamicResource Snu.Divider}" BorderThickness="0,0,0,1" Padding="20,0">
-        <StackPanel x:Name="NavigationPanel" Orientation="Horizontal">
-          <RadioButton x:Name="FindNavigation" GroupName="Pages" Content="{DynamicResource Ui.FindCourses}"
-                       Tag="{x:Static shell:StudentPage.FindCourses}" Checked="OnNavigate" IsChecked="True" Style="{DynamicResource Student.Navigation}"/>
-          <RadioButton x:Name="WatchesNavigation" GroupName="Pages" Content="{DynamicResource Ui.MyWatches}"
-                       Tag="{x:Static shell:StudentPage.MyWatches}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
-          <RadioButton x:Name="AlertsNavigation" GroupName="Pages" Content="{DynamicResource Ui.Alerts}"
-                       Tag="{x:Static shell:StudentPage.Alerts}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
-          <RadioButton x:Name="SettingsNavigation" GroupName="Pages" Content="{DynamicResource Ui.Settings}"
-                       Tag="{x:Static shell:StudentPage.Settings}" Checked="OnNavigate" Style="{DynamicResource Student.Navigation}"/>
-        </StackPanel>
-      </Border>
-      <Border x:Name="StatusBand" Background="{DynamicResource Snu.SubBar}" Padding="20,4">
+      <Border x:Name="StatusBand" Padding="20,4,20,0">
         <StackPanel>
-          <Expander x:Name="SourceStatusExpander" Header="{DynamicResource Ui.SourceStatus}" Foreground="{DynamicResource Snu.Slate}">
-            <StackPanel Margin="10,6,10,8">
-              <TextBlock ui:ResourceText.Key="{Binding State.Source.MessageKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
-                         Foreground="{DynamicResource Snu.Ink}"/>
-              <WrapPanel Margin="0,8,0,0">
-                <Button Content="{DynamicResource Ui.Reload}" Command="{Binding RefreshSourceCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
-                <Button Content="{DynamicResource Ui.SourceResume}" Command="{Binding ResumeAccessCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
-                <Button Content="{DynamicResource Ui.RecoverSavedState}" Command="{Binding RecoverPolicyCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
-              </WrapPanel>
-              <TextBlock Text="{DynamicResource Ui.Unofficial}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Snu.InkSecondary}"/>
-              <TextBlock Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" Foreground="{DynamicResource Snu.InkSecondary}"/>
-            </StackPanel>
+          <Expander x:Name="SourceStatusExpander" Header="{DynamicResource Ui.SourceStatus}" Foreground="{DynamicResource Snu.InkSecondary}" FontSize="13">
+            <Border Style="{DynamicResource Student.Card}" Margin="0,4,0,6" Padding="14,10">
+              <StackPanel>
+                <TextBlock ui:ResourceText.Key="{Binding State.Source.MessageKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                           Foreground="{DynamicResource Snu.Ink}" FontSize="14"/>
+                <WrapPanel Margin="0,8,0,0">
+                  <Button Content="{DynamicResource Ui.Reload}" Command="{Binding RefreshSourceCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
+                  <Button Content="{DynamicResource Ui.SourceResume}" Command="{Binding ResumeAccessCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
+                  <Button Content="{DynamicResource Ui.RecoverSavedState}" Command="{Binding RecoverPolicyCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
+                </WrapPanel>
+                <TextBlock Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Snu.InkSecondary}"/>
+              </StackPanel>
+            </Border>
           </Expander>
           <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
                      Foreground="{DynamicResource Snu.Emphasis}"/>
@@ -106,44 +107,44 @@
     </ScrollViewer>
     <!-- The page normally fills its viewport. A very short work area (200% on 1280x800) gives the page a minimum
          height and scrolls it, rather than collapsing result rows beneath fixed chrome. -->
-    <ScrollViewer x:Name="PageScrollViewer" Grid.Row="1" Margin="16,12,16,6" Style="{StaticResource Student.CoveredInteraction}" Focusable="False"
+    <ScrollViewer x:Name="PageScrollViewer" Grid.Row="1" Margin="16,8,16,6" Style="{StaticResource Student.CoveredInteraction}" Focusable="False"
                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <ContentControl x:Name="PageContent" Style="{StaticResource Student.CoveredInteraction}" Content="{Binding PageContent}"
                       Height="{Binding ViewportHeight, ElementName=PageScrollViewer}"/>
     </ScrollViewer>
-    <Border x:Name="FooterBand" Grid.Row="2" Background="{DynamicResource Snu.Footer}" Padding="20,7">
+    <Border x:Name="FooterBand" Grid.Row="2" BorderBrush="{DynamicResource Snu.Divider}" BorderThickness="0,1,0,0" Padding="20,7">
       <TextBlock x:Name="ReservationFooter" Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" FontSize="12"
                  Foreground="{DynamicResource Snu.InkSecondary}"/>
     </Border>
-    <Border x:Name="Onboarding" Grid.RowSpan="3" Background="{DynamicResource Snu.Tint}" Padding="24"
+    <Border x:Name="Onboarding" Grid.RowSpan="3" Background="{DynamicResource Snu.Page}" Padding="24"
             KeyboardNavigation.TabNavigation="Cycle" IsVisibleChanged="OnOnboardingVisibilityChanged"
             Visibility="{Binding State.ShowOnboarding, Converter={StaticResource Student.Visible}}">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Border Style="{DynamicResource Student.Card}" MaxWidth="640" Padding="32,28" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <Border Style="{DynamicResource Student.Card}" MaxWidth="640" Padding="36,32" VerticalAlignment="Center" HorizontalAlignment="Center">
           <StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-              <Border Width="44" Height="44" CornerRadius="22" Background="{DynamicResource Snu.Navy}">
-                <TextBlock Text="&#xEA8F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource Snu.OnNavy}"
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+              <Border Width="46" Height="46" CornerRadius="23" Background="{DynamicResource Snu.Navy}">
+                <TextBlock Text="&#xEA8F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="21" Foreground="{DynamicResource Snu.OnNavy}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
-              <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                <TextBlock Text="SNU Watcher" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource Snu.Heading}"/>
+              <StackPanel Margin="13,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="SNU Watcher" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource Snu.Heading}"/>
                 <TextBlock Text="{DynamicResource Ui.Unofficial}" FontSize="12.5" Foreground="{DynamicResource Snu.InkSecondary}" TextWrapping="Wrap"/>
               </StackPanel>
             </StackPanel>
             <TextBlock Text="{DynamicResource Ui.OnboardingTitle}" Style="{DynamicResource Student.Title}"/>
-            <TextBlock Text="{DynamicResource Ui.OnboardingNote}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+            <TextBlock Text="{DynamicResource Ui.OnboardingNote}" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="{DynamicResource Snu.InkSecondary}"/>
             <Border Background="{DynamicResource Snu.Tint}" BorderBrush="{DynamicResource Snu.Border}" BorderThickness="1" CornerRadius="8"
-                    Padding="12,9" Margin="0,0,0,14">
+                    Padding="12,10" Margin="0,0,0,14">
               <TextBlock Text="{DynamicResource Ui.NoReservation}" TextWrapping="Wrap" Foreground="{DynamicResource Snu.Heading}" FontWeight="SemiBold"/>
             </Border>
-            <TextBlock Text="{DynamicResource Ui.AlertsInactive}" TextWrapping="Wrap" Margin="0,0,0,18"/>
+            <TextBlock Text="{DynamicResource Ui.AlertsInactive}" TextWrapping="Wrap" Margin="0,0,0,20" Foreground="{DynamicResource Snu.InkSecondary}"/>
             <WrapPanel Margin="0,0,0,6">
-              <Button Content="English" Click="OnEnglish" Style="{DynamicResource Student.SecondaryButton}"/>
-              <Button Content="한국어" Click="OnKorean" Style="{DynamicResource Student.SecondaryButton}"/>
+              <Button Content="English" Click="OnEnglish" Style="{DynamicResource Student.QuietButton}"/>
+              <Button Content="한국어" Click="OnKorean" Style="{DynamicResource Student.QuietButton}"/>
             </WrapPanel>
             <Button x:Name="GetStartedButton" Content="{DynamicResource Ui.GetStarted}" Command="{Binding CompleteOnboardingCommand}" HorizontalAlignment="Left"
-                    Style="{DynamicResource Student.PrimaryButton}" MinWidth="140"/>
+                    Style="{DynamicResource Student.PrimaryButton}" MinWidth="150" Margin="0,8,0,8"/>
             <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
                        Foreground="{DynamicResource Snu.Emphasis}"/>
           </StackPanel>

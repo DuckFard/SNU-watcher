@@ -1,138 +1,181 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Every color is a Snu.* palette key resolved dynamically, so Windows high contrast can swap the whole palette
-       (StudentPalette.HighContrast.xaml) while the app runs. Keyboard focus stays visible on every template. -->
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="clr-namespace:SnuWatcher.Desktop.Presentation">
+  <!-- Every color is a Snu.* palette key resolved dynamically, so Windows high contrast can swap the palette while the
+       app runs. Hover and pressed states fade in overlay layers (ui:Motion) instead of animating brushes, keeping those
+       brushes dynamic. Keyboard focus is a visible 2px ring on every control. Disabled controls use solid colors. -->
+  <ui:AnyTrueConverter x:Key="Student.AnyTrue"/>
 
-  <!-- Buttons -->
+  <!-- Buttons: one template; each variant supplies its colors through ui:Paint. -->
+  <ControlTemplate x:Key="Student.ButtonTemplate" TargetType="ButtonBase">
+    <Grid>
+      <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+              BorderThickness="{TemplateBinding BorderThickness}"
+              CornerRadius="{Binding (ui:Paint.Radius), RelativeSource={RelativeSource TemplatedParent}}"/>
+      <Border x:Name="HoverLayer" Opacity="0" Background="{Binding (ui:Paint.Hover), RelativeSource={RelativeSource TemplatedParent}}"
+              CornerRadius="{Binding (ui:Paint.Radius), RelativeSource={RelativeSource TemplatedParent}}"
+              ui:Motion.FadeIn="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}"/>
+      <Border x:Name="HoverOutline" Opacity="0" BorderThickness="{TemplateBinding BorderThickness}"
+              BorderBrush="{Binding (ui:Paint.HoverBorder), RelativeSource={RelativeSource TemplatedParent}}"
+              CornerRadius="{Binding (ui:Paint.Radius), RelativeSource={RelativeSource TemplatedParent}}"
+              ui:Motion.FadeIn="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}"/>
+      <Border x:Name="PressedLayer" Opacity="0" Background="{Binding (ui:Paint.Pressed), RelativeSource={RelativeSource TemplatedParent}}"
+              CornerRadius="{Binding (ui:Paint.Radius), RelativeSource={RelativeSource TemplatedParent}}"
+              ui:Motion.FadeIn="{Binding IsPressed, RelativeSource={RelativeSource TemplatedParent}}"/>
+      <Border x:Name="FocusRing" BorderThickness="2" Margin="-4" Visibility="Collapsed"
+              BorderBrush="{Binding (ui:Paint.Focus), RelativeSource={RelativeSource TemplatedParent}}"
+              CornerRadius="{Binding (ui:Paint.Radius), RelativeSource={RelativeSource TemplatedParent}}"/>
+      <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </Grid>
+    <ControlTemplate.Triggers>
+      <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.DisabledFill}"/>
+        <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.DisabledBorder}"/>
+        <Setter TargetName="HoverLayer" Property="Visibility" Value="Collapsed"/>
+        <Setter TargetName="HoverOutline" Property="Visibility" Value="Collapsed"/>
+        <Setter TargetName="PressedLayer" Property="Visibility" Value="Collapsed"/>
+        <Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/>
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
   <Style x:Key="Student.PrimaryButton" TargetType="Button">
     <Setter Property="Padding" Value="16,8"/>
     <Setter Property="MinHeight" Value="36"/>
     <Setter Property="Margin" Value="0,0,8,8"/>
     <Setter Property="FontSize" Value="14"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
     <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="Background" Value="{DynamicResource Snu.Blue}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.OnBlue}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Snu.Blue}"/>
     <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="Template">
-      <Setter.Value><ControlTemplate TargetType="Button">
-        <Grid>
-          <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"/>
-          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="7" Margin="-3" Visibility="Collapsed"/>
-          <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
-        </Grid>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.BlueHover}"/></Trigger>
-          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.Navy}"/></Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value>
-    </Setter>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.BlueHover}"/>
+    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.BlueHover}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.BluePressed}"/>
+    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.Focus}"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="Template" Value="{StaticResource Student.ButtonTemplate}"/>
   </Style>
 
   <Style x:Key="Student.SecondaryButton" TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}">
     <Setter Property="Padding" Value="14,8"/>
+    <Setter Property="FontWeight" Value="Normal"/>
     <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Snu.Slate}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Snu.Border}"/>
-    <Setter Property="Template">
-      <Setter.Value><ControlTemplate TargetType="Button">
-        <Grid>
-          <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"/>
-          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="7" Margin="-3" Visibility="Collapsed"/>
-          <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
-        </Grid>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True">
-            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.Hover}"/>
-            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.BorderStrong}"/>
-          </Trigger>
-          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.SubBar}"/></Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value>
-    </Setter>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Snu.FieldBorder}"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.ActionHover}"/>
+    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.FieldBorderHover}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.ActionPressed}"/>
   </Style>
 
-  <!-- Pill buttons for the navy action panel. -->
-  <Style x:Key="Student.PanelButton" TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}">
-    <Setter Property="Margin" Value="0,0,0,8"/>
-    <Setter Property="Padding" Value="12,8"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
-    <Setter Property="Background" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Snu.Navy}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="Template">
-      <Setter.Value><ControlTemplate TargetType="Button">
-        <Grid>
-          <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="18"/>
-          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.OnNavy}" BorderThickness="2" CornerRadius="20" Margin="-3" Visibility="Collapsed"/>
-          <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
-        </Grid>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.9"/></Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value>
-    </Setter>
-  </Style>
-
+  <!-- Rounded outline pill on light surfaces. -->
   <Style x:Key="Student.QuietButton" TargetType="Button" BasedOn="{StaticResource Student.SecondaryButton}">
     <Setter Property="MinHeight" Value="32"/>
     <Setter Property="Padding" Value="14,5"/>
-    <Setter Property="Margin" Value="0"/>
+    <Setter Property="Margin" Value="0,0,6,0"/>
     <Setter Property="FontSize" Value="13"/>
-    <Setter Property="Template">
-      <Setter.Value><ControlTemplate TargetType="Button">
-        <Grid>
-          <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="16"/>
-          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="18" Margin="-3" Visibility="Collapsed"/>
-          <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
-        </Grid>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True">
-            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.Hover}"/>
-            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.BorderStrong}"/>
-          </Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value>
-    </Setter>
+    <Setter Property="ui:Paint.Radius" Value="16"/>
   </Style>
 
-  <!-- Inputs -->
+  <!-- Navy action panel: a filled blue pill and a white outline pill that fills white on hover. -->
+  <Style x:Key="Student.PanelButton" TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}">
+    <Setter Property="Margin" Value="0,0,0,8"/>
+    <Setter Property="Padding" Value="12,8"/>
+    <Setter Property="ui:Paint.Radius" Value="18"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.BlueLight}"/>
+    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.BlueLight}"/>
+    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.OnNavy}"/>
+  </Style>
+  <Style x:Key="Student.PanelOutlineButton" TargetType="Button" BasedOn="{StaticResource Student.PanelButton}">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.OnNavyMuted}"/>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.Navy}"/></Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Text buttons in the navy utility strip. -->
+  <Style x:Key="Student.UtilityButton" TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}">
+    <Setter Property="MinHeight" Value="24"/>
+    <Setter Property="Padding" Value="8,2"/>
+    <Setter Property="Margin" Value="0"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="ui:Paint.Radius" Value="4"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.NavyHover}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.BluePressed}"/>
+    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.OnNavy}"/>
+  </Style>
+
+  <!-- Square icon button (secondary colors). Its glyph turns on hover, after the registration site's reset icon. -->
+  <Style x:Key="Student.IconButton" TargetType="Button" BasedOn="{StaticResource Student.SecondaryButton}">
+    <Setter Property="MinWidth" Value="36"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+    <Setter Property="FontSize" Value="15"/>
+  </Style>
+
+  <!-- "Advanced search" toggle: navy, with a glyph that turns while hovered or open. -->
+  <Style x:Key="Student.FilterToggle" TargetType="ToggleButton">
+    <Setter Property="Padding" Value="12,7"/>
+    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="Margin" Value="0,0,0,0"/>
+    <Setter Property="FontSize" Value="13.5"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Background" Value="{DynamicResource Snu.Navy}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Snu.Navy}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.NavyHover}"/>
+    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.NavyHover}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.BluePressed}"/>
+    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.Focus}"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="Template" Value="{StaticResource Student.ButtonTemplate}"/>
+  </Style>
+
+  <!-- Inputs: borders meet 3:1 (WCAG 1.4.11), darken on hover and take a 2px blue ring while focused. -->
   <Style x:Key="Student.Field" TargetType="TextBox">
-    <Setter Property="MinHeight" Value="34"/>
-    <Setter Property="Padding" Value="8,5"/>
+    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="Padding" Value="9,5"/>
     <Setter Property="Margin" Value="0,4,10,10"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
     <Setter Property="CaretBrush" Value="{DynamicResource Snu.Ink}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Snu.Border}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Snu.FieldBorder}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Template">
       <Setter.Value><ControlTemplate TargetType="TextBox">
         <Grid>
           <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"/>
+          <Border x:Name="HoverOutline" Opacity="0" BorderBrush="{DynamicResource Snu.FieldBorderHover}" BorderThickness="1" CornerRadius="6"
+                  ui:Motion.FadeIn="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}"/>
           <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Blue}" BorderThickness="2" CornerRadius="6" Visibility="Collapsed"/>
           <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                         Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
         </Grid>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.BorderStrong}"/></Trigger>
           <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False">
+            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.DisabledFill}"/>
+            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.DisabledBorder}"/>
+            <Setter TargetName="HoverOutline" Property="Visibility" Value="Collapsed"/>
+            <Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/>
+          </Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value>
     </Setter>
@@ -144,22 +187,46 @@
     <Setter Property="Template">
       <Setter.Value><ControlTemplate TargetType="ToggleButton">
         <Border Background="Transparent">
-          <Path x:Name="Arrow" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" Data="M 0 0 L 4.5 4.5 L 9 0"
+          <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" Data="M 0 0 L 4.5 4.5 L 9 0"
                 Stroke="{DynamicResource Snu.Slate}" StrokeThickness="1.6"/>
         </Border>
       </ControlTemplate></Setter.Value>
     </Setter>
   </Style>
 
+  <Style x:Key="Student.SelectItem" TargetType="ComboBoxItem">
+    <Setter Property="Padding" Value="9,7"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="ComboBoxItem">
+        <Border x:Name="Row" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+          <ContentPresenter/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource Snu.ActionHover}"/></Trigger>
+          <Trigger Property="IsSelected" Value="True">
+            <Setter TargetName="Row" Property="Background" Value="{DynamicResource Snu.Selected}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedText}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+          </Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+
   <Style x:Key="Student.Select" TargetType="ComboBox">
-    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="MinHeight" Value="36"/>
     <Setter Property="Margin" Value="0,4,10,10"/>
-    <Setter Property="Padding" Value="9,5,30,5"/>
+    <Setter Property="Padding" Value="10,5,32,5"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Snu.Border}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Snu.FieldBorder}"/>
     <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="ItemContainerStyle" Value="{StaticResource Student.SelectItem}"/>
     <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
     <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
     <Setter Property="Template">
@@ -167,10 +234,12 @@
         <Grid>
           <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"/>
+          <Border x:Name="HoverOutline" Opacity="0" BorderBrush="{DynamicResource Snu.FieldBorderHover}" BorderThickness="1" CornerRadius="6"
+                  ui:Motion.FadeIn="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}"/>
           <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Blue}" BorderThickness="2" CornerRadius="6" Visibility="Collapsed"/>
           <ToggleButton Style="{StaticResource Student.SelectToggle}"
                         IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
-          <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" Margin="{TemplateBinding Padding}"
+          <ContentPresenter IsHitTestVisible="False" Margin="{TemplateBinding Padding}"
                             VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="Left"
                             Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                             ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
@@ -178,8 +247,8 @@
           <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True"
                  Focusable="False" PopupAnimation="Fade">
             <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
-                    Margin="0,2,0,0" Background="{DynamicResource Snu.Surface}" BorderBrush="{DynamicResource Snu.BorderStrong}"
-                    BorderThickness="1" CornerRadius="6" Padding="2">
+                    Margin="0,4,0,0" Background="{DynamicResource Snu.Surface}" BorderBrush="{DynamicResource Snu.BorderStrong}"
+                    BorderThickness="1" CornerRadius="8" Padding="4">
               <ScrollViewer SnapsToDevicePixels="True">
                 <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
               </ScrollViewer>
@@ -187,9 +256,87 @@
           </Popup>
         </Grid>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.BorderStrong}"/></Trigger>
           <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55"/></Trigger>
+          <Trigger Property="IsDropDownOpen" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False">
+            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Snu.DisabledFill}"/>
+            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Snu.DisabledBorder}"/>
+            <Setter TargetName="HoverOutline" Property="Visibility" Value="Collapsed"/>
+            <Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Every check box: a rounded square that turns blue when checked and blue-edged on hover. -->
+  <Style TargetType="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="CheckBox">
+        <Grid Background="Transparent">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid Width="20" Height="20" VerticalAlignment="Center">
+            <Border x:Name="Box" CornerRadius="4" BorderThickness="1.5" BorderBrush="{DynamicResource Snu.FieldBorder}" Background="{DynamicResource Snu.Surface}"/>
+            <Path x:Name="Mark" Data="M 5 10.5 L 8.5 14 L 15 6.5" Stroke="{DynamicResource Snu.OnBlue}" StrokeThickness="2"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed"/>
+            <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2" BorderBrush="{DynamicResource Snu.Focus}" Margin="-4" Visibility="Collapsed"/>
+          </Grid>
+          <ContentPresenter Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Snu.Blue}"/></Trigger>
+          <Trigger Property="IsChecked" Value="True">
+            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Snu.Blue}"/>
+            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Snu.Blue}"/>
+            <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+          </Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False">
+            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Snu.DisabledFill}"/>
+            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Snu.DisabledBorder}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Selection check on course rows: a circle, after the registration site's result list. -->
+  <Style x:Key="Student.CircleCheck" TargetType="CheckBox">
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="CheckBox">
+        <Grid Width="26" Height="26" Background="Transparent">
+          <Ellipse x:Name="Ring" Stroke="{DynamicResource Snu.BorderStrong}" StrokeThickness="1.5" Fill="{DynamicResource Snu.Surface}"/>
+          <Path x:Name="Mark" Data="M 7.5 13.5 L 11.5 17.5 L 18.5 9.5" Stroke="{DynamicResource Snu.BorderStrong}" StrokeThickness="2"
+                StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+          <Ellipse x:Name="FocusRing" Stroke="{DynamicResource Snu.Focus}" StrokeThickness="2" Margin="-4" Visibility="Collapsed"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Snu.BlueLight}"/>
+            <Setter TargetName="Mark" Property="Stroke" Value="{DynamicResource Snu.BlueLight}"/>
+          </DataTrigger>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Snu.Blue}"/>
+            <Setter TargetName="Mark" Property="Stroke" Value="{DynamicResource Snu.Blue}"/>
+          </Trigger>
+          <Trigger Property="IsChecked" Value="True">
+            <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource Snu.Blue}"/>
+            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Snu.Blue}"/>
+            <Setter TargetName="Mark" Property="Stroke" Value="{DynamicResource Snu.OnBlue}"/>
+          </Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False">
+            <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource Snu.DisabledFill}"/>
+            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Snu.DisabledBorder}"/>
+            <Setter TargetName="Mark" Property="Stroke" Value="{DynamicResource Snu.DisabledBorder}"/>
+          </Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value>
     </Setter>
@@ -206,22 +353,22 @@
     <Setter Property="FontSize" Value="12.5"/>
   </Style>
   <Style x:Key="Student.Title" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
-    <Setter Property="FontSize" Value="22"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="21"/>
+    <Setter Property="FontWeight" Value="Bold"/>
     <Setter Property="Margin" Value="0,0,0,12"/>
   </Style>
   <Style x:Key="Student.SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
     <Setter Property="FontSize" Value="17"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontWeight" Value="Bold"/>
   </Style>
 
-  <!-- Surfaces -->
+  <!-- Surfaces: white cards on the light gray page, as on mySNU. -->
   <Style x:Key="Student.Card" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Snu.Border}"/>
     <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="CornerRadius" Value="10"/>
-    <Setter Property="Padding" Value="16"/>
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Padding" Value="18"/>
     <Setter Property="Margin" Value="0,0,0,12"/>
   </Style>
   <Style x:Key="Student.Band" TargetType="Border">
@@ -234,46 +381,19 @@
   </Style>
   <Style x:Key="Student.NavyPanel" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource Snu.Navy}"/>
-    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="CornerRadius" Value="12"/>
     <Setter Property="Padding" Value="14,14,14,8"/>
-    <Setter Property="Margin" Value="0,0,0,10"/>
+    <Setter Property="Margin" Value="0,0,0,12"/>
   </Style>
   <Style x:Key="Student.Badge" TargetType="Border">
-    <Setter Property="CornerRadius" Value="11"/>
-    <Setter Property="Padding" Value="10,2"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="HorizontalAlignment" Value="Right"/>
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="Padding" Value="8,2"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
   </Style>
 
-  <!-- Selection check shown on course cards: a circle that fills blue when selected. -->
-  <Style x:Key="Student.CircleCheck" TargetType="CheckBox">
-    <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-    <Setter Property="Template">
-      <Setter.Value><ControlTemplate TargetType="CheckBox">
-        <Grid Width="26" Height="26" Background="Transparent">
-          <Ellipse x:Name="Ring" Stroke="{DynamicResource Snu.BorderStrong}" StrokeThickness="1.5" Fill="{DynamicResource Snu.Surface}"/>
-          <Path x:Name="Mark" Data="M 7.5 13.5 L 11.5 17.5 L 18.5 9.5" Stroke="{DynamicResource Snu.BorderStrong}" StrokeThickness="2"
-                StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-          <Ellipse x:Name="FocusRing" Stroke="{DynamicResource Snu.Focus}" StrokeThickness="2" Margin="-3" Visibility="Collapsed"/>
-        </Grid>
-        <ControlTemplate.Triggers>
-          <Trigger Property="IsChecked" Value="True">
-            <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource Snu.Blue}"/>
-            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Snu.Blue}"/>
-            <Setter TargetName="Mark" Property="Stroke" Value="{DynamicResource Snu.OnBlue}"/>
-          </Trigger>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Snu.Blue}"/></Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
-        </ControlTemplate.Triggers>
-      </ControlTemplate></Setter.Value>
-    </Setter>
-  </Style>
-
-  <!-- Tables follow the SNU registration site: a strong top rule, quiet headers and thin row dividers. -->
+  <!-- Tables follow the registration site: a strong top rule, quiet headers and thin dividers; rows tint on hover. -->
   <Style x:Key="Student.ColumnHeader" TargetType="DataGridColumnHeader">
-    <Setter Property="Background" Value="{DynamicResource Snu.Hover}"/>
+    <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Snu.Divider}"/>
     <Setter Property="FontSize" Value="13"/>
@@ -296,6 +416,7 @@
   <Style x:Key="Student.Row" TargetType="DataGridRow">
     <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="Cursor" Value="Hand"/>
     <Style.Triggers>
       <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Snu.Hover}"/></Trigger>
       <Trigger Property="IsSelected" Value="True">
@@ -338,19 +459,19 @@
     <Setter Property="HeadersVisibility" Value="Column"/>
     <Setter Property="GridLinesVisibility" Value="Horizontal"/>
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Snu.Divider}"/>
-    <Setter Property="MinRowHeight" Value="36"/>
+    <Setter Property="MinRowHeight" Value="38"/>
     <Setter Property="RowHeaderWidth" Value="0"/>
     <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="RowBackground" Value="{DynamicResource Snu.Surface}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Snu.Rule}"/>
-    <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    <Setter Property="BorderThickness" Value="0,1.5,0,0"/>
     <Setter Property="ColumnHeaderStyle" Value="{StaticResource Student.ColumnHeader}"/>
     <Setter Property="RowStyle" Value="{StaticResource Student.Row}"/>
     <Setter Property="CellStyle" Value="{StaticResource Student.Cell}"/>
   </Style>
 
-  <!-- Course search results: one card-like row per section, no column headers. Every card carries its own labels. -->
+  <!-- Course search results: one card-like row per section, no column headers. Every row carries its own labels. -->
   <Style x:Key="Student.CardList" TargetType="DataGrid" BasedOn="{StaticResource Student.Results}">
     <Setter Property="HeadersVisibility" Value="None"/>
     <Setter Property="MinRowHeight" Value="64"/>
@@ -358,34 +479,41 @@
     <Setter Property="EnableColumnVirtualization" Value="False"/>
   </Style>
 
-  <!-- Main navigation: a text menu with an underline, like the registration site's menu bar. -->
+  <!-- Main navigation: large bold labels; hover turns blue and grows a light underline, the page in view keeps a
+       full navy underline (mySNU / registration-site menu). High contrast fills the selected item instead. -->
   <Style x:Key="Student.Navigation" TargetType="RadioButton">
-    <Setter Property="MinHeight" Value="38"/>
-    <Setter Property="Margin" Value="0,0,26,0"/>
-    <Setter Property="Padding" Value="2,8"/>
-    <Setter Property="FontSize" Value="15"/>
+    <Setter Property="MinHeight" Value="42"/>
+    <Setter Property="Margin" Value="0,0,28,0"/>
+    <Setter Property="Padding" Value="2,10"/>
+    <Setter Property="FontSize" Value="16"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.NavText}"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Template">
       <Setter.Value><ControlTemplate TargetType="RadioButton">
         <Grid Background="Transparent">
           <Border x:Name="Fill" Background="Transparent" CornerRadius="4"/>
-          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="4" Margin="-6,2" Visibility="Collapsed"/>
+          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="4" Margin="-6,4" Visibility="Collapsed"/>
           <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
-          <Border x:Name="Underline" Height="3" VerticalAlignment="Bottom" Background="Transparent"/>
+          <Border Height="3" VerticalAlignment="Bottom" Background="{DynamicResource Snu.Blue}" Opacity="0.45" RenderTransformOrigin="0.5,0.5"
+                  ui:Motion.ExpandX="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}">
+            <Border.RenderTransform><ScaleTransform ScaleX="0"/></Border.RenderTransform>
+          </Border>
+          <Border Height="3" VerticalAlignment="Bottom" Background="{DynamicResource Snu.Navy}" RenderTransformOrigin="0.5,0.5"
+                  ui:Motion.ExpandX="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}">
+            <Border.RenderTransform><ScaleTransform ScaleX="0"/></Border.RenderTransform>
+          </Border>
         </Grid>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.Accent}"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.NavHoverText}"/></Trigger>
           <Trigger Property="IsChecked" Value="True">
             <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/>
-            <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Snu.Blue}"/>
           </Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value>
     </Setter>
@@ -393,8 +521,7 @@
 
   <!-- Sub-tabs inside a page (details / watch selection, compact pane switch). -->
   <Style x:Key="Student.Tab" TargetType="TabItem">
-    <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
-    <Setter Property="Padding" Value="10,6"/>
+    <Setter Property="Padding" Value="10,7"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="Template">
@@ -402,16 +529,24 @@
         <Grid Background="Transparent" Margin="0,0,4,0">
           <Border x:Name="Fill" Background="Transparent" CornerRadius="4,4,0,0"/>
           <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="4" Visibility="Collapsed"/>
-          <ContentPresenter ContentSource="Header" Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-          <Border x:Name="Underline" Height="2" VerticalAlignment="Bottom" Background="Transparent"/>
+          <!-- Header color and weight are set here, not on the TabItem: TabItem values would be inherited by the tab content. -->
+          <ContentPresenter x:Name="HeaderText" ContentSource="Header" Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            TextElement.Foreground="{DynamicResource Snu.InkSecondary}" TextElement.FontSize="14"/>
+          <Border Height="2" VerticalAlignment="Bottom" Background="{DynamicResource Snu.Blue}" Opacity="0.45" RenderTransformOrigin="0.5,0.5"
+                  ui:Motion.ExpandX="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}">
+            <Border.RenderTransform><ScaleTransform ScaleX="0"/></Border.RenderTransform>
+          </Border>
+          <Border Height="2" VerticalAlignment="Bottom" Background="{DynamicResource Snu.Navy}" RenderTransformOrigin="0.5,0.5"
+                  ui:Motion.ExpandX="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}">
+            <Border.RenderTransform><ScaleTransform ScaleX="0"/></Border.RenderTransform>
+          </Border>
         </Grid>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.Accent}"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderText" Property="TextElement.Foreground" Value="{DynamicResource Snu.NavHoverText}"/></Trigger>
           <Trigger Property="IsSelected" Value="True">
-            <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter TargetName="HeaderText" Property="TextElement.Foreground" Value="{DynamicResource Snu.NavSelectedText}"/>
+            <Setter TargetName="HeaderText" Property="TextElement.FontWeight" Value="SemiBold"/>
             <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/>
-            <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Snu.Blue}"/>
           </Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
         </ControlTemplate.Triggers>
@@ -428,9 +563,136 @@
           <Border BorderBrush="{DynamicResource Snu.Divider}" BorderThickness="0,0,0,1">
             <TabPanel x:Name="HeaderPanel" IsItemsHost="True" KeyboardNavigation.TabIndex="1" Background="Transparent"/>
           </Border>
-          <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" ContentSource="SelectedContent" Margin="0,8,0,0"
+          <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" ContentSource="SelectedContent" Margin="0,10,0,0"
                             KeyboardNavigation.TabNavigation="Local" KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabIndex="2"/>
         </Grid>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Disclosure sections (source status, more identifiers): a chevron that turns when open; text turns blue on hover. -->
+  <Style x:Key="Student.DisclosureHeader" TargetType="ToggleButton">
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Expander}}"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="ToggleButton">
+        <Grid Background="Transparent">
+          <Border x:Name="FocusRing" BorderBrush="{DynamicResource Snu.Focus}" BorderThickness="2" CornerRadius="4" Margin="-4,-2" Visibility="Collapsed"/>
+          <StackPanel Orientation="Horizontal" Margin="0,4">
+            <TextBlock Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center"
+                       Margin="0,0,8,0" RenderTransformOrigin="0.5,0.5"
+                       ui:Motion.Turn="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}"/>
+            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+          </StackPanel>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.NavHoverText}"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+  <Style TargetType="Expander">
+    <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="Expander">
+        <DockPanel>
+          <ToggleButton DockPanel.Dock="Top" Style="{StaticResource Student.DisclosureHeader}" HorizontalAlignment="Left"
+                        Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"
+                        IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+          <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
+        </DockPanel>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsExpanded" Value="True"><Setter TargetName="Body" Property="Visibility" Value="Visible"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+  <!-- A header-less expander: its content is shown or hidden by a separate toggle (advanced search). -->
+  <Style x:Key="Student.Collapsible" TargetType="Expander">
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="Expander">
+        <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsExpanded" Value="True"><Setter TargetName="Body" Property="Visibility" Value="Visible"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Thin scrollbars: a rounded thumb that darkens on hover or drag; track clicks still page. -->
+  <Style x:Key="Student.ScrollPage" TargetType="RepeatButton">
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="IsTabStop" Value="False"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="Student.ScrollThumb" TargetType="Thumb">
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="IsTabStop" Value="False"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="Thumb">
+        <Border x:Name="Grip" Background="{DynamicResource Snu.ScrollThumb}" CornerRadius="4" Margin="3"/>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="{DynamicResource Snu.ScrollThumbHover}"/></Trigger>
+          <Trigger Property="IsDragging" Value="True"><Setter TargetName="Grip" Property="Background" Value="{DynamicResource Snu.ScrollThumbHover}"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+  </Style>
+  <Style TargetType="ScrollBar">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Width" Value="14"/>
+    <Setter Property="MinWidth" Value="14"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="ScrollBar">
+        <Grid Background="Transparent">
+          <Track x:Name="PART_Track" IsDirectionReversed="True">
+            <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource Student.ScrollPage}"/></Track.DecreaseRepeatButton>
+            <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource Student.ScrollPage}"/></Track.IncreaseRepeatButton>
+            <Track.Thumb><Thumb Style="{StaticResource Student.ScrollThumb}"/></Track.Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate></Setter.Value>
+    </Setter>
+    <Style.Triggers>
+      <Trigger Property="Orientation" Value="Horizontal">
+        <Setter Property="Width" Value="Auto"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="MinHeight" Value="14"/>
+        <Setter Property="Template">
+          <Setter.Value><ControlTemplate TargetType="ScrollBar">
+            <Grid Background="Transparent">
+              <Track x:Name="PART_Track" IsDirectionReversed="False">
+                <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageLeftCommand" Style="{StaticResource Student.ScrollPage}"/></Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageRightCommand" Style="{StaticResource Student.ScrollPage}"/></Track.IncreaseRepeatButton>
+                <Track.Thumb><Thumb Style="{StaticResource Student.ScrollThumb}"/></Track.Thumb>
+              </Track>
+            </Grid>
+          </ControlTemplate></Setter.Value>
+        </Setter>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Dark rounded tooltips (KRDS); high contrast uses the system Info colors. -->
+  <Style TargetType="ToolTip">
+    <Setter Property="Background" Value="{DynamicResource Snu.TooltipBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.TooltipText}"/>
+    <Setter Property="FontSize" Value="12.5"/>
+    <Setter Property="MaxWidth" Value="320"/>
+    <Setter Property="Template">
+      <Setter.Value><ControlTemplate TargetType="ToolTip">
+        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="9,6">
+          <ContentPresenter>
+            <ContentPresenter.Resources>
+              <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+            </ContentPresenter.Resources>
+          </ContentPresenter>
+        </Border>
       </ControlTemplate></Setter.Value>
     </Setter>
   </Style>

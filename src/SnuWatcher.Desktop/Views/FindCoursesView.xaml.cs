@@ -59,6 +59,13 @@ public partial class FindCoursesView : UserControl
         SidePanel.Focus();
     }
 
+    private void OnShowDetailsClicked(object sender, RoutedEventArgs args)
+    {
+        SidePanel.SelectedIndex = 0;
+        if (compactLayout) CompactPaneSelector.SelectedIndex = 1;
+        SidePanel.Focus();
+    }
+
     private void OnSearchClicked(object sender, RoutedEventArgs args)
     {
         if (shortLayout) FiltersExpander.IsExpanded = false;
@@ -74,7 +81,9 @@ public partial class FindCoursesView : UserControl
         if (nowShort && !shortLayout) FiltersExpander.IsExpanded = false;
         shortLayout = nowShort;
         FiltersScroller.MaxHeight = args.NewSize.Height < 520 ? 88 : 144;
-        FilterFields.Columns = args.NewSize.Width < 480 ? 2 : 4;
+        FilterFields.Columns = args.NewSize.Width < 560 ? 2 : args.NewSize.Width < 900 ? 3 : 5;
+        // Narrow search bars keep the toggle's icon (its accessible name stays "Advanced search").
+        AdvancedToggleText.Visibility = args.NewSize.Width < 780 ? Visibility.Collapsed : Visibility.Visible;
         CompactPaneSelector.Visibility = compactLayout ? Visibility.Visible : Visibility.Collapsed;
         ResultTiming.Visibility = args.NewSize.Height < 540 ? Visibility.Collapsed : Visibility.Visible;
         ResultFooter.Visibility = args.NewSize.Height < 600 ? Visibility.Collapsed : Visibility.Visible;

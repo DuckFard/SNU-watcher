@@ -43,6 +43,8 @@ internal static partial class StudentUiValidation
 
     private static async Task RunAsync(Guid runId, Action<int> shutdown)
     {
+        // Captures must show final states, never a frame part-way through a hover or page fade.
+        Presentation.Motion.Suppressed = true;
         RuntimeProfile? profile = null;
         WindowsMonitoringHost? host = null;
         StudentDesktopSession? graph = null;

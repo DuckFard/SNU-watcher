@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Windows high contrast replaces every brand color with the user's system colors. Surfaces use Window,
-       text uses WindowText, and accents use Highlight paired with HighlightText. Keys match StudentPalette.xaml. -->
+  <!-- Windows high contrast replaces every brand color with the user's system colors. Surfaces use Window, text uses
+       WindowText, accents and selection use Highlight paired with HighlightText, disabled uses GrayText.
+       Keys match StudentPalette.xaml. -->
   <SolidColorBrush x:Key="Snu.Page" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Surface" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Tint" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
@@ -14,12 +15,17 @@
   <SolidColorBrush x:Key="Snu.SelectedAccent" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
 
   <SolidColorBrush x:Key="Snu.Navy" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.NavyHover" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
   <SolidColorBrush x:Key="Snu.OnNavy" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.OnNavyMuted" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Blue" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
   <SolidColorBrush x:Key="Snu.BlueHover" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.BluePressed" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.BlueLight" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
   <SolidColorBrush x:Key="Snu.OnBlue" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Slate" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.NavText" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.NavHoverText" Color="{DynamicResource {x:Static SystemColors.HotTrackColorKey}}"/>
   <SolidColorBrush x:Key="Snu.NavSelectedText" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.NavSelectedBackground" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
 
@@ -31,10 +37,24 @@
 
   <SolidColorBrush x:Key="Snu.Border" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.BorderStrong" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.FieldBorder" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.FieldBorderHover" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Divider" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Rule" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.Focus" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
 
+  <SolidColorBrush x:Key="Snu.ActionHover" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.ActionPressed" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.DisabledFill" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.DisabledBorder" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.DisabledText" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.ScrollThumb" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.ScrollThumbHover" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.TooltipBackground" Color="{DynamicResource {x:Static SystemColors.InfoColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.TooltipText" Color="{DynamicResource {x:Static SystemColors.InfoTextColorKey}}"/>
+
+  <SolidColorBrush x:Key="Snu.SelectedOpenText" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+  <SolidColorBrush x:Key="Snu.SelectedFullText" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.OpenTint" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
   <SolidColorBrush x:Key="Snu.OpenText" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
   <SolidColorBrush x:Key="Snu.FullTint" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>

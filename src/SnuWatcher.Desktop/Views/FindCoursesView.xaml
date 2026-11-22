@@ -8,12 +8,13 @@
   <UserControl.Resources>
     <Style TargetType="Label">
       <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
-      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Padding" Value="0"/>
     </Style>
     <!-- On a selected card, secondary and accent text switch to Snu.Selected* keys: the same tones in normal mode, and
          HighlightText in high contrast, where the selected row is painted with the Highlight system color. -->
     <Style x:Key="Card.Meta" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="FontSize" Value="13"/>
       <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Style.Triggers>
@@ -24,8 +25,8 @@
     </Style>
     <Style x:Key="Card.Divider" TargetType="TextBlock" BasedOn="{StaticResource Card.Meta}">
       <Setter Property="Text" Value="|"/>
-      <Setter Property="Margin" Value="7,0"/>
-      <Setter Property="Foreground" Value="{DynamicResource Snu.Border}"/>
+      <Setter Property="Margin" Value="8,0"/>
+      <Setter Property="Foreground" Value="{DynamicResource Snu.BorderStrong}"/>
     </Style>
     <Style x:Key="Card.Value" TargetType="TextBlock" BasedOn="{StaticResource Card.Meta}">
       <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
@@ -52,22 +53,28 @@
         </DataTrigger>
       </Style.Triggers>
     </Style>
-    <!-- Seat badge: open (blue), full (red) or unknown (gray). Apparent seats are source arithmetic, not eligibility. -->
-    <Style x:Key="Card.SeatBadge" TargetType="Border" BasedOn="{StaticResource Student.Badge}">
-      <Setter Property="Background" Value="{DynamicResource Snu.OpenTint}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource Snu.OpenText}"/>
-      <Setter Property="TextElement.Foreground" Value="{DynamicResource Snu.OpenText}"/>
+    <!-- Apparent open seats: blue when open, red when full, gray when unknown. Source arithmetic, not eligibility. -->
+    <Style x:Key="Card.Seats" TargetType="TextBlock">
+      <Setter Property="Text" Value="{Binding ApparentSeats}"/>
+      <Setter Property="FontSize" Value="21"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="HorizontalAlignment" Value="Right"/>
+      <Setter Property="Foreground" Value="{DynamicResource Snu.OpenText}"/>
       <Style.Triggers>
-        <DataTrigger Binding="{Binding ApparentSeats}" Value="0">
-          <Setter Property="Background" Value="{DynamicResource Snu.FullTint}"/>
-          <Setter Property="BorderBrush" Value="{DynamicResource Snu.FullText}"/>
-          <Setter Property="TextElement.Foreground" Value="{DynamicResource Snu.FullText}"/>
-        </DataTrigger>
+        <DataTrigger Binding="{Binding ApparentSeats}" Value="0"><Setter Property="Foreground" Value="{DynamicResource Snu.FullText}"/></DataTrigger>
         <DataTrigger Binding="{Binding ApparentSeats}" Value="{x:Null}">
-          <Setter Property="Background" Value="{DynamicResource Snu.UnknownTint}"/>
-          <Setter Property="BorderBrush" Value="{DynamicResource Snu.UnknownText}"/>
-          <Setter Property="TextElement.Foreground" Value="{DynamicResource Snu.UnknownText}"/>
+          <Setter Property="Text" Value="{DynamicResource Ui.Unknown}"/>
+          <Setter Property="FontSize" Value="13"/>
+          <Setter Property="FontWeight" Value="SemiBold"/>
+          <Setter Property="Foreground" Value="{DynamicResource Snu.UnknownText}"/>
         </DataTrigger>
+        <MultiDataTrigger>
+          <MultiDataTrigger.Conditions>
+            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridCell}}" Value="True"/>
+            <Condition Binding="{Binding ApparentSeats}" Value="0"/>
+          </MultiDataTrigger.Conditions>
+          <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedFullText}"/>
+        </MultiDataTrigger>
       </Style.Triggers>
     </Style>
   </UserControl.Resources>
@@ -80,84 +87,107 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <Border Style="{DynamicResource Student.Band}" PreviewKeyDown="OnFiltersPreviewKeyDown">
+
+    <!-- One prominent search bar, after the registration site: year, term, keyword, Search, and "Advanced search". -->
+    <Border x:Name="SearchCard" Style="{DynamicResource Student.Card}" Padding="18,10,18,4" PreviewKeyDown="OnFiltersPreviewKeyDown">
       <StackPanel>
-        <Expander x:Name="FiltersExpander" IsExpanded="True" Foreground="{DynamicResource Snu.Heading}">
-          <Expander.Header><TextBlock Text="{DynamicResource Ui.FindCourses}" Style="{DynamicResource Student.SectionTitle}" Foreground="{DynamicResource Snu.Heading}"/></Expander.Header>
-          <!-- Only filters scroll. The results list always retains its own finite viewport. -->
-          <ScrollViewer x:Name="FiltersScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="144" Margin="0,8,0,0">
-            <StackPanel>
-        <UniformGrid x:Name="FilterFields" Columns="4">
-          <StackPanel>
-            <Label Target="{Binding ElementName=YearField}" Padding="0"><TextBlock Text="{DynamicResource Ui.Year}" TextWrapping="Wrap"/></Label>
+        <DockPanel x:Name="SearchBar" LastChildFill="True">
+          <StackPanel DockPanel.Dock="Left" Width="92">
+            <Label Target="{Binding ElementName=YearField}"><TextBlock Text="{DynamicResource Ui.Year}" TextWrapping="Wrap"/></Label>
             <TextBox x:Name="YearField" Text="{Binding SelectedYear, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
-                     MaxLength="4" Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.Year}"/>
+                     MaxLength="4" Style="{DynamicResource Student.Field}" Margin="0,4,8,10" AutomationProperties.Name="{DynamicResource Ui.Year}"/>
           </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=TermField}" Padding="0"><TextBlock Text="{DynamicResource Ui.Term}" TextWrapping="Wrap"/></Label>
+          <StackPanel DockPanel.Dock="Left" Width="164">
+            <Label Target="{Binding ElementName=TermField}"><TextBlock Text="{DynamicResource Ui.Term}" TextWrapping="Wrap"/></Label>
             <ComboBox x:Name="TermField" ItemsSource="{Binding Model.State.Terms}" SelectedItem="{Binding SelectedTerm}"
-                      DisplayMemberPath="Name" Style="{DynamicResource Student.Select}" AutomationProperties.Name="{DynamicResource Ui.Term}"/>
+                      DisplayMemberPath="Name" Style="{DynamicResource Student.Select}" Margin="0,4,6,10" AutomationProperties.Name="{DynamicResource Ui.Term}"/>
           </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=CodeField}" Padding="0"><TextBlock Text="{DynamicResource Ui.CourseCode}" TextWrapping="Wrap"/></Label>
-            <TextBox x:Name="CodeField" Text="{Binding CourseCode, UpdateSourceTrigger=PropertyChanged}"
-                     MaxLength="80" Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.CourseCode}"/>
-          </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=SectionField}" Padding="0"><TextBlock Text="{DynamicResource Ui.Section}" TextWrapping="Wrap"/></Label>
-            <TextBox x:Name="SectionField" Text="{Binding SectionLookup, UpdateSourceTrigger=PropertyChanged}" MaxLength="3"
-                     Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.Section}"
-                     ToolTip="{DynamicResource Ui.InvalidSection}"/>
-          </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=NameField}" Padding="0"><TextBlock Text="{DynamicResource Ui.CourseName}" TextWrapping="Wrap"/></Label>
-            <TextBox x:Name="NameField" Text="{Binding CourseName, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
-                     Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.CourseName}"/>
-          </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=InstructorField}" Padding="0"><TextBlock Text="{DynamicResource Ui.Instructor}" TextWrapping="Wrap"/></Label>
-            <TextBox x:Name="InstructorField" Text="{Binding Instructor, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
-                     Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.Instructor}"/>
-          </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=CollegeField}" Padding="0"><TextBlock Text="{DynamicResource Ui.College}" TextWrapping="Wrap"/></Label>
-            <ComboBox x:Name="CollegeField" ItemsSource="{Binding Model.State.Colleges}" SelectedItem="{Binding SelectedCollege}"
-                      DisplayMemberPath="Name" Style="{DynamicResource Student.Select}" AutomationProperties.Name="{DynamicResource Ui.College}"/>
-          </StackPanel>
-          <StackPanel>
-            <Label Target="{Binding ElementName=DepartmentField}" Padding="0"><TextBlock Text="{DynamicResource Ui.Department}" TextWrapping="Wrap"/></Label>
-            <ComboBox x:Name="DepartmentField" ItemsSource="{Binding Model.State.Departments}" SelectedItem="{Binding SelectedDepartment}"
-                      DisplayMemberPath="Name" Style="{DynamicResource Student.Select}" AutomationProperties.Name="{DynamicResource Ui.Department}"/>
-          </StackPanel>
-        </UniformGrid>
-              <TextBlock Text="{DynamicResource Ui.SearchHint}" Style="{DynamicResource Student.Muted}"/>
+          <!-- Loads the term and department lists; its arrows turn while hovered, like the registration site's reset icon. -->
+          <Button DockPanel.Dock="Left" Command="{Binding LoadCatalogCommand}" VerticalAlignment="Bottom" Margin="0,0,12,10"
+                  ToolTip="{DynamicResource Ui.LoadCatalog}" AutomationProperties.Name="{DynamicResource Ui.LoadCatalog}">
+            <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.IconButton}"><Style.Triggers>
+              <DataTrigger Binding="{Binding (Validation.HasError), ElementName=YearField}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+            </Style.Triggers></Style></Button.Style>
+            <TextBlock Text="&#xE72C;" RenderTransformOrigin="0.5,0.5"
+                       ui:Motion.Turn="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+          </Button>
+          <ToggleButton x:Name="AdvancedToggle" DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="0,0,0,10" Style="{DynamicResource Student.FilterToggle}"
+                        IsChecked="{Binding IsExpanded, ElementName=FiltersExpander, Mode=TwoWay}"
+                        AutomationProperties.Name="{DynamicResource Ui.AdvancedSearch}">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="&#xE71C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"/>
+              <TextBlock x:Name="AdvancedToggleText" Text="{DynamicResource Ui.AdvancedSearch}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"
+                         ui:Motion.Turn="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
             </StackPanel>
-          </ScrollViewer>
-        </Expander>
-        <WrapPanel Margin="0,8,0,0">
-          <Button Content="{DynamicResource Ui.Search}" Command="{Binding SearchCommand}" Click="OnSearchClicked" MinWidth="96">
+          </ToggleButton>
+          <Button DockPanel.Dock="Right" Content="{DynamicResource Ui.Search}" Command="{Binding SearchCommand}" Click="OnSearchClicked" MinWidth="88"
+                  VerticalAlignment="Bottom" Margin="0,0,8,10">
             <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}"><Style.Triggers>
               <DataTrigger Binding="{Binding (Validation.HasError), ElementName=YearField}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
             </Style.Triggers></Style></Button.Style>
           </Button>
-          <Button Content="{DynamicResource Ui.LoadCatalog}" Command="{Binding LoadCatalogCommand}">
-            <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.SecondaryButton}"><Style.Triggers>
-              <DataTrigger Binding="{Binding (Validation.HasError), ElementName=YearField}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
-            </Style.Triggers></Style></Button.Style>
-          </Button>
-          <Button Content="{DynamicResource Ui.Cancel}" Command="{Binding CancelCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
-          <Button Content="{DynamicResource Ui.Clear}" Command="{Binding ClearCommand}" Style="{DynamicResource Student.SecondaryButton}"/>
-        </WrapPanel>
-        <TextBlock Text="{DynamicResource Ui.FiltersInvalid}" AutomationProperties.LiveSetting="Polite">
+          <StackPanel>
+            <Label Target="{Binding ElementName=NameField}"><TextBlock Text="{DynamicResource Ui.CourseName}" TextWrapping="Wrap"/></Label>
+            <TextBox x:Name="NameField" Text="{Binding CourseName, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
+                     Style="{DynamicResource Student.Field}" Margin="0,4,8,10" AutomationProperties.Name="{DynamicResource Ui.CourseName}"/>
+          </StackPanel>
+        </DockPanel>
+
+        <!-- Advanced search: folded away until requested; short layouts also fold it after a search. -->
+        <Expander x:Name="FiltersExpander" IsExpanded="False" Style="{DynamicResource Student.Collapsible}">
+          <StackPanel>
+            <Border Height="1" Background="{DynamicResource Snu.Divider}" Margin="0,0,0,8"/>
+            <!-- Only filters scroll. The results list always retains its own finite viewport. -->
+            <ScrollViewer x:Name="FiltersScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="144">
+              <UniformGrid x:Name="FilterFields" Columns="5">
+                <StackPanel>
+                  <Label Target="{Binding ElementName=CodeField}"><TextBlock Text="{DynamicResource Ui.CourseCode}" TextWrapping="Wrap"/></Label>
+                  <TextBox x:Name="CodeField" Text="{Binding CourseCode, UpdateSourceTrigger=PropertyChanged}"
+                           MaxLength="80" Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.CourseCode}"/>
+                </StackPanel>
+                <StackPanel>
+                  <Label Target="{Binding ElementName=SectionField}"><TextBlock Text="{DynamicResource Ui.Section}" TextWrapping="Wrap"/></Label>
+                  <TextBox x:Name="SectionField" Text="{Binding SectionLookup, UpdateSourceTrigger=PropertyChanged}" MaxLength="3"
+                           Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.Section}"
+                           ToolTip="{DynamicResource Ui.InvalidSection}"/>
+                </StackPanel>
+                <StackPanel>
+                  <Label Target="{Binding ElementName=InstructorField}"><TextBlock Text="{DynamicResource Ui.Instructor}" TextWrapping="Wrap"/></Label>
+                  <TextBox x:Name="InstructorField" Text="{Binding Instructor, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
+                           Style="{DynamicResource Student.Field}" AutomationProperties.Name="{DynamicResource Ui.Instructor}"/>
+                </StackPanel>
+                <StackPanel>
+                  <Label Target="{Binding ElementName=CollegeField}"><TextBlock Text="{DynamicResource Ui.College}" TextWrapping="Wrap"/></Label>
+                  <ComboBox x:Name="CollegeField" ItemsSource="{Binding Model.State.Colleges}" SelectedItem="{Binding SelectedCollege}"
+                            DisplayMemberPath="Name" Style="{DynamicResource Student.Select}" AutomationProperties.Name="{DynamicResource Ui.College}"/>
+                </StackPanel>
+                <StackPanel>
+                  <Label Target="{Binding ElementName=DepartmentField}"><TextBlock Text="{DynamicResource Ui.Department}" TextWrapping="Wrap"/></Label>
+                  <ComboBox x:Name="DepartmentField" ItemsSource="{Binding Model.State.Departments}" SelectedItem="{Binding SelectedDepartment}"
+                            DisplayMemberPath="Name" Style="{DynamicResource Student.Select}" AutomationProperties.Name="{DynamicResource Ui.Department}"/>
+                </StackPanel>
+              </UniformGrid>
+            </ScrollViewer>
+            <DockPanel Margin="0,0,0,6">
+              <WrapPanel DockPanel.Dock="Right">
+                <Button Content="{DynamicResource Ui.Cancel}" Command="{Binding CancelCommand}" Style="{DynamicResource Student.QuietButton}"/>
+                <Button Content="{DynamicResource Ui.Clear}" Command="{Binding ClearCommand}" Style="{DynamicResource Student.QuietButton}" Margin="0"/>
+              </WrapPanel>
+              <TextBlock Text="{DynamicResource Ui.SearchHint}" Style="{DynamicResource Student.Muted}" VerticalAlignment="Center"/>
+            </DockPanel>
+          </StackPanel>
+        </Expander>
+        <TextBlock Text="{DynamicResource Ui.FiltersInvalid}" AutomationProperties.LiveSetting="Polite" Margin="0,0,0,6">
           <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
             <Setter Property="Visibility" Value="Collapsed"/><Setter Property="Foreground" Value="{DynamicResource Snu.Emphasis}"/><Style.Triggers>
               <DataTrigger Binding="{Binding (Validation.HasError), ElementName=YearField}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
             </Style.Triggers>
           </Style></TextBlock.Style>
         </TextBlock>
-        <TextBlock AutomationProperties.LiveSetting="Polite">
+        <TextBlock AutomationProperties.LiveSetting="Polite" Margin="0,0,0,6">
           <TextBlock.Style>
-            <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+            <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Muted}">
               <Setter Property="Visibility" Value="Collapsed"/>
               <Style.Triggers>
                 <DataTrigger Binding="{Binding Model.State.CatalogState}" Value="{x:Static search:CourseUiLoadState.Loading}">
@@ -170,13 +200,13 @@
             </Style>
           </TextBlock.Style>
         </TextBlock>
-        <TextBlock ui:ResourceText.Key="{Binding Model.State.IssueKey}" Style="{DynamicResource Student.Label}"
+        <TextBlock ui:ResourceText.Key="{Binding Model.State.IssueKey}" Style="{DynamicResource Student.Label}" Margin="0,0,0,6"
                    AutomationProperties.LiveSetting="Polite"/>
       </StackPanel>
     </Border>
 
     <!-- Compact layouts display one full-height pane rather than splitting a short viewport. -->
-    <TabControl x:Name="CompactPaneSelector" Grid.Row="1" Height="34" Margin="0,0,0,6" Visibility="Collapsed" Style="{DynamicResource Student.Tabs}"
+    <TabControl x:Name="CompactPaneSelector" Grid.Row="1" Height="36" Margin="0,0,0,6" Visibility="Collapsed" Style="{DynamicResource Student.Tabs}"
                 SelectionChanged="OnCompactPaneChanged" AutomationProperties.Name="{DynamicResource Ui.FindCourses}">
       <TabItem><TabItem.Header><TextBlock Text="{DynamicResource Ui.Results}"/></TabItem.Header></TabItem>
       <TabItem><TabItem.Header><TextBlock Text="{DynamicResource Ui.Details}"/></TabItem.Header></TabItem>
@@ -190,7 +220,7 @@
         <RowDefinition x:Name="ResultRow" Height="*"/>
         <RowDefinition x:Name="SideRow" Height="0"/>
       </Grid.RowDefinitions>
-      <Border x:Name="ResultPanel" Style="{DynamicResource Student.Card}" Padding="14,12,14,10" Margin="0,0,12,0">
+      <Border x:Name="ResultPanel" Style="{DynamicResource Student.Card}" Padding="18,14,18,10" Margin="0,0,12,0">
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -213,7 +243,21 @@
                 </Style>
               </Button.Style>
             </Button>
-            <TextBlock Text="{DynamicResource Ui.Results}" Style="{DynamicResource Student.SectionTitle}" VerticalAlignment="Center"/>
+            <WrapPanel VerticalAlignment="Center">
+              <TextBlock Text="{DynamicResource Ui.Results}" Style="{DynamicResource Student.SectionTitle}" VerticalAlignment="Bottom" Margin="0,0,12,0"/>
+              <WrapPanel x:Name="ResultTiming" VerticalAlignment="Bottom" Margin="0,0,0,2">
+                <WrapPanel.Style>
+                  <Style TargetType="WrapPanel"><Style.Triggers>
+                    <DataTrigger Binding="{Binding Model.State.SearchRead}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                  </Style.Triggers></Style>
+                </WrapPanel.Style>
+                <TextBlock Foreground="{DynamicResource Snu.Emphasis}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,3,0"
+                           Text="{Binding Model.State.Rows.Length}"/>
+                <TextBlock Text="{DynamicResource Ui.ResultCountSuffix}" Style="{DynamicResource Student.Muted}" Margin="0,0,10,0"/>
+                <TextBlock Text="{DynamicResource Ui.SearchCompleted}" Style="{DynamicResource Student.Muted}" Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding Model.State.SearchRead.CompletedAtUtc, StringFormat={}{0:u}}" Style="{DynamicResource Student.Muted}"/>
+              </WrapPanel>
+            </WrapPanel>
           </DockPanel>
           <StackPanel x:Name="ResultStatusPanel" Grid.Row="1" Margin="0,0,0,8">
             <TextBlock AutomationProperties.LiveSetting="Polite">
@@ -243,18 +287,6 @@
                 </Style>
               </TextBlock.Style>
             </TextBlock>
-            <WrapPanel x:Name="ResultTiming">
-              <WrapPanel.Style>
-                <Style TargetType="WrapPanel"><Style.Triggers>
-                  <DataTrigger Binding="{Binding Model.State.SearchRead}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                </Style.Triggers></Style>
-              </WrapPanel.Style>
-              <TextBlock Foreground="{DynamicResource Snu.Emphasis}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,3,0"
-                         Text="{Binding Model.State.Rows.Length}"/>
-              <TextBlock Text="{DynamicResource Ui.ResultCountSuffix}" Style="{DynamicResource Student.Muted}" Margin="0,0,12,0"/>
-              <TextBlock Text="{DynamicResource Ui.SearchCompleted}" Style="{DynamicResource Student.Muted}" Margin="0,0,6,0"/>
-              <TextBlock Text="{Binding Model.State.SearchRead.CompletedAtUtc, StringFormat={}{0:u}}" Style="{DynamicResource Student.Muted}"/>
-            </WrapPanel>
           </StackPanel>
           <!-- Still a DataGrid: it keeps virtualization, keyboard row navigation and row/cell automation. Each row is a card. -->
           <DataGrid x:Name="ResultsGrid" Grid.Row="2" ItemsSource="{Binding Model.State.Rows}" SelectionMode="Single"
@@ -265,18 +297,30 @@
               <DataGridTemplateColumn Width="*" MinWidth="240">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                    <Grid Margin="6,11,10,11">
+                    <Grid Margin="0,12,6,12">
                       <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                       </Grid.ColumnDefinitions>
-                      <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}" Click="OnSectionSelectionClicked" VerticalAlignment="Top" Margin="0,0,12,0"
-                                Style="{DynamicResource Student.CircleCheck}"
+                      <!-- Accent bar: grows in on hover and stays while the row is selected. -->
+                      <Border Width="3" Background="{DynamicResource Snu.Blue}" Margin="0,-12,0,-12" RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform><ScaleTransform ScaleY="0"/></Border.RenderTransform>
+                        <ui:Motion.ExpandY>
+                          <MultiBinding Converter="{StaticResource Student.AnyTrue}">
+                            <Binding Path="IsMouseOver" RelativeSource="{RelativeSource AncestorType=DataGridRow}"/>
+                            <Binding Path="IsSelected" RelativeSource="{RelativeSource AncestorType=DataGridRow}"/>
+                          </MultiBinding>
+                        </ui:Motion.ExpandY>
+                      </Border>
+                      <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected, Mode=OneWay}" Click="OnSectionSelectionClicked" VerticalAlignment="Top"
+                                Margin="12,0,14,0" Style="{DynamicResource Student.CircleCheck}"
                                 IsEnabled="{Binding DataContext.WatchSelection.Model.State.CanEdit, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                 AutomationProperties.Name="{DynamicResource Ui.WatchSelected}" AutomationProperties.HelpText="{Binding Row.Key}"/>
-                      <StackPanel Grid.Column="1">
-                        <TextBlock Text="{Binding Row.Name}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,1,0,3"/>
+                      <StackPanel Grid.Column="2">
+                        <TextBlock Text="{Binding Row.Name}" FontSize="15.5" FontWeight="Bold" TextWrapping="Wrap" Margin="0,1,0,4"/>
                         <WrapPanel Margin="0,0,0,2">
                           <TextBlock DataContext="{Binding Row.Instructor}" Style="{StaticResource Card.Optional}"/>
                           <TextBlock Style="{StaticResource Card.Divider}"/>
@@ -300,18 +344,27 @@
                         </WrapPanel>
                         <TextBlock DataContext="{Binding Row.Schedule}" Style="{StaticResource Card.Optional}" TextWrapping="Wrap"/>
                       </StackPanel>
-                      <StackPanel Grid.Column="2" Margin="12,1,0,0" MinWidth="86">
+                      <StackPanel Grid.Column="3" Margin="14,0,0,0" MinWidth="76" VerticalAlignment="Center">
                         <TextBlock Text="{DynamicResource Ui.Seats}" Style="{StaticResource Card.Meta}" FontSize="11.5" HorizontalAlignment="Right"
-                                   TextAlignment="Right" TextWrapping="Wrap" MaxWidth="110" Margin="0,0,0,4"/>
-                        <Border Style="{StaticResource Card.SeatBadge}">
-                          <TextBlock FontWeight="SemiBold" FontSize="13">
-                            <TextBlock.Style><Style TargetType="TextBlock">
-                              <Setter Property="Text" Value="{Binding ApparentSeats}"/>
-                              <Style.Triggers><DataTrigger Binding="{Binding ApparentSeats}" Value="{x:Null}"><Setter Property="Text" Value="{DynamicResource Ui.Unknown}"/></DataTrigger></Style.Triggers>
-                            </Style></TextBlock.Style>
-                          </TextBlock>
-                        </Border>
+                                   TextAlignment="Right" TextWrapping="Wrap" MaxWidth="104" Margin="0,0,0,1"/>
+                        <TextBlock Style="{StaticResource Card.Seats}"/>
                       </StackPanel>
+                      <!-- Chevron nudges right on hover, like the arrow links on snu.ac.kr. -->
+                      <TextBlock Grid.Column="4" Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Margin="14,0,0,0"
+                                 VerticalAlignment="Center"
+                                 ui:Motion.NudgeRight="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}">
+                        <TextBlock.Style><Style TargetType="TextBlock">
+                          <Setter Property="Foreground" Value="{DynamicResource Snu.BorderStrong}"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                              <Setter Property="Foreground" Value="{DynamicResource Snu.Blue}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                              <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedMuted}"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style></TextBlock.Style>
+                      </TextBlock>
                     </Grid>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
@@ -329,12 +382,12 @@
         <Border x:Name="ActionPanel" Style="{DynamicResource Student.NavyPanel}">
           <StackPanel>
             <WrapPanel HorizontalAlignment="Center" Margin="0,0,0,10">
-              <TextBlock Text="{DynamicResource Ui.SelectedSections}" Foreground="{DynamicResource Snu.OnNavy}" FontSize="13.5" Margin="0,0,6,0"/>
-              <TextBlock Text="{Binding WatchSelection.Model.State.Rows.Length}" Foreground="{DynamicResource Snu.OnNavy}" FontSize="13.5" FontWeight="SemiBold"/>
+              <TextBlock Text="{DynamicResource Ui.SelectedSections}" Foreground="{DynamicResource Snu.OnNavyMuted}" FontSize="13.5" Margin="0,0,6,0"/>
+              <TextBlock Text="{Binding WatchSelection.Model.State.Rows.Length}" Foreground="{DynamicResource Snu.OnNavy}" FontSize="13.5" FontWeight="Bold"/>
             </WrapPanel>
             <Button x:Name="WatchSelectedButton" Content="{DynamicResource Ui.WatchSelected}" Click="OnReviewSelectionClicked">
               <Button.Style>
-                <Style TargetType="Button" BasedOn="{StaticResource Student.PanelButton}">
+                <Style TargetType="Button" BasedOn="{StaticResource Student.PanelOutlineButton}">
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding WatchSelection.Model.State.Rows.IsEmpty}" Value="True">
                       <Setter Property="IsEnabled" Value="False"/>
@@ -343,11 +396,12 @@
                 </Style>
               </Button.Style>
             </Button>
+            <Button x:Name="ShowDetailsButton" Content="{DynamicResource Ui.Details}" Click="OnShowDetailsClicked" Style="{DynamicResource Student.PanelButton}"/>
             <TextBlock Text="{DynamicResource Ui.NoReservation}" Foreground="{DynamicResource Snu.OnNavyMuted}" FontSize="11.5"
                        TextWrapping="Wrap" TextAlignment="Center" Margin="0,2,0,4"/>
           </StackPanel>
         </Border>
-        <Border Grid.Row="1" Style="{DynamicResource Student.Card}" Padding="12,6,12,10" Margin="0">
+        <Border Grid.Row="1" Style="{DynamicResource Student.Card}" Padding="16,6,16,12" Margin="0">
           <TabControl x:Name="SidePanel" Style="{DynamicResource Student.Tabs}" AutomationProperties.Name="{DynamicResource Ui.Details}">
             <TabItem><TabItem.Header><TextBlock Text="{DynamicResource Ui.Details}" TextWrapping="Wrap"/></TabItem.Header>
               <views:CourseDetailsView DataContext="{Binding Details}"/>
