@@ -27,6 +27,24 @@
       "agreementId": "WIN10SDK.RTM.AUG_2018_en-US",
       "extraction": "Official RTF converted using Windows RichTextBox.Text, retaining source list numbering. Two exposed RTF HYPERLINK field-instruction fragments were omitted while preserving displayed URLs. Complete body text independently matches Windows WPF TextRange extraction after list-marker, whitespace, and bullet-glyph normalization. All 15 numbered sections, French clauses, original wording and punctuation, and agreement identifier are retained. Saved as UTF-8 without BOM.",
       "retrievedAtUtc": "2026-11-01T16:43:52.2359068Z"
+    },
+    {
+      "component": "Noto Sans KR (bundled font)",
+      "version": "2.004",
+      "licenseFile": "docs/third-party/NotoSansKR-LICENSE.txt",
+      "primaryUrl": "https://github.com/notofonts/noto-cjk/blob/main/Sans/LICENSE",
+      "resolvedUrl": "https://raw.githubusercontent.com/notofonts/noto-cjk/a99a4354c68964f6bfac488d01010b1fb6d9178a/Sans/LICENSE",
+      "sourceCommitSha": "a99a4354c68964f6bfac488d01010b1fb6d9178a",
+      "sourceGitBlobSha": "d952d62c065f3f35fb83a173496e90b21525aef3",
+      "downloadedSourceSHA256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "downloadedTextSHA256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "bundledFiles": [
+        { "path": "src/SnuWatcher.Desktop/Fonts/NotoSansKR-Regular.otf", "sourceCommitSha": "165c01b46ea533872e002e0785ff17e44f6d97d8", "sourcePath": "Sans/SubsetOTF/KR/NotoSansKR-Regular.otf", "sourceGitBlobSha": "b8c11425a25c74dac1b51b28341ff1ef379f2ffa", "sha256": "69975a0ac8472717870aefeab0a4d52739308d90856b9955313b2ad5e0148d68" },
+        { "path": "src/SnuWatcher.Desktop/Fonts/NotoSansKR-Medium.otf", "sourceCommitSha": "165c01b46ea533872e002e0785ff17e44f6d97d8", "sourcePath": "Sans/SubsetOTF/KR/NotoSansKR-Medium.otf", "sourceGitBlobSha": "653cbfd8b8594f679e454efe396d0d3d90ca5c13", "sha256": "b46988ef13e8bac08f3933af686eaf770972994f9b6d335be0184d60169b5431" },
+        { "path": "src/SnuWatcher.Desktop/Fonts/NotoSansKR-Bold.otf", "sourceCommitSha": "165c01b46ea533872e002e0785ff17e44f6d97d8", "sourcePath": "Sans/SubsetOTF/KR/NotoSansKR-Bold.otf", "sourceGitBlobSha": "497914abec9fcf714fedebb7b893e63657d19124", "sha256": "5a6ceb287ed2fc6cfc6213144ebea68cbd94b20fc9eb873d8486493bf02d9bda" }
+      ],
+      "extraction": "Official GitHub file content saved verbatim; Git blob hashes of the license and all three font files verified against the upstream commits.",
+      "retrievedAtUtc": "2026-11-22T15:05:00Z"
     }
   ]
 }

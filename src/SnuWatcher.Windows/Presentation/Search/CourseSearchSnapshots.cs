@@ -72,16 +72,51 @@ public sealed record CourseSearchItem(CourseSearchRow Row, bool IsSelected)
 /// <param name="CatalogRead">Original metadata read.</param>
 /// <param name="SearchRead">Original search read including partial/failure evidence.</param>
 /// <param name="IssueKey">Fixed localizable input/action message key.</param>
+/// <param name="Grade">Optional source grade option ("1" to "5"); empty for every grade.</param>
+/// <param name="Level">Optional source degree-program option; empty for every program.</param>
 public sealed record CourseSearchSnapshot(int? SelectedYear, CatalogTerm? SelectedTerm, DepartmentOption? SelectedCollege,
     DepartmentOption? SelectedDepartment, string CourseCode, string CourseName, string Instructor, string SectionLookup,
     ImmutableArray<CatalogTerm> Terms, ImmutableArray<DepartmentOption> Colleges, ImmutableArray<DepartmentOption> Departments,
     ImmutableArray<CourseSearchItem> Rows, CourseUiLoadState CatalogState, CourseUiLoadState SearchState,
-    SourceRead<CourseCatalogData>? CatalogRead, SourceRead<CourseSearchData>? SearchRead, string? IssueKey)
+    SourceRead<CourseCatalogData>? CatalogRead, SourceRead<CourseSearchData>? SearchRead, string? IssueKey,
+    string Grade = "", string Level = "")
 {
+    /// <summary>Pages shown at once in the paging bar, as on the registration site.</summary>
+    public const int PageWindow = 5;
+
     /// <summary>Empty offline rendering state; this factory performs no source request.</summary>
     public static CourseSearchSnapshot Initial(int? year) => new(year, null, null, null, "", "", "", "", [], [], [], [],
         CourseUiLoadState.Idle, CourseUiLoadState.Idle, null, null, null);
+
+    /// <summary>The page of the displayed results, or null for an unpaged (every page) read.</summary>
+    public int? CurrentPage => SearchRead?.Data?.Query.Page;
+    /// <summary>The last result page the source reported for the displayed listing.</summary>
+    public int? LastPage => CurrentPage is { } page ? Math.Max(page, SearchRead?.Data?.LastPage ?? page) : null;
+    /// <summary>Source-stated number of matching courses, falling back to the rows shown when it is not stated.</summary>
+    public int ResultCount => SearchRead?.Data?.TotalCount ?? Rows.Length;
+    /// <summary>Whether a paging bar applies to the displayed results.</summary>
+    public bool IsPaged => CurrentPage is not null && SearchState is CourseUiLoadState.Complete or CourseUiLoadState.Partial or CourseUiLoadState.Empty;
+    /// <summary>Whether an earlier page exists.</summary>
+    public bool HasPreviousPage => CurrentPage > 1;
+    /// <summary>Whether a later page exists.</summary>
+    public bool HasNextPage => CurrentPage < LastPage;
+    /// <summary>The block of page numbers around the current page (1–5, 6–10, …), as the registration site groups them.</summary>
+    public ImmutableArray<SearchPageLink> PageNumbers
+    {
+        get
+        {
+            if (CurrentPage is not { } page || LastPage is not { } last) return [];
+            var first = (page - 1) / PageWindow * PageWindow + 1;
+            return Enumerable.Range(first, Math.Min(PageWindow, last - first + 1))
+                .Select(number => new SearchPageLink(number, number == page)).ToImmutableArray();
+        }
+    }
 }
+
+/// <summary>One numbered link in the paging bar.</summary>
+/// <param name="Number">One-based result page.</param>
+/// <param name="IsCurrent">Whether this is the page on screen.</param>
+public sealed record SearchPageLink(int Number, bool IsCurrent);
 
 /// <summary>One exact selection and its original metadata result.</summary>
 /// <param name="Key">Exact selected six-part identity.</param>

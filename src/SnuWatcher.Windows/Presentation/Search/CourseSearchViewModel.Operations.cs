@@ -48,8 +48,103 @@ public sealed partial class CourseSearchViewModel
         }
     }
 
-    private async Task SearchAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Selects the term the source reports as current. The first read asks for the calendar year; the site
+    /// answers with its own current term, which can belong to another year (its winter term in January), and
+    /// that year's term list is then read once. Filter edits during the read never discard its result.
+    /// </summary>
+    private async Task LoadCurrentTermAsync(CancellationToken cancellationToken)
     {
+        var start = false;
+        await dispatcher.InvokeAsync(() =>
+        {
+            var state = Model.State;
+            if (state.SelectedTerm is not null || state.CatalogState == CourseUiLoadState.Loading) return;
+            start = true;
+            Model.Replace(state with { CatalogState = CourseUiLoadState.Loading });
+        }, cancellationToken).ConfigureAwait(false);
+        if (start) await ReadCurrentTermAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<bool> ReadCurrentTermAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var year = Math.Clamp(clock.GetUtcNow().Year, 2013, 2200);
+            var read = await queries.GetCatalogAsync(new(year), cancellationToken).ConfigureAwait(false);
+            if (read.Data is { CurrentTerm: null, CurrentYear: { } reported } && reported != year)
+                read = await queries.GetCatalogAsync(new(reported), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            var catalog = read.Data;
+            var term = catalog?.CurrentTerm;
+            var selected = false;
+            await dispatcher.InvokeAsync(() =>
+            {
+                // A read canceled after its response arrived must not overwrite the canceled state.
+                if (disposed || cancellationToken.IsCancellationRequested) return;
+                var state = Model.State;
+                if (state.SelectedTerm is not null) { selected = true; return; }
+                if (catalog is null || term is null)
+                {
+                    Model.Replace(state with { CatalogRead = read, CatalogState = CourseUiLoadState.Failed, IssueKey = "Ui.CurrentTermUnavailable" });
+                    return;
+                }
+                selected = true;
+                Model.Replace(state with
+                {
+                    SelectedYear = term.Year, SelectedTerm = term, Terms = catalog.Terms, CatalogRead = read,
+                    CatalogState = CourseUiLoadState.Complete, SelectedCollege = null, SelectedDepartment = null,
+                    Colleges = catalog.Departments.Where(option => option.Level == "UP_DEPT").ToImmutableArray(), Departments = [],
+                    IssueKey = state.IssueKey == "Ui.CurrentTermUnavailable" ? null : state.IssueKey,
+                });
+            }).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return selected;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await dispatcher.InvokeAsync(() =>
+            {
+                if (!disposed && Model.State.SelectedTerm is null) Model.Replace(Model.State with { CatalogState = CourseUiLoadState.Canceled });
+            }).ConfigureAwait(false);
+            throw;
+        }
+        catch (Exception)
+        {
+            await dispatcher.InvokeAsync(() =>
+            {
+                if (!disposed && Model.State.SelectedTerm is null)
+                    Model.Replace(Model.State with { CatalogState = CourseUiLoadState.Failed, IssueKey = "Ui.CurrentTermUnavailable" });
+            }).ConfigureAwait(false);
+            Report("ui_current_term_failed");
+            return false;
+        }
+    }
+
+    private async Task SearchAsync(int? page, CancellationToken cancellationToken)
+    {
+        // A search before the current term is known reads it first, so the button always does what it says.
+        var needsTerm = false;
+        await dispatcher.InvokeAsync(() =>
+        {
+            needsTerm = page is null && Model.State.SelectedTerm is null;
+            if (needsTerm) Model.Replace(Model.State with { CatalogState = CourseUiLoadState.Loading, SearchState = CourseUiLoadState.Loading, IssueKey = null });
+        }, cancellationToken).ConfigureAwait(false);
+        if (needsTerm)
+        {
+            var known = false;
+            try { known = await ReadCurrentTermAsync(cancellationToken).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+            if (!known)
+            {
+                await dispatcher.InvokeAsync(() =>
+                {
+                    if (!disposed && Model.State.SearchState == CourseUiLoadState.Loading)
+                        Model.Replace(Model.State with { SearchState = cancellationToken.IsCancellationRequested ? CourseUiLoadState.Canceled : CourseUiLoadState.Invalid });
+                }).ConfigureAwait(false);
+                return;
+            }
+        }
         CourseSearchQuery? query = null;
         string lookup = "";
         long version = 0;
@@ -59,13 +154,24 @@ public sealed partial class CourseSearchViewModel
             var state = Model.State;
             try
             {
-                if (state.SelectedYear is not { } year || state.SelectedTerm is not { } term
-                    || !state.Terms.Any(option => option.Year == year && option.Selector == term.Selector))
-                { Model.Replace(state with { SearchState = CourseUiLoadState.Invalid, IssueKey = "Ui.TermUnconfirmed" }); return; }
-                lookup = state.SectionLookup.Trim();
-                if (lookup.Length > 0 && (lookup.Length != 3 || lookup.Any(character => character is < '0' or > '9') || string.IsNullOrWhiteSpace(state.CourseCode)))
-                { Model.Replace(state with { SearchState = CourseUiLoadState.Invalid, IssueKey = "Ui.InvalidSection" }); return; }
-                query = new(year, term.Selector, state.CourseCode, state.CourseName, state.Instructor, state.SelectedCollege?.Code, state.SelectedDepartment?.Code);
+                if (page is { } next)
+                {
+                    // Paging keeps the filters the displayed results were searched with.
+                    if (!state.IsPaged || state.SearchRead?.Data?.Query is not { } shown) return;
+                    query = shown.ForPage(next);
+                }
+                else
+                {
+                    if (state.SelectedYear is not { } year || state.SelectedTerm is not { } term
+                        || !state.Terms.Any(option => option.Year == year && option.Selector == term.Selector))
+                    { Model.Replace(state with { SearchState = CourseUiLoadState.Invalid, IssueKey = "Ui.TermUnconfirmed" }); return; }
+                    lookup = state.SectionLookup.Trim();
+                    if (lookup.Length > 0 && (lookup.Length != 3 || lookup.Any(character => character is < '0' or > '9') || string.IsNullOrWhiteSpace(state.CourseCode)))
+                    { Model.Replace(state with { SearchState = CourseUiLoadState.Invalid, IssueKey = "Ui.InvalidSection" }); return; }
+                    // A section lookup reads every page of its course code; any other search shows one page at a time.
+                    query = new(year, term.Selector, state.CourseCode, state.CourseName, state.Instructor, state.SelectedCollege?.Code,
+                        state.SelectedDepartment?.Code, lookup.Length > 0 ? null : 1, state.Grade, state.Level);
+                }
                 Model.Replace(state with { SearchState = CourseUiLoadState.Loading, Rows = [], SearchRead = null, IssueKey = null });
                 if (generation != version) { query = null; return; }
                 Details.Clear();

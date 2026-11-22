@@ -89,7 +89,7 @@ SNU's misconduct notice concerns macro-assisted registration attempts and course
 | 6. Register from alert | Body click/Open registration opens the fixed official HTTPS URL directly in the default browser; course details and Copy identifier remain in the app | Browser action works with window visible, in tray, and after process exit |
 | 7. Manage watches | Add, pause, resume, remove; bulk operations on a confirmed selection | Changes apply immediately and survive restart |
 | 8 and 12. Freshness | Last attempt, last successful check, age, next estimated check, delayed/unavailable indicators | Failed attempts never advance last-success time |
-| 9. No reservation | Inline message: an alert does not reserve a seat; availability may change before registration | Present in onboarding, course detail, and notification context |
+| 9. No reservation | Inline message: an alert does not reserve a seat; availability may change before registration | Present in the window footer, course detail, and notification context |
 | 11. Any-section groups | Choose all or selected sections under one course, or explicitly combine courses in a named group | Group coverage and matched sections visible; overlapping watches deduplicated |
 | 13. Source outages | Show offline, rate limited, maintenance, limited search, parse changed, and not-found states separately | Fault fixtures produce actionable messages and no false openings |
 | 14. Watch duration | Until date/time, selected registration-window end, or until manually stopped | Expiry stops future scheduling and delivery even during in-flight requests |

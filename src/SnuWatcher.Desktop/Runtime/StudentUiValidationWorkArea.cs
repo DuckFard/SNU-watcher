@@ -82,10 +82,9 @@ internal static partial class StudentUiValidation
         source.FailInteractiveSearch = false;
         await NavigateAsync(window, graph, StudentPage.FindCourses);
         await ExpandFiltersAsync(window);
-        SetText(window, "YearField", StudentUiValidationSource.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        if (graph.Search.SelectedTerm is null) await LoadTermAsync(window, graph, ct);
+        await EnsureCurrentTermAsync(graph, source, ct);
         SetText(window, "CodeField", StudentUiValidationSource.Key012.CourseCode); SetText(window, "SectionField", "012");
-        foreach (var name in new[] { "YearField", "TermField", "CodeField", "SectionField" })
+        foreach (var name in new[] { "NameField", "CodeField", "SectionField" })
             await RequireReachableAsync(Named<FrameworkElement>(window, name), window, "ui_actual_search_control_unreachable");
         await RequireReachableAsync(BoundButton(window, graph.Search.SearchCommand), window, "ui_actual_search_button_unreachable");
         await InvokeCommandAsync(window, graph.Search.SearchCommand, ct);

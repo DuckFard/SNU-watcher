@@ -15,6 +15,9 @@ public static class SourceLimits
     public const int MaxFilterText = 200;
     public const int MaxCount = 100_000;
     public const int MaxPages = 100;
+    /// <summary>Highest single page a browsing query may request (ten sections per source page).</summary>
+    public const int MaxBrowsePage = 2_000;
+    public const int MaxCredits = 100;
     public const int MaxTerms = 128;
     public const int MaxDepartments = 10_000;
     public const int MaxRows = 10_000;

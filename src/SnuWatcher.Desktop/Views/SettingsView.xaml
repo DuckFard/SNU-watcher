@@ -63,7 +63,7 @@
       </Border>
       <Border Style="{StaticResource Student.Card}">
         <StackPanel>
-          <TextBlock Text="{DynamicResource Ui.NativeTest}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="SemiBold"/>
+          <TextBlock Text="{DynamicResource Ui.NativeTest}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="Medium"/>
           <TextBlock Text="{DynamicResource Ui.NativeTestNote}" Style="{StaticResource Student.Label}" Margin="0,8,0,12"/>
           <TextBlock Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite">
             <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
@@ -111,7 +111,7 @@
       </Border>
       <Border Style="{StaticResource Student.Card}">
         <StackPanel>
-          <TextBlock Text="{DynamicResource Ui.DiagnosticsTitle}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="SemiBold"/>
+          <TextBlock Text="{DynamicResource Ui.DiagnosticsTitle}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="Medium"/>
           <TextBlock Text="{DynamicResource Ui.DiagnosticsPrivacy}" Style="{StaticResource Student.Label}" Margin="0,8,0,10"/>
           <WrapPanel>
             <Button Content="{DynamicResource Ui.DiagnosticsRefresh}" Command="{Binding RefreshDiagnosticsCommand}" Style="{StaticResource Student.SecondaryButton}"/>

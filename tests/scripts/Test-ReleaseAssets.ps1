@@ -47,6 +47,12 @@ Set-Content -LiteralPath (Join-Path $fixtureRepo 'LICENSE') 'MIT fixture license
 Set-Content -LiteralPath (Join-Path $publish 'SnuWatcher.Desktop.exe') 'Fixture executable bytes.'
 Set-Content -LiteralPath (Join-Path $publish 'Example.dll') 'Fixture library bytes.'
 Set-Content -LiteralPath (Join-Path $fixtureRepo 'installer/SnuWatcher.iss') '; Fixture installer input.'
+# The bundled font's OFL text and files are repository inputs, not NuGet packages.
+New-Item -ItemType Directory -Path (Join-Path $fixtureRepo 'docs/third-party'), (Join-Path $fixtureRepo 'src/SnuWatcher.Desktop/Fonts') -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $fixtureRepo 'docs/third-party/NotoSansKR-LICENSE.txt') 'SIL Open Font License fixture. Copyright Font.'
+foreach ($weight in 'Regular', 'Medium', 'Bold') {
+    Set-Content -LiteralPath (Join-Path $fixtureRepo ('src/SnuWatcher.Desktop/Fonts/NotoSansKR-' + $weight + '.otf')) ('Fixture font ' + $weight)
+}
 
 $config = Get-ReleaseConfiguration $fixtureRepo
 Assert-Release ($config.version -eq '0.1.0-preview.1' -and $config.installerVersion -eq '0.1.0.0') 'The prerelease display and numeric versions were conflated.'
@@ -81,7 +87,10 @@ $identity = @{ revision = ('a' * 40); dirty = $false }
 Write-DistributionMetadata -RepositoryPath $fixtureRepo -PublishPath $publish -Configuration $config -SourceIdentity $identity
 $sbom = Get-Content -LiteralPath (Join-Path $publish 'sbom.cdx.json') -Raw | ConvertFrom-Json
 Assert-Release ($sbom.bomFormat -eq 'CycloneDX' -and $sbom.specVersion -eq '1.6') 'Missing standard SBOM identity.'
-Assert-Release (@($sbom.components).Count -eq 2) 'Self-contained runtime or production package missing from SBOM.'
+Assert-Release (@($sbom.components).Count -eq 3) 'Self-contained runtime, production package or bundled font missing from SBOM.'
+$font = @($sbom.components | Where-Object name -eq 'Noto Sans KR')[0]
+Assert-Release ($font.licenses[0].expression -eq 'OFL-1.1' -and @($font.properties | Where-Object name -like 'snu:font:*:sha256').Count -eq 3) 'The bundled font lost its license or file hashes.'
+Assert-Release (Test-Path -LiteralPath (Join-Path $publish 'licenses/Noto-Sans-KR/2.004/LICENSE.txt') -PathType Leaf) 'The bundled font license was not installed.'
 Assert-Release ($sbom.compositions[0].aggregate -eq 'incomplete') 'Inventory must not claim a full native transitive audit.'
 $library = @($sbom.components | Where-Object name -eq 'Example.Library')[0]
 Assert-Release ($library.hashes[0].alg -eq 'SHA-256' -and $library.hashes[0].content -ne 'NotARawArchiveHash') 'NuGet contentHash was mislabeled as a standard package checksum.'
@@ -89,6 +98,11 @@ Assert-Release (@($library.properties | Where-Object { $_.name -eq 'snu:nuget:co
 $notices = Get-Content -LiteralPath (Join-Path $publish 'DISTRIBUTION-LICENSES.txt') -Raw
 Assert-Release ($notices.Contains('Copyright Fixture') -and $notices.Contains('Copyright Example') -and $notices.Contains('Copyright Runtime')) 'Distribution omitted original or runtime license text.'
 Assert-Release ($notices.Contains('Notice for Example.Library')) 'Package NOTICE text was omitted.'
+Assert-Release ($notices.Contains('Copyright Font')) 'The bundled font license text was omitted.'
+$fontLicense = Join-Path $fixtureRepo 'docs/third-party/NotoSansKR-LICENSE.txt'
+Move-Item -LiteralPath $fontLicense -Destination ($fontLicense + '.saved')
+Assert-Rejected { Write-DistributionMetadata $fixtureRepo $publish $config $identity } 'A missing bundled font license was accepted.'
+Move-Item -LiteralPath ($fontLicense + '.saved') -Destination $fontLicense
 
 # Unknown package terms and traversal-bearing license paths must stop packaging.
 $license = Join-Path $cache 'example.library/1.2.3/LICENSE.txt'

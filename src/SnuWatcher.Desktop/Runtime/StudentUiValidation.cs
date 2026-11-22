@@ -43,6 +43,8 @@ internal static partial class StudentUiValidation
 
     private static async Task RunAsync(Guid runId, Action<int> shutdown)
     {
+        // Captures must show final states, never a frame part-way through a hover or page fade.
+        Presentation.Motion.Suppressed = true;
         RuntimeProfile? profile = null;
         WindowsMonitoringHost? host = null;
         StudentDesktopSession? graph = null;
@@ -70,6 +72,8 @@ internal static partial class StudentUiValidation
                 nativeNotifications: simulatedNative);
             graph.Settings.PreferencesChanged += simulatedNative.ApplyKnownPreferences;
             var quitRequested = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            // The search page reads the current term once local startup ends; hold that read until startup is checked.
+            source.HoldCatalog();
             window = new(graph.Shell, () => quitRequested.TrySetResult(), enableTray: false) { ShowInTaskbar = false };
             System.Windows.Application.Current.MainWindow = window;
             window.Show(); window.Activate();
@@ -84,8 +88,12 @@ internal static partial class StudentUiValidation
             var joined = graph.InitializeAsync(deadline.Token);
             var initial = await Task.WhenAll(first, joined);
             graph.Settings.PreferencesChanged -= initialRead;
-            Require(initial.All(result => result == UiCommandOutcome.Completed) && source.Calls == 0 && initialPreferenceReads == 1,
-                "ui_local_initialization_requested_source");
+            // Initialization itself is local. The only source read it may start is the search page's own current-term
+            // read, which begins after saved settings load and is still held here.
+            Require(initial.All(result => result == UiCommandOutcome.Completed) && source.CatalogCalls <= 1
+                && source.InteractiveSearchCalls == 0 && source.WatchSearchCalls == 0 && source.DetailsCalls == 0
+                && initialPreferenceReads == 1 && graph.Search.Model.State.SelectedTerm is null, "ui_local_initialization_requested_source");
+            source.ReleaseCatalog();
             await PumpUiAsync(window);
             _stage = "glyph_guard_self_checks";
             await ProbeGlyphGuardsAsync(window);
@@ -124,7 +132,6 @@ internal static partial class StudentUiValidation
                 reopenStable = true, ownerHandoff = true, ownerRetainedDuringDrain = stopped.OwnerRetained,
                 sourceDisposed = source.IsDisposed, quitObserved = true, pendingAlertsPreserved = stable.PendingAlerts,
                 bindingErrors = bindings.ErrorCount, bindingEvidence = bindings.Errors,
-                expectedYearValidationTraces = bindings.ExpectedValidationCount,
                 glyphGuardsVerified = true,
                 actualWorkAreaVerified = true, workArea,
                 keyboardScope = "in-process WPF focus and routed events", journey, captures,
@@ -165,7 +172,7 @@ internal static partial class StudentUiValidation
                         noLiveHttp = true, httpRequests = 0, noOsNotifications = true, nativeNotificationCalls = 0,
                         noBrowser = true, browserCalls = 0, noClipboard = true, clipboardCalls = 0, channelCalls = channel.Calls,
                         graphDrained = drained, hostDrained = drained, bindingErrors = bindings.ErrorCount,
-                        bindingEvidence = bindings.Errors, expectedYearValidationTraces = bindings.ExpectedValidationCount, captures,
+                        bindingEvidence = bindings.Errors, captures,
                         workArea,
                         source = new { source.CatalogCalls, source.InteractiveSearchCalls, source.WatchSearchCalls, source.DetailsCalls },
                     });

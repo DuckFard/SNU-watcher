@@ -62,20 +62,26 @@ public sealed class CourseSearchFailureTests
         await using var dispatcher = new DedicatedUiDispatcher();
         var queries = new SearchQueries();
         await using var view = new CourseSearchViewModel(queries, new SearchWatches(), dispatcher, new SearchClock());
+        // Searching before the current term is known reads it (and only it); an unknown term never searches.
         await view.SearchCommand.ExecuteAsync();
-        Assert.Equal("Ui.TermUnconfirmed", view.Model.State.IssueKey);
+        Assert.Equal("Ui.CurrentTermUnavailable", view.Model.State.IssueKey);
+        Assert.Empty(queries.Searches);
         await dispatcher.InvokeAsync(() => view.SelectedYear = 2012);
         await view.LoadCatalogCommand.ExecuteAsync();
-        Assert.Empty(queries.Catalogs);
+        Assert.Single(queries.Catalogs);
         Assert.Equal(CourseUiLoadState.Invalid, view.Model.State.CatalogState);
         await CourseSearchViewModelTests.Prepare(view, dispatcher);
         await dispatcher.InvokeAsync(() => view.SelectedTerm = new(2026, "UNCONFIRMED", "Fake", null));
         await view.SearchCommand.ExecuteAsync();
         Assert.Empty(queries.Searches);
-        await dispatcher.InvokeAsync(() => { view.SelectedTerm = Assert.Single(view.Model.State.Terms); view.CourseCode = ""; });
+        await dispatcher.InvokeAsync(() => { view.SelectedTerm = Assert.Single(view.Model.State.Terms); view.CourseCode = "not a code"; });
         await view.SearchCommand.ExecuteAsync();
         Assert.Equal("Ui.FiltersInvalid", view.Model.State.IssueKey);
         Assert.Empty(queries.Searches);
+        // With no filters at all, a search lists the whole term one page at a time.
+        await dispatcher.InvokeAsync(() => view.CourseCode = "");
+        await view.SearchCommand.ExecuteAsync();
+        Assert.Equal(new CourseSearchQuery(2026, SearchQueries.Selector, page: 1), Assert.Single(queries.Searches));
     }
 
     /// <summary>Unexpected query exceptions are sanitized and source-provided wrong term rows stay unselectable.</summary>

@@ -13,8 +13,10 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
 {
     private readonly IRuntimeCourseQueries queries;
     private readonly IUiDispatcher dispatcher;
+    private readonly TimeProvider clock;
     private readonly Action<string> reportError;
     private long generation;
+    private int requestedPage = 1;
     private bool disposed;
 
     /// <summary>Creates an empty search controller; construction and filter editing never request source data.</summary>
@@ -23,18 +25,23 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
     {
         ArgumentNullException.ThrowIfNull(queries); ArgumentNullException.ThrowIfNull(watches);
         ArgumentNullException.ThrowIfNull(dispatcher); ArgumentNullException.ThrowIfNull(clock);
-        this.queries = queries; this.dispatcher = dispatcher; this.reportError = reportError ?? (_ => { });
+        this.queries = queries; this.dispatcher = dispatcher; this.clock = clock; this.reportError = reportError ?? (_ => { });
         Model = new(CourseSearchSnapshot.Initial(Math.Clamp(clock.GetUtcNow().Year, 2013, 2200)), dispatcher, this.reportError);
         Details = new(queries, dispatcher, actions, this.reportError);
         WatchSelection = new(watches, dispatcher, clock, this.reportError);
         Model.PropertyChanged += (_, _) => NotifyBindings();
         LoadCatalogCommand = new(LoadCatalogAsync, dispatcher, this.reportError);
-        SearchCommand = new(SearchAsync, dispatcher, this.reportError);
+        LoadCurrentTermCommand = new(LoadCurrentTermAsync, dispatcher, this.reportError);
+        SearchCommand = new(token => SearchAsync(null, token), dispatcher, this.reportError);
+        PageCommand = new(token => SearchAsync(Volatile.Read(ref requestedPage), token), dispatcher, this.reportError,
+            () => Model.State.IsPaged);
         ClearCommand = new(_ => dispatcher.InvokeAsync(() => Change(state => CourseSearchSnapshot.Initial(state.SelectedYear)
-            with { Terms = state.Terms, SelectedTerm = state.SelectedTerm })), dispatcher, this.reportError);
+            with { Terms = state.Terms, SelectedTerm = state.SelectedTerm, Colleges = state.SelectedCollege is null ? state.Colleges : [] })),
+            dispatcher, this.reportError);
         CancelCommand = new(_ => dispatcher.InvokeAsync(() =>
         {
-            generation++; CancelReads();
+            // Cancel also stops the automatic current-term read; editing filters (CancelReads alone) never does.
+            generation++; CancelReads(); LoadCurrentTermCommand.Cancel();
             Model.Replace(Model.State with { SearchState = CourseUiLoadState.Canceled, CatalogState = CourseUiLoadState.Canceled });
         }), dispatcher, this.reportError);
     }
@@ -46,8 +53,18 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
     public WatchSelectionViewModel WatchSelection { get; }
     /// <summary>Explicit metadata load for the current year/term/college branch.</summary>
     public UiAsyncCommand LoadCatalogCommand { get; }
-    /// <summary>Explicit search only; typing never executes this command.</summary>
+    /// <summary>
+    /// Reads the term the registration site reports as current, with its colleges, and selects it. This is the
+    /// only read the search page starts by itself, once, when it is first shown; it never runs a search.
+    /// </summary>
+    public UiAsyncCommand LoadCurrentTermCommand { get; }
+    /// <summary>
+    /// Explicit search only; typing never executes this command. It shows the first result page; with no
+    /// filters it lists every course in the term, one source page at a time, as the registration site does.
+    /// </summary>
     public UiAsyncCommand SearchCommand { get; }
+    /// <summary>Reads another page of the displayed results; see <see cref="GoToPageAsync"/>.</summary>
+    public UiAsyncCommand PageCommand { get; }
     /// <summary>Clears dependent filters/results/selection without requesting data.</summary>
     public UiAsyncCommand ClearCommand { get; }
     /// <summary>Cancels obsolete read waiters while retaining actual command ownership.</summary>
@@ -96,6 +113,25 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
     public string Instructor { get => Model.State.Instructor; set => Change(state => state.Instructor == (value ?? "") ? state : state with { Instructor = value ?? "" }); }
     /// <summary>Optional three-ASCII-digit local lookup within an exact course-code result.</summary>
     public string SectionLookup { get => Model.State.SectionLookup; set => Change(state => state.SectionLookup == (value ?? "") ? state : state with { SectionLookup = value ?? "" }); }
+    /// <summary>The registration site's grade option ("1" to "5"); empty or null for every grade.</summary>
+    public string Grade { get => Model.State.Grade; set => Change(state => state.Grade == (value ?? "") ? state : state with { Grade = value ?? "" }); }
+    /// <summary>The registration site's degree-program option code; empty or null for every program.</summary>
+    public string Level { get => Model.State.Level; set => Change(state => state.Level == (value ?? "") ? state : state with { Level = value ?? "" }); }
+
+    /// <summary>
+    /// Shows another page of the displayed results, keeping the filters they were searched with. Pages outside
+    /// the listing the source reported are ignored.
+    /// </summary>
+    public Task<UiCommandOutcome> GoToPageAsync(int page, CancellationToken cancellationToken = default)
+    {
+        if (!dispatcher.CheckAccess()) throw new InvalidOperationException("Paging requires the UI dispatcher.");
+        ObjectDisposedException.ThrowIf(disposed, this);
+        var state = Model.State;
+        if (!state.IsPaged || page < 1 || page > state.LastPage || page == state.CurrentPage)
+            return Task.FromResult(UiCommandOutcome.Unavailable);
+        Volatile.Write(ref requestedPage, page);
+        return PageCommand.ExecuteAsync(cancellationToken);
+    }
     /// <summary>Binding changes are always raised on the UI dispatcher.</summary>
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -113,7 +149,7 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
         CancelReads(); Details.Clear(); WatchSelection.ReplaceSelection([]);
     }
     private static bool SameDepartment(DepartmentOption? first, DepartmentOption? second) => first?.Code == second?.Code && first?.Level == second?.Level;
-    private void CancelReads() { LoadCatalogCommand.Cancel(); SearchCommand.Cancel(); Details.Cancel(); }
+    private void CancelReads() { LoadCatalogCommand.Cancel(); SearchCommand.Cancel(); PageCommand.Cancel(); Details.Cancel(); }
 
     /// <summary>Resolves supplied identity against current results; supplied row counts are never trusted.</summary>
     public async Task SelectRowAsync(CourseSearchRow? row, CancellationToken cancellationToken = default)
@@ -164,7 +200,9 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
     {
         disposed = true; Interlocked.Increment(ref generation);
         await LoadCatalogCommand.DisposeAsync().ConfigureAwait(false);
+        await LoadCurrentTermCommand.DisposeAsync().ConfigureAwait(false);
         await SearchCommand.DisposeAsync().ConfigureAwait(false);
+        await PageCommand.DisposeAsync().ConfigureAwait(false);
         await ClearCommand.DisposeAsync().ConfigureAwait(false);
         await CancelCommand.DisposeAsync().ConfigureAwait(false);
         await Details.DisposeAsync().ConfigureAwait(false);

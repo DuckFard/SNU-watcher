@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Desktop.Resources;
 using SnuWatcher.Windows;
+using SnuWatcher.Windows.Presentation.Common;
 using SnuWatcher.Windows.Presentation.Shell;
 using Forms = System.Windows.Forms;
 
@@ -20,6 +21,8 @@ public partial class StudentWindow : Window, IDisposable
     private bool _allowClose;
     private bool _finishing;
     private bool _syncingNavigation;
+    private StudentPage? _shownPage;
+    private bool _startupSeen;
 
     internal StudentWindow(StudentShellViewModel? model, Action requestQuit, bool enableTray = true)
     {
@@ -36,11 +39,12 @@ public partial class StudentWindow : Window, IDisposable
         Left = work.Left + (work.Width - Width) / 2; Top = work.Top + (work.Height - Height) / 2;
         if (model is null)
         {
-            Onboarding.Visibility = Visibility.Collapsed;
             FindNavigation.IsEnabled = WatchesNavigation.IsEnabled = AlertsNavigation.IsEnabled = SettingsNavigation.IsEnabled = false;
+            KoreanLanguage.IsEnabled = EnglishLanguage.IsEnabled = false;
         }
         else
         {
+            _shownPage = model.SelectedPage;
             model.PropertyChanged += ModelChanged;
             model.PreferencesChanged += PreferencesChanged;
             _resources.Apply(model.State.Language);
@@ -78,30 +82,39 @@ public partial class StudentWindow : Window, IDisposable
 
     internal void AllowClose() => _allowClose = true;
 
-    private void OnWindowLoaded(object sender, RoutedEventArgs args) => QueueWelcomeFocus();
+    private void OnWindowLoaded(object sender, RoutedEventArgs args) => QueueInitialFocus();
 
-    private void OnOnboardingVisibilityChanged(object sender, DependencyPropertyChangedEventArgs args) => QueueWelcomeFocus();
-
-    private void QueueWelcomeFocus()
+    private void QueueInitialFocus()
     {
-        // Wait for visibility bindings to enable the destination. Recheck the active window so
-        // an auxiliary or closing window never takes focus from another application.
+        // There is no welcome screen: the course menu takes focus so the student can start right away. Recheck the
+        // active window so an auxiliary or closing window never takes focus from another application.
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
         {
             if (!IsLoaded || !IsVisible || !IsActive) return;
-            UIElement target = Onboarding.Visibility == Visibility.Visible ? GetStartedButton
-                : _finishing || _model is null ? QuitButton : FindNavigation;
-            target.Focus();
+            if (_finishing || _model is null) { QuitButton.Focus(); return; }
+            // The course page opens with the caret in its search box; any other page starts on the menu.
+            if (FindDescendant<Views.FindCoursesView>(PageContent) is not { } search || !search.FocusSearch()) FindNavigation.Focus();
         }));
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, index);
+            if (child is T match) return match;
+            if (FindDescendant<T>(child) is { } nested) return nested;
+        }
+        return null;
     }
 
     internal void SetStopping()
     {
         Dispatcher.VerifyAccess();
         _finishing = true;
-        Onboarding.Visibility = Visibility.Collapsed;
-        PageContent.IsEnabled = false; Onboarding.IsEnabled = false;
+        PageContent.IsEnabled = false;
         FindNavigation.IsEnabled = WatchesNavigation.IsEnabled = AlertsNavigation.IsEnabled = SettingsNavigation.IsEnabled = false;
+        KoreanLanguage.IsEnabled = EnglishLanguage.IsEnabled = false;
         ShowStatusKey("Ui.Stopping");
     }
 
@@ -111,28 +124,32 @@ public partial class StudentWindow : Window, IDisposable
     {
         if (RootLayout is null || ChromeScrollViewer is null) return;
         var compact = ActualHeight < 560;
-        RootLayout.Margin = new Thickness(compact ? 6 : 16);
+        var narrow = ActualWidth < 860;
+        var gutter = compact ? 8 : 20;
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
         ChromeScrollViewer.MaxHeight = compact ? Math.Max(56, RootLayout.ActualHeight - 250) : double.PositiveInfinity;
         // Enough for a compact list pane's header, rows and paging; 150% on 1280x800 still fits without scrolling.
         PageContent.MinHeight = compact ? 340 : 0;
-        HeaderPanel.Margin = new Thickness(0, 0, 0, compact ? 2 : 10);
-        BrandingPanel.Orientation = compact ? Orientation.Horizontal : Orientation.Vertical;
-        BrandingTitle.FontSize = compact ? 18 : 21;
-        BrandingSubtitle.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        DemoLabel.Margin = compact ? new Thickness(8, 0, 0, 0) : new Thickness(0, 2, 0, 0);
-        DemoLabel.VerticalAlignment = compact ? VerticalAlignment.Center : VerticalAlignment.Top;
-        DemoLabel.FontSize = compact ? 11 : 12;
-        QuitButton.MinHeight = compact ? 28 : 36;
-        QuitButton.Padding = compact ? new Thickness(8, 3, 8, 3) : new Thickness(14, 9, 14, 9);
-        QuitButton.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 8, 8);
-        NavigationPanel.Margin = new Thickness(0, 0, 0, compact ? 2 : 8);
-        SourceStatusExpander.Margin = new Thickness(0, 0, 0, compact ? 2 : 8);
-        ReservationFooter.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        PageScrollViewer.Margin = compact ? new Thickness(6, 2, 6, 2) : new Thickness(16, 8, 16, 6);
+        HeaderBand.Padding = new Thickness(gutter, compact ? 1 : 8, compact ? 6 : gutter, 0);
+        StatusBand.Padding = new Thickness(gutter, compact ? 0 : 4, gutter, 0);
+        BrandMark.Width = BrandMark.Height = compact ? 24 : 36;
+        BrandMark.CornerRadius = new CornerRadius(compact ? 12 : 18);
+        BrandingPanel.Margin = new Thickness(0, compact ? 0 : 2, compact ? 12 : 24, compact ? 0 : 4);
+        BrandingTitle.FontSize = compact || narrow ? 17 : 21;
+        // Narrow windows leave the term to the search card, which always shows it, so the header never clips.
+        TermLabel.FontSize = compact ? 15 : 18;
+        TermLabel.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+        BrandingSubtitle.Visibility = compact || narrow ? Visibility.Collapsed : Visibility.Visible;
+        DemoLabel.FontSize = compact ? 11 : 11.5;
+        foreach (var link in new[] { KoreanLanguage, EnglishLanguage, QuitButton }) link.MinHeight = compact ? 20 : 24;
+        FooterBand.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         foreach (var navigation in new[] { FindNavigation, WatchesNavigation, AlertsNavigation, SettingsNavigation })
         {
-            navigation.MinHeight = compact ? 28 : 36;
-            navigation.Padding = compact ? new Thickness(8, 3, 8, 3) : new Thickness(10, 6, 10, 6);
+            navigation.MinHeight = compact ? 30 : 42;
+            navigation.FontSize = compact || narrow ? 14.5 : 16;
+            navigation.Padding = compact ? new Thickness(2, 4, 2, 5) : new Thickness(2, 10, 2, 10);
+            if (!ReferenceEquals(navigation, SettingsNavigation)) navigation.Margin = new Thickness(0, 0, compact || narrow ? 18 : 28, 0);
         }
     }
 
@@ -146,6 +163,19 @@ public partial class StudentWindow : Window, IDisposable
     private void ModelChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (_model is null) return;
+        // A quick fade marks an actual page change; pages never slide (top-level transitions stay calm). The shell
+        // re-announces its page with every status refresh (every two seconds), so compare with the page on screen.
+        if (args.PropertyName == nameof(StudentShellViewModel.SelectedPage) && _model.SelectedPage != _shownPage)
+        {
+            _shownPage = _model.SelectedPage;
+            Presentation.Motion.FadeInPage(PageContent);
+        }
+        // Local startup has finished: the course page may now read the site's current term.
+        if (!_startupSeen && _model.State.IsLoaded)
+        {
+            _startupSeen = true;
+            FindDescendant<Views.FindCoursesView>(PageContent)?.EnsureCurrentTerm();
+        }
         _syncingNavigation = true;
         try
         {
@@ -167,15 +197,18 @@ public partial class StudentWindow : Window, IDisposable
     private void OnEnglish(object sender, RoutedEventArgs args) => SaveLanguage(UiLanguage.English);
     private void OnKorean(object sender, RoutedEventArgs args) => SaveLanguage(UiLanguage.Korean);
 
-    private void SaveLanguage(UiLanguage language)
+    /// <summary>"KR | EN" saves only the language; unsaved Settings edits are never saved along with it.</summary>
+    private async void SaveLanguage(UiLanguage language)
     {
         if (_model is null) return;
         try
         {
-            if (!_model.Settings.SaveCommand.CanExecute(null)) { ShowStatusKey("Ui.SettingsPending"); return; }
-            _model.Settings.Language = language; _model.Settings.SaveCommand.Execute(null);
+            var outcome = await _model.Settings.SaveLanguageAsync(language);
+            if (outcome is UiCommandOutcome.Busy or UiCommandOutcome.Unavailable) ShowStatusKey("Ui.SettingsPending");
+            else if (outcome == UiCommandOutcome.Failed)
+                ShowStatusKey(_model.Settings.Model.State.SaveUncertain ? "Ui.SettingsSaveUncertain" : "Ui.SettingsPending");
         }
-        catch (InvalidOperationException) { ShowStatusKey("Ui.SettingsSaveUncertain"); }
+        catch (ObjectDisposedException) { /* Closing the shell closes settings admission. */ }
     }
 
     private void OnQuit(object sender, RoutedEventArgs args) => _requestQuit();
