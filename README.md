@@ -53,10 +53,10 @@ The desktop uses **C# / .NET 10 and WPF**, with native Windows notifications and
 
 The **2026-11-02** live recheck passed catalog, two-page search, exact section details and previous-year metadata through the production gateway. The adapter now follows SNU's observed catalog initialization flow and validates source-reported academic years. Unsupported responses still produce unavailable data rather than invented availability. See the [integration evidence](docs/integrations/snu.md); these reads do not establish an institution-approved polling rate.
 
-Desktop development is on the `development/windows-foundation` branch. On Windows 11 x64, install the .NET SDK version specified in [global.json](global.json), then run:
+The desktop app is on the `main` branch. On Windows 11 x64, install the exact .NET SDK version pinned in [global.json](global.json), then run:
 
 ```powershell
-git clone --branch development/windows-foundation https://github.com/DuckFard/SNU-watcher.git
+git clone https://github.com/DuckFard/SNU-watcher.git
 cd SNU-watcher
 .\scripts\Test-Foundation.ps1
 ```
