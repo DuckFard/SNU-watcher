@@ -1,3 +1,6 @@
 # Preserve the exact upstream legal text and its pinned checksum.
 docs/third-party/AngleSharp-LICENSE.txt -text -whitespace
 docs/third-party/Windows-SDK-LICENSE.txt -text -whitespace
+docs/third-party/NotoSansKR-LICENSE.txt -text -whitespace
+# Bundled font files are binary and kept byte-for-byte as published upstream.
+*.otf binary

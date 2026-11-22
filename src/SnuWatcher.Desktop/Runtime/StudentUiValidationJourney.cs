@@ -21,7 +21,7 @@ namespace SnuWatcher.Desktop.Runtime;
 
 internal sealed record StudentUiJourney
 {
-    public bool Onboarding { get; init; }
+    public bool LanguageLinks { get; init; }
     public bool EnglishKorean { get; init; }
     public bool LeadingZeroLookup { get; init; }
     public bool DetailsQuotaSeparated { get; init; }
@@ -33,7 +33,7 @@ internal sealed record StudentUiJourney
     public bool ProfileApplied { get; init; }
     public bool FullVsUnknown { get; init; }
     public bool InteractiveUnavailable { get; init; }
-    public bool InvalidYearBlocked { get; init; }
+    public bool BrowseAllPaged { get; init; }
     public bool TabTraversal { get; init; }
     public bool EnterSearch { get; init; }
     public bool FixedActionIntents { get; init; }
@@ -58,52 +58,46 @@ internal static partial class StudentUiValidation
         StudentUiSimulatedNativeControls simulatedNative, List<StudentUiCapture> captures, CancellationToken ct)
     {
         var proof = new StudentUiJourney();
-        _stage = "onboarding";
-        Require(graph.Shell.State.IsDemo && graph.Shell.State.ShowOnboarding, "ui_demo_onboarding_missing");
-        Require(ReferenceEquals(Keyboard.FocusedElement, Named<Button>(window, "GetStartedButton")),
-            "ui_onboarding_initial_focus_missing");
-        await ProbeTerminalFirstRunAsync(graph, window);
-        await ProbeOnboardingKeyboardAsync(window);
+        // There is no welcome screen: the course page is ready at once, with the language links in the header.
+        _stage = "start_language_links";
+        Require(graph.Shell.State.IsDemo, "ui_demo_label_missing");
+        Require(ReferenceEquals(Keyboard.FocusedElement, Named<TextBox>(window, "NameField")), "ui_start_focus_missing");
+        await ProbeTerminalStartAsync(graph, window);
         proof = proof with { TerminalStoppingVisible = true };
-        captures.Add(await CaptureAsync(profile, window, "ui-onboarding-en.png", false, ct));
+        await EnsureCurrentTermAsync(graph, source, ct);
+        Require(source.InteractiveSearchCalls == 0 && source.DetailsCalls == 0, "ui_start_ran_search");
+        await PumpUiAsync(window);
+        captures.Add(await CaptureAsync(profile, window, "ui-start-en.png", false, ct));
         await ClickLanguageAsync(window, graph, UiLanguage.Korean, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "설정", "ui_korean_resources_missing");
-        await ProbeOnboardingKeyboardAsync(window);
+        Require(Named<TextBlock>(window, "TermLabel").Text == "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
         await ClickLanguageAsync(window, graph, UiLanguage.English, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "Settings", "ui_english_resources_missing");
-        await InvokeCommandAsync(window, graph.Shell.CompleteOnboardingCommand, ct);
-        await EventuallyAsync(() => !graph.Shell.State.ShowOnboarding, ct);
-        await PumpUiAsync(window);
-        Require(ReferenceEquals(Keyboard.FocusedElement, Named<RadioButton>(window, "FindNavigation")),
-            "ui_onboarding_completion_focus_missing");
-        proof = proof with { Onboarding = true, EnglishKorean = true };
+        Require(Named<TextBlock>(window, "TermLabel").Text == "2026 Winter Semester (Demo)", "ui_english_term_label_missing");
+        proof = proof with { LanguageLinks = true, EnglishKorean = true };
 
-        _stage = "filters_validation";
-        await ExpandFiltersAsync(window);
-        SetText(window, "YearField", StudentUiValidationSource.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        await LoadTermAsync(window, graph, ct);
-        SetText(window, "CodeField", StudentUiValidationSource.Key012.CourseCode);
-        var invalidYear = Named<TextBox>(window, "YearField");
+        // An empty search lists every course in the current term one source page at a time, as the registration site does.
+        _stage = "browse_all_paged";
         var searchesBefore = source.InteractiveSearchCalls;
-        bindings.ExpectInvalidYear = true;
-        try
-        {
-            SetText(window, "YearField", "abc");
-            await PumpUiAsync(window);
-            Require(Validation.GetHasError(invalidYear), "ui_invalid_year_not_validated");
-            Require(!BoundButton(window, graph.Search.SearchCommand).IsEnabled
-                && !BoundButton(window, graph.Search.LoadCatalogCommand).IsEnabled, "ui_invalid_year_buttons_enabled");
-            _ = SendEnter(invalidYear, window);
-            await PumpUiAsync(window); await Task.Delay(30, ct);
-            Require(source.InteractiveSearchCalls == searchesBefore, "ui_invalid_year_queried_old_value");
-            SetText(window, "YearField", StudentUiValidationSource.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            await PumpUiAsync(window);
-        }
-        finally { bindings.ExpectInvalidYear = false; }
-        Require(!Validation.GetHasError(invalidYear), "ui_year_correction_not_applied");
-        proof = proof with { InvalidYearBlocked = true };
+        Require(graph.Search.CourseName.Length == 0 && graph.Search.CourseCode.Length == 0, "ui_browse_filters_not_empty");
+        Require(Named<FrameworkElement>(window, "StartPanel").IsVisible, "ui_start_panel_missing");
+        await ObserveCommandAsync(graph.Search.SearchCommand, () => InvokeButton(Named<Button>(window, "BrowseAllButton")), ct);
+        await PumpUiAsync(window);
+        var listing = graph.Search.Model.State;
+        Require(listing.Rows.Length == 10 && listing.CurrentPage == 1 && listing.LastPage == 3
+            && listing.ResultCount == StudentUiValidationSource.BrowseCount && source.InteractiveSearchCalls == searchesBefore + 1,
+            "ui_browse_first_page_missing");
+        Require(Named<FrameworkElement>(window, "PagingBar").IsVisible && !Named<Button>(window, "PreviousPageButton").IsEnabled
+            && Named<Button>(window, "LastPageButton").IsEnabled, "ui_browse_paging_bar_invalid");
+        await ObserveCommandAsync(graph.Search.PageCommand, () => InvokeButton(Named<Button>(window, "LastPageButton")), ct);
+        await PumpUiAsync(window);
+        listing = graph.Search.Model.State;
+        Require(listing.Rows.Length == 3 && listing.CurrentPage == 3 && !listing.HasNextPage && listing.HasPreviousPage
+            && source.InteractiveSearchCalls == searchesBefore + 2, "ui_browse_last_page_missing");
+        proof = proof with { BrowseAllPaged = true };
+
         _stage = "exact_search_keyboard";
-        await LoadTermAsync(window, graph, ct);
+        await ExpandFiltersAsync(window);
         SetText(window, "CodeField", StudentUiValidationSource.Key012.CourseCode);
         SetText(window, "SectionField", "012");
         var codeField = Named<TextBox>(window, "CodeField");
@@ -246,7 +240,8 @@ internal static partial class StudentUiValidation
         return proof with { Expiry = true, PreferencesRevision = graph.Settings.Model.State.Stored!.Revision };
     }
 
-    private static async Task ProbeTerminalFirstRunAsync(StudentDesktopSession graph, StudentWindow primary)
+    /// <summary>The stopping state must stay visible and keep Quit available, with every page action disabled.</summary>
+    private static async Task ProbeTerminalStartAsync(StudentDesktopSession graph, StudentWindow primary)
     {
         using var terminal = new StudentWindow(graph.Shell, () => { }, enableTray: false)
             { ShowInTaskbar = false, ShowActivated = false };
@@ -254,14 +249,12 @@ internal static partial class StudentUiValidation
         {
             terminal.Show(); await PumpUiAsync(terminal);
             terminal.SetStopping(); graph.Shell.RefreshAges(); await PumpUiAsync(terminal);
-            var onboarding = terminal.FindName("Onboarding") as FrameworkElement;
             var status = terminal.FindName("LifecycleText") as TextBlock;
             var page = terminal.FindName("PageContent") as FrameworkElement;
-            Require(graph.Shell.State.ShowOnboarding && onboarding?.Visibility == Visibility.Collapsed
-                && status?.IsVisible == true && status.Text == terminal.TryFindResource("Ui.Stopping") as string
-                && page?.IsEnabled == false, "ui_terminal_onboarding_hid_stopping");
-            Require(Named<Button>(terminal, "QuitButton").IsEnabled,
-                "ui_terminal_onboarding_blocked_quit");
+            Require(status?.IsVisible == true && status.Text == terminal.TryFindResource("Ui.Stopping") as string
+                && page?.IsEnabled == false && !Named<Button>(terminal, "KoreanLanguage").IsEnabled
+                && !Named<RadioButton>(terminal, "FindNavigation").IsEnabled, "ui_terminal_start_hid_stopping");
+            Require(Named<Button>(terminal, "QuitButton").IsEnabled, "ui_terminal_start_blocked_quit");
         }
         finally
         {
@@ -271,15 +264,14 @@ internal static partial class StudentUiValidation
         }
     }
 
-    private static async Task LoadTermAsync(StudentWindow window, StudentDesktopSession graph, CancellationToken ct)
+    /// <summary>The search page reads the site's current term by itself, once; that read never runs a search.</summary>
+    private static async Task EnsureCurrentTermAsync(StudentDesktopSession graph, StudentUiValidationSource source, CancellationToken ct)
     {
-        await InvokeCommandAsync(window, graph.Search.LoadCatalogCommand, ct);
-        Require(graph.Search.Model.State.CatalogState == CourseUiLoadState.Complete, "ui_catalog_not_loaded");
-        var term = graph.Search.Model.State.Terms.Single(option => option.Selector == StudentUiValidationSource.Selector);
-        var selection = Named<ComboBox>(window, "TermField");
-        selection.SetCurrentValue(Selector.SelectedItemProperty, term);
-        selection.GetBindingExpression(Selector.SelectedItemProperty)?.UpdateSource();
-        Require(graph.Search.SelectedTerm == term, "ui_term_binding_not_applied");
+        await EventuallyAsync(() => graph.Search.Model.State.SelectedTerm is not null
+            || graph.Search.Model.State.CatalogState == CourseUiLoadState.Failed, ct);
+        var term = graph.Search.Model.State.SelectedTerm;
+        Require(term is { Year: StudentUiValidationSource.Year, Selector: StudentUiValidationSource.Selector }
+            && source.CatalogCalls >= 1, "ui_current_term_not_loaded");
     }
 
     private static async Task VerifyEmptyWatchColumnsAsync(StudentWindow window, StudentDesktopSession graph, CancellationToken ct)
@@ -319,8 +311,7 @@ internal static partial class StudentUiValidation
 
     private static async Task ClickLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)
     {
-        var text = language == UiLanguage.Korean ? "한국어" : "English";
-        InvokeButton(Visuals<Button>(window).Single(button => button.IsVisible && button.Content is string content && content == text));
+        InvokeButton(Named<Button>(window, language == UiLanguage.Korean ? "KoreanLanguage" : "EnglishLanguage"));
         await EventuallyAsync(() => graph.Settings.Model.State.Stored?.Values.Language == language && !graph.Settings.SaveCommand.IsExecuting, ct);
         await PumpUiAsync(window);
     }

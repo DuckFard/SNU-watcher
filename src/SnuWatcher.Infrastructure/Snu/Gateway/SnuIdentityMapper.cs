@@ -34,7 +34,8 @@ public static class SnuIdentityMapper
             ? catalog.Terms.SingleOrDefault(term => term.Year == query.Year && term.Selector == query.TermSelector)
             : null;
         sourceQuery = term is null ? null : new(new(term.Year, term.Selector, term.Name, term.EnglishName),
-            query.CourseCode, query.Name, query.Instructor, query.UpDepartment, query.Department);
+            query.CourseCode, query.Name, query.Instructor, query.UpDepartment, query.Department,
+            Page: query.Page, Grade: query.Grade, Level: query.Level);
         return sourceQuery is not null;
     }
 
@@ -42,5 +43,6 @@ public static class SnuIdentityMapper
         dispatched?.Term is { } term && term.Year == query.Year && term.Selector == query.TermSelector
         && dispatched.CourseCode == query.CourseCode && dispatched.Name == query.Name
         && dispatched.Instructor == query.Instructor && dispatched.UpDepartment == query.UpDepartment
-        && dispatched.Department == query.Department && dispatched.Major is null;
+        && dispatched.Department == query.Department && dispatched.Major is null && dispatched.Page == query.Page
+        && dispatched.Grade == query.Grade && dispatched.Level == query.Level;
 }

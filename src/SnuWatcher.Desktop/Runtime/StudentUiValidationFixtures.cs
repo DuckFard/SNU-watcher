@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SnuWatcher.Application.Delivery;
@@ -30,8 +31,9 @@ internal sealed class StudentUiValidationSource(StudentUiValidationClock clock) 
     internal const string Selector = "U000200002U000300002";
     internal static SectionKey Key012 { get; } = new(Year, "U000200002", "U000300002", "F32.102", "012", "0");
     internal static SectionKey Key013 { get; } = new(Year, "U000200002", "U000300002", "F32.102", "013", "0");
-    private int _catalogs, _interactive, _watch, _details, _disposed, _failInteractive, _holdDetails;
+    private int _catalogs, _interactive, _watch, _details, _disposed, _failInteractive, _holdDetails, _holdCatalog;
     private readonly TaskCompletionSource _releaseDetails = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _releaseCatalog = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal TaskCompletionSource DetailsEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal int CatalogCalls => Volatile.Read(ref _catalogs);
     internal int InteractiveSearchCalls => Volatile.Read(ref _interactive);
@@ -43,13 +45,41 @@ internal sealed class StudentUiValidationSource(StudentUiValidationClock clock) 
     internal void HoldDetails() => Volatile.Write(ref _holdDetails, 1);
     internal void ReleaseDetails() => _releaseDetails.TrySetResult();
 
-    public Task<SourceRead<CourseCatalogData>> GetCatalogAsync(CatalogQuery query, SourceRequestPurpose purpose, CancellationToken ct)
+    /// <summary>Holds catalog reads until released, so startup checks never race the search page's own term read.</summary>
+    internal void HoldCatalog() => Volatile.Write(ref _holdCatalog, 1);
+    internal void ReleaseCatalog() { Volatile.Write(ref _holdCatalog, 0); _releaseCatalog.TrySetResult(); }
+
+    public async Task<SourceRead<CourseCatalogData>> GetCatalogAsync(CatalogQuery query, SourceRequestPurpose purpose, CancellationToken ct)
     {
         Check(ct); Interlocked.Increment(ref _catalogs);
-        return Task.FromResult(new SourceRead<CourseCatalogData>(SourceReadStatus.Complete,
-            new(query, [new(query.Year, Selector, "2학기 (Demo)", "Second semester (Demo)")],
+        if (Volatile.Read(ref _holdCatalog) != 0) await _releaseCatalog.Task.WaitAsync(ct).ConfigureAwait(false);
+        // Like the registration site, every catalog reports the site's current term (here the demo winter term).
+        return new SourceRead<CourseCatalogData>(SourceReadStatus.Complete,
+            new CourseCatalogData(query, [new(query.Year, Selector, "겨울학기 (Demo)", "Winter Semester (Demo)")],
                 [new("DEMO.COLLEGE", "자연과학대학 (Demo)", "College of Natural Sciences (Demo)", "UP_DEPT"),
-                 new("DEMO.DEPARTMENT", "통계학과 (Demo)", "Statistics (Demo)", "DEPT")]), [], clock.GetUtcNow()));
+                 new("DEMO.DEPARTMENT", "통계학과 (Demo)", "Statistics (Demo)", "DEPT")]) { CurrentYear = Year, CurrentTermSelector = Selector },
+            [], clock.GetUtcNow());
+    }
+
+    /// <summary>Demo listing for an empty search: the two statistics sections plus 21 more, 23 in all (three pages).</summary>
+    internal const int BrowseCount = 23;
+    private const int PageSize = 10;
+
+    private ImmutableArray<CourseSearchRow> BrowseRows()
+    {
+        var names = new[] { "확률론 (Demo)", "회귀분석 (Demo)", "통계학 실험 (Demo)", "데이터과학 입문 (Demo)", "수리통계 (Demo)", "표본조사론 (Demo)", "베이즈 통계 (Demo)" };
+        var rows = ImmutableArray.CreateBuilder<CourseSearchRow>(BrowseCount);
+        rows.Add(Row(Key012, 40) with { Classification = "[학사] [전선]", Credits = 3 });
+        rows.Add(Row(Key013, 39) with { Classification = "[학사] [전선]", Credits = 3 });
+        for (var index = 0; index < BrowseCount - 2; index++)
+        {
+            var key = new SectionKey(Year, "U000200002", "U000300002", $"F33.{201 + index / 3}", $"00{1 + index % 3}", "0");
+            var capacity = 30 + index % 4 * 10;
+            var registered = index % 3 == 0 ? capacity : capacity - 1 - index % 5;
+            rows.Add(new CourseSearchRow(key, names[index % names.Length], "김서연 (Demo)", "통계학과 (Demo)", "화(09:30~10:45) 목(09:30~10:45)",
+                registered, capacity, registered, "Enrollment/Quota", clock.GetUtcNow()) { Classification = "[학사] [전필]", Credits = 3 });
+        }
+        return rows.MoveToImmutable();
     }
 
     public Task<SourceRead<CourseSearchData>> SearchAsync(CourseSearchQuery query, SourceRequestPurpose purpose, CancellationToken ct)
@@ -59,9 +89,19 @@ internal sealed class StudentUiValidationSource(StudentUiValidationClock clock) 
         if (purpose == SourceRequestPurpose.Interactive && Volatile.Read(ref _failInteractive) != 0)
             return Task.FromResult(new SourceRead<CourseSearchData>(SourceReadStatus.Failed, null,
                 [new(SourceProblemKind.Unavailable, "ui_validation_source_unavailable")], clock.GetUtcNow()));
-        ImmutableArray<CourseSearchRow> rows = query.Year == Year && query.TermSelector == Selector && query.CourseCode == Key012.CourseCode
-            ? ImmutableArray.Create(Row(Key012, 40), Row(Key013, 39)) : [];
-        return Task.FromResult(new SourceRead<CourseSearchData>(SourceReadStatus.Complete, new(query, rows, 1), [], clock.GetUtcNow()));
+        var inTerm = query.Year == Year && query.TermSelector == Selector;
+        var browse = query.CourseCode is null && query.Name is null && query.Instructor is null && query.UpDepartment is null
+            && query.Department is null && query.Grade is null && query.Level is null;
+        ImmutableArray<CourseSearchRow> all = !inTerm ? []
+            : query.CourseCode == Key012.CourseCode ? ImmutableArray.Create(Row(Key012, 40), Row(Key013, 39))
+            : browse ? BrowseRows() : [];
+        if (query.Page is not { } page)
+            return Task.FromResult(new SourceRead<CourseSearchData>(SourceReadStatus.Complete, new(query, all, 1), [], clock.GetUtcNow()));
+        // A paged query reads one ten-row page and reports the listing's total and last page, as the site does.
+        var lastPage = Math.Max(1, (all.Length + PageSize - 1) / PageSize);
+        var rows = all.Skip((page - 1) * PageSize).Take(PageSize);
+        return Task.FromResult(new SourceRead<CourseSearchData>(SourceReadStatus.Complete,
+            new(query, rows, 1, all.Length, lastPage), [], clock.GetUtcNow()));
     }
 
     public async Task<SourceRead<CourseDetails>> GetDetailsAsync(SectionKey key, SourceRequestPurpose purpose, CancellationToken ct)

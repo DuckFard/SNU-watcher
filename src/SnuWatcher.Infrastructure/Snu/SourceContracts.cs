@@ -31,9 +31,21 @@ public sealed record SourceSectionIdentity
 }
 
 public sealed record SourceDepartment(string Code, string Name, string? EnglishName, string Level);
-public sealed record SourceCatalog(int Year, IReadOnlyList<SourceTerm> Terms, IReadOnlyList<SourceDepartment> Departments);
+public sealed record SourceCatalog(int Year, IReadOnlyList<SourceTerm> Terms, IReadOnlyList<SourceDepartment> Departments)
+{
+    /// <summary>Year of the term the site reports as current (currSchyy); it may differ from <see cref="Year"/>.</summary>
+    public int? CurrentYear { get; init; }
+    /// <summary>The site's current term selector (currShtmFg + currDetaShtmFg), when both parts are valid.</summary>
+    public string? CurrentSelector { get; init; }
+}
+
+/// <summary>
+/// One search. A null page reads every result page within the configured bound; a page number reads exactly
+/// that one page, as the registration site does when a student pages through results.
+/// </summary>
 public sealed record SourceSearchQuery(SourceTerm Term, string? CourseCode = null, string? Name = null,
-    string? Instructor = null, string? UpDepartment = null, string? Department = null, string? Major = null);
+    string? Instructor = null, string? UpDepartment = null, string? Department = null, string? Major = null,
+    int? Page = null, string? Grade = null, string? Level = null);
 
 /// <summary>Counts retain their public quota label; apparent seats do not imply personal eligibility.</summary>
 public sealed record SourceSection(SourceSectionIdentity Identity, string Name, string? Instructor,
@@ -41,6 +53,10 @@ public sealed record SourceSection(SourceSectionIdentity Identity, string Name, 
 {
     /// <summary>UTC receipt of this count's complete response body; null for pure-parser or manually constructed rows.</summary>
     public DateTimeOffset? ObservedAtUtc { get; init; }
+    /// <summary>The card's program and course-type tags, for example "[학사] [전선]".</summary>
+    public string? Classification { get; init; }
+    /// <summary>Credits stated on the card.</summary>
+    public decimal? Credits { get; init; }
     public int? AvailableSeats => Registered.HasValue && Capacity.HasValue ? Math.Max(0, Capacity.Value - Registered.Value) : null;
 }
 
@@ -53,6 +69,10 @@ public sealed record SourceSearchResult(IReadOnlyList<SourceSection> Sections, b
 {
     /// <summary>UTC query completion, distinct from the receipt times of successfully read pages.</summary>
     public DateTimeOffset? CompletedAtUtc { get; init; }
+    /// <summary>The site's stated number of matching courses ("N건의 교과목이 검색되었습니다"), when present.</summary>
+    public int? TotalCount { get; init; }
+    /// <summary>The highest page the site links to (its "last page" arrow), or the read page when it is the only one.</summary>
+    public int? LastPage { get; init; }
 }
 public sealed record SourceFailure(SourceFailureKind Kind, string Message, TimeSpan? RetryAfter = null)
 {

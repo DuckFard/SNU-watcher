@@ -166,7 +166,7 @@
   <sys:String x:Key="Ui.WatchConflict">관심 강좌가 변경되었습니다. 현재 상태를 불러온 후 다시 시도하세요.</sys:String>
   <sys:String x:Key="Ui.CommandFailed">작업을 완료하지 못했습니다. 다시 시도하기 전에 현재 상태를 확인하세요.</sys:String>
   <sys:String x:Key="Ui.FiltersInvalid">올바른 학년도와 하나 이상의 검색 조건을 입력하세요.</sys:String>
-  <sys:String x:Key="Ui.TermUnconfirmed">검색 전에 SNU에서 학기를 불러와 선택하세요.</sys:String>
+  <sys:String x:Key="Ui.TermUnconfirmed">아직 현재 학기를 확인하지 못했습니다. 잠시 후 다시 시도하세요.</sys:String>
   <sys:String x:Key="Ui.SectionNotFound">조회된 결과에서 해당 강좌번호를 찾을 수 없습니다.</sys:String>
   <sys:String x:Key="Ui.InvalidSection">앞자리 0을 포함한 세 자리 강좌번호를 입력하세요.</sys:String>
   <sys:String x:Key="Ui.WatchSaved">관심 강좌를 저장했습니다.</sys:String>
@@ -206,7 +206,7 @@
   <sys:String x:Key="Ui.SelectSections">지켜볼 강좌 선택</sys:String>
   <sys:String x:Key="Ui.ObservedAt">잔여석 조회 시각</sys:String>
   <sys:String x:Key="Ui.SearchCompleted">검색 완료 시각</sys:String>
-  <sys:String x:Key="Ui.SearchHint">학기와 교과목번호, 교과목명, 담당교수 또는 학과를 선택한 후 검색하세요.</sys:String>
+  <sys:String x:Key="Ui.SearchHint">수강신청 사이트처럼, 아무것도 입력하지 않고 검색하면 이번 학기 전체 강좌를 볼 수 있습니다.</sys:String>
   <sys:String x:Key="Ui.LoadCatalog">학기와 학과 불러오기</sys:String>
   <sys:String x:Key="Ui.WatchSelectionEmpty">검색 결과에서 강좌를 선택해 관심 강좌를 만드세요.</sys:String>
   <sys:String x:Key="Ui.ExpiryInclusive">선택한 날짜를 포함하며 한국 시간 자정까지 유지됩니다.</sys:String>
@@ -245,4 +245,27 @@
   <sys:String x:Key="Ui.CooldownUntil">사이트 재시도 가능 시각</sys:String>
   <sys:String x:Key="Ui.BrowserFailed">기본 브라우저를 열 수 없습니다. 공식 SNU 수강신청 사이트를 직접 이용하세요.</sys:String>
   <sys:String x:Key="Ui.MemberCountShort">분반 수</sys:String>
+  <sys:String x:Key="Ui.SearchPlaceholder">교과목명 또는 검색어 · 비워 두고 검색하면 전체 강좌를 봅니다</sys:String>
+  <sys:String x:Key="Ui.TermSearchSuffix">강좌 검색</sys:String>
+  <sys:String x:Key="Ui.StartTitle">지켜볼 강좌를 찾아보세요</sys:String>
+  <sys:String x:Key="Ui.BrowseAll">전체 강좌 보기</sys:String>
+  <sys:String x:Key="Ui.TermLoading">수강신청 사이트에서 현재 학기를 확인하는 중…</sys:String>
+  <sys:String x:Key="Ui.CurrentTermUnavailable">수강신청 사이트에서 현재 학기를 읽지 못했습니다.</sys:String>
+  <sys:String x:Key="Ui.TryAgain">다시 시도</sys:String>
+  <sys:String x:Key="Ui.Grade">학년</sys:String>
+  <sys:String x:Key="Ui.AllGrades">전체 학년</sys:String>
+  <sys:String x:Key="Ui.Grade1">1학년</sys:String>
+  <sys:String x:Key="Ui.Grade2">2학년</sys:String>
+  <sys:String x:Key="Ui.Grade3">3학년</sys:String>
+  <sys:String x:Key="Ui.Grade4">4학년</sys:String>
+  <sys:String x:Key="Ui.Grade5">5학년</sys:String>
+  <sys:String x:Key="Ui.Program">이수과정</sys:String>
+  <sys:String x:Key="Ui.AllPrograms">전체 과정</sys:String>
+  <sys:String x:Key="Ui.ProgramBachelor">학사</sys:String>
+  <sys:String x:Key="Ui.ProgramMaster">석사</sys:String>
+  <sys:String x:Key="Ui.ProgramDoctor">박사</sys:String>
+  <sys:String x:Key="Ui.ProgramIntegrated">석박사통합</sys:String>
+  <sys:String x:Key="Ui.PreviousPage">이전 페이지</sys:String>
+  <sys:String x:Key="Ui.NextPage">다음 페이지</sys:String>
+  <sys:String x:Key="Ui.LastPage">마지막 페이지</sys:String>
 </ResourceDictionary>

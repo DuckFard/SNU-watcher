@@ -113,7 +113,7 @@ internal static partial class StudentUiValidation
         string leaf, bool narrow, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        Require(leaf is "ui-onboarding-en.png" or "ui-search-en-normal.png" or "ui-search-ko-normal.png"
+        Require(leaf is "ui-start-en.png" or "ui-search-en-normal.png" or "ui-search-ko-normal.png"
             or "ui-search-ko-narrow.png" or "ui-watches-en-normal.png" or "ui-watches-ko-narrow.png"
             or "ui-settings-en-normal.png" or "ui-expired-ko.png" or "ui-simulated-native-en.png"
             or "ui-simulated-native-ko-narrow.png" or "ui-alerts-en-normal.png" or "ui-alerts-ko-narrow.png"
@@ -307,13 +307,13 @@ internal static partial class StudentUiValidation
     }
 }
 
-/// <summary>Bounded private binding evidence. Only the deliberately invalid year conversion is an expected validation error.</summary>
+/// <summary>Bounded private binding evidence. Every binding error counts: the journey has no deliberately invalid input.</summary>
 internal sealed class StudentUiBindingProbe : TraceListener
 {
     private readonly object _sync = new();
     private readonly SourceLevels _previousLevel;
     private ImmutableArray<string> _errors = [];
-    private int _errorCount, _expectedCount, _expectYear;
+    private int _errorCount;
     internal StudentUiBindingProbe()
     {
         _previousLevel = PresentationTraceSources.DataBindingSource.Switch.Level;
@@ -321,9 +321,7 @@ internal sealed class StudentUiBindingProbe : TraceListener
         PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
     }
     internal int ErrorCount => Volatile.Read(ref _errorCount);
-    internal int ExpectedValidationCount => Volatile.Read(ref _expectedCount);
     internal ImmutableArray<string> Errors { get { lock (_sync) return _errors; } }
-    internal bool ExpectInvalidYear { set => Volatile.Write(ref _expectYear, value ? 1 : 0); }
     public override bool IsThreadSafe => true;
     public override void Write(string? message) { }
     public override void WriteLine(string? message) { }
@@ -331,10 +329,6 @@ internal sealed class StudentUiBindingProbe : TraceListener
     {
         if (eventType is not (TraceEventType.Error or TraceEventType.Critical)) return;
         var text = message ?? "binding_error";
-        if (Volatile.Read(ref _expectYear) != 0 && text.Contains("abc", StringComparison.Ordinal)
-            && (text.Contains("Format", StringComparison.OrdinalIgnoreCase) || text.Contains("Convert", StringComparison.OrdinalIgnoreCase)
-                || text.Contains("Int32", StringComparison.Ordinal)))
-        { Interlocked.Increment(ref _expectedCount); return; }
         Interlocked.Increment(ref _errorCount);
         text = new string(text.Take(600).Select(character => char.IsControl(character) ? ' ' : character).ToArray());
         try { text = Regex.Replace(text, @"https?://\S+|[A-Za-z]:\\\S+", "[redacted]", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50)); }

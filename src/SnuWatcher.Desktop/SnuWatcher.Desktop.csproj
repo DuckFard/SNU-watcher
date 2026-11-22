@@ -21,6 +21,12 @@
     <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Noto Sans KR 2.004 (SIL Open Font License 1.1), the registration site's typeface; see docs/third-party. -->
+    <Resource Include="Fonts\NotoSansKR-Regular.otf" />
+    <Resource Include="Fonts\NotoSansKR-Medium.otf" />
+    <Resource Include="Fonts\NotoSansKR-Bold.otf" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
     <ProjectReference Include="../SnuWatcher.Application/SnuWatcher.Application.csproj" />
     <ProjectReference Include="../SnuWatcher.Infrastructure/SnuWatcher.Infrastructure.csproj" />

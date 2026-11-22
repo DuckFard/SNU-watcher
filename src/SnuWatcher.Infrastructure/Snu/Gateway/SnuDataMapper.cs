@@ -17,6 +17,12 @@ public static class SnuDataMapper
         {
             if (source is null || source.Year != query.Year) return Failed<CourseCatalogData>(completedAtUtc);
             var data = new CourseCatalogData(query, source.Terms.Select(Term), source.Departments.Select(Department));
+            // The site's current term is display context. A malformed report is dropped, never a catalog failure.
+            if (source.CurrentYear is { } currentYear && source.CurrentSelector is { } selector)
+            {
+                try { data = data with { CurrentYear = currentYear, CurrentTermSelector = selector }; }
+                catch (Exception error) when (InvalidShape(error)) { }
+            }
             if (query.TermSelector is not null && !data.Terms.Any(term => term.Selector == query.TermSelector))
                 return new(SourceReadStatus.Failed, null, [new(SourceProblemKind.TermUnavailable, "term_unconfirmed")], completedAtUtc);
             return new(SourceReadStatus.Complete, data, [], completedAtUtc);
@@ -83,7 +89,9 @@ public static class SnuDataMapper
         }
         var problems = invalid || (!source.IsComplete && sourceProblems.Count == 0)
             ? WithParseProblem(sourceProblems) : sourceProblems;
-        var data = new CourseSearchData(query, valid.Values, source.PagesFetched);
+        var data = new CourseSearchData(query, valid.Values, source.PagesFetched,
+            source.TotalCount is >= 0 and <= SourceLimits.MaxBrowsePage * 100 ? source.TotalCount : null,
+            source.LastPage is >= 1 and <= SourceLimits.MaxBrowsePage ? source.LastPage : null);
         return new(problems.Count == 0 ? SourceReadStatus.Complete : SourceReadStatus.Partial, data, problems, completedAt);
     }
 
@@ -97,6 +105,9 @@ public static class SnuDataMapper
             if (key.Year != query.Year || key.SemesterCode + key.DetailSemesterCode != query.TermSelector) return false;
             row = new(key, source.Name, source.Instructor, source.Department, source.Schedule, Count(source.Registered),
                 Count(source.Capacity), Count(source.TotalRegistered), source.CountLabel, observedAt);
+            // Tags and credits are display extras: an unusable value is dropped without discarding the row.
+            try { row = row with { Classification = source.Classification }; } catch (Exception error) when (InvalidShape(error)) { }
+            row = row with { Credits = source.Credits is >= 0 and <= SourceLimits.MaxCredits ? source.Credits : null };
             return true;
         }
         catch (Exception error) when (InvalidShape(error)) { return false; }

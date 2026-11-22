@@ -6,7 +6,7 @@
              AutomationProperties.Name="{DynamicResource Ui.WatchSelected}" FontSize="14">
   <UserControl.Resources>
     <Style x:Key="Selection.Name" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
     </Style>
   </UserControl.Resources>
@@ -29,7 +29,7 @@
         </TextBlock>
         <WrapPanel Margin="0,0,0,8">
           <TextBlock Text="{DynamicResource Ui.MemberCount}" Style="{DynamicResource Student.Label}" Margin="0,0,8,0"/>
-          <TextBlock Text="{Binding Model.State.Rows.Length}" Style="{DynamicResource Student.Label}" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Model.State.Rows.Length}" Style="{DynamicResource Student.Label}" FontWeight="Medium"/>
         </WrapPanel>
         <WrapPanel Margin="0,0,0,10">
           <TextBlock Text="{Binding Model.State.Year}" Style="{DynamicResource Student.Label}" Margin="0,0,10,0"/>

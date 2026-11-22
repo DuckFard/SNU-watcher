@@ -33,7 +33,7 @@ public sealed class CourseSearchViewModelTests
         Assert.Empty(queries.Searches);
         await view.SearchCommand.ExecuteAsync();
         var query = Assert.Single(queries.Searches);
-        Assert.Equal(new CourseSearchQuery(2026, SearchQueries.Selector, "F32.102", "통계학", "이권상", "COLLEGE", "DEPT"), query);
+        Assert.Equal(new CourseSearchQuery(2026, SearchQueries.Selector, "F32.102", "통계학", "이권상", "COLLEGE", "DEPT", page: 1), query);
         Assert.Equal(CourseUiLoadState.Complete, view.Model.State.SearchState);
         Assert.Equal(SearchQueries.Now, Assert.Single(view.Model.State.Rows).Row.ObservedAtUtc);
     }
@@ -159,9 +159,11 @@ internal sealed class SearchQueries : IRuntimeCourseQueries
     internal TaskCompletionSource SearchStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal Func<CourseSearchQuery, CancellationToken, Task<SourceRead<CourseSearchData>>>? SearchHandler { get; set; }
     internal Func<SectionKey, CancellationToken, Task<SourceRead<CourseDetails>>>? DetailsHandler { get; set; }
+    internal Func<CatalogQuery, CancellationToken, Task<SourceRead<CourseCatalogData>>>? CatalogHandler { get; set; }
     public Task<SourceRead<CourseCatalogData>> GetCatalogAsync(CatalogQuery query, CancellationToken cancellationToken = default)
     {
         Catalogs.Add(query);
+        if (CatalogHandler is { } handler) return handler(query, cancellationToken);
         return Task.FromResult(new SourceRead<CourseCatalogData>(SourceReadStatus.Complete,
             new(query, [new(query.Year, Selector, "2학기", "Second semester")],
                 [new("COLLEGE", "단과대학", null, "UP_DEPT"), new("DEPT", "통계학과", null, "DEPT")]), [], Now));

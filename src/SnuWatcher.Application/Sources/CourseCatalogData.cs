@@ -53,4 +53,28 @@ public sealed record CourseCatalogData
     public CatalogQuery Query { get; }
     public ImmutableArray<CatalogTerm> Terms { get; }
     public ImmutableArray<DepartmentOption> Departments { get; }
+
+    private readonly int? currentYear;
+    private readonly string? currentTermSelector;
+
+    /// <summary>
+    /// The academic year of the term the source itself reports as current. It may differ from
+    /// <see cref="Query"/>'s year (for example in January, while the winter term of the previous year is open).
+    /// </summary>
+    public int? CurrentYear
+    {
+        get => currentYear;
+        init => currentYear = value is null ? null : SourceValidation.Year(value.Value);
+    }
+
+    /// <summary>The source-reported current term selector, belonging to <see cref="CurrentYear"/>.</summary>
+    public string? CurrentTermSelector
+    {
+        get => currentTermSelector;
+        init => currentTermSelector = value is null ? null : SourceValidation.Token(value, nameof(CurrentTermSelector));
+    }
+
+    /// <summary>The reported current term when it belongs to this catalog's year, otherwise null.</summary>
+    public CatalogTerm? CurrentTerm => CurrentYear == Query.Year && CurrentTermSelector is { } selector
+        ? Terms.FirstOrDefault(term => term.Selector == selector) : null;
 }

@@ -20,6 +20,8 @@ public partial class StudentWindow : Window, IDisposable
     private bool _allowClose;
     private bool _finishing;
     private bool _syncingNavigation;
+    private StudentPage? _shownPage;
+    private bool _startupSeen;
 
     internal StudentWindow(StudentShellViewModel? model, Action requestQuit, bool enableTray = true)
     {
@@ -36,11 +38,12 @@ public partial class StudentWindow : Window, IDisposable
         Left = work.Left + (work.Width - Width) / 2; Top = work.Top + (work.Height - Height) / 2;
         if (model is null)
         {
-            Onboarding.Visibility = Visibility.Collapsed;
             FindNavigation.IsEnabled = WatchesNavigation.IsEnabled = AlertsNavigation.IsEnabled = SettingsNavigation.IsEnabled = false;
+            KoreanLanguage.IsEnabled = EnglishLanguage.IsEnabled = false;
         }
         else
         {
+            _shownPage = model.SelectedPage;
             model.PropertyChanged += ModelChanged;
             model.PreferencesChanged += PreferencesChanged;
             _resources.Apply(model.State.Language);
@@ -78,30 +81,39 @@ public partial class StudentWindow : Window, IDisposable
 
     internal void AllowClose() => _allowClose = true;
 
-    private void OnWindowLoaded(object sender, RoutedEventArgs args) => QueueWelcomeFocus();
+    private void OnWindowLoaded(object sender, RoutedEventArgs args) => QueueInitialFocus();
 
-    private void OnOnboardingVisibilityChanged(object sender, DependencyPropertyChangedEventArgs args) => QueueWelcomeFocus();
-
-    private void QueueWelcomeFocus()
+    private void QueueInitialFocus()
     {
-        // Wait for visibility bindings to enable the destination. Recheck the active window so
-        // an auxiliary or closing window never takes focus from another application.
+        // There is no welcome screen: the course menu takes focus so the student can start right away. Recheck the
+        // active window so an auxiliary or closing window never takes focus from another application.
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
         {
             if (!IsLoaded || !IsVisible || !IsActive) return;
-            UIElement target = Onboarding.Visibility == Visibility.Visible ? GetStartedButton
-                : _finishing || _model is null ? QuitButton : FindNavigation;
-            target.Focus();
+            if (_finishing || _model is null) { QuitButton.Focus(); return; }
+            // The course page opens with the caret in its search box; any other page starts on the menu.
+            if (FindDescendant<Views.FindCoursesView>(PageContent) is not { } search || !search.FocusSearch()) FindNavigation.Focus();
         }));
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, index);
+            if (child is T match) return match;
+            if (FindDescendant<T>(child) is { } nested) return nested;
+        }
+        return null;
     }
 
     internal void SetStopping()
     {
         Dispatcher.VerifyAccess();
         _finishing = true;
-        Onboarding.Visibility = Visibility.Collapsed;
-        PageContent.IsEnabled = false; Onboarding.IsEnabled = false;
+        PageContent.IsEnabled = false;
         FindNavigation.IsEnabled = WatchesNavigation.IsEnabled = AlertsNavigation.IsEnabled = SettingsNavigation.IsEnabled = false;
+        KoreanLanguage.IsEnabled = EnglishLanguage.IsEnabled = false;
         ShowStatusKey("Ui.Stopping");
     }
 
@@ -118,16 +130,18 @@ public partial class StudentWindow : Window, IDisposable
         // Enough for a compact list pane's header, rows and paging; 150% on 1280x800 still fits without scrolling.
         PageContent.MinHeight = compact ? 340 : 0;
         PageScrollViewer.Margin = compact ? new Thickness(6, 2, 6, 2) : new Thickness(16, 8, 16, 6);
-        UtilityBand.Padding = new Thickness(gutter, compact ? 1 : 3, compact ? 2 : gutter - 8, compact ? 1 : 3);
-        HeaderBand.Padding = new Thickness(gutter, compact ? 2 : 10, gutter, 0);
+        HeaderBand.Padding = new Thickness(gutter, compact ? 1 : 8, compact ? 6 : gutter, 0);
         StatusBand.Padding = new Thickness(gutter, compact ? 0 : 4, gutter, 0);
         BrandMark.Width = BrandMark.Height = compact ? 24 : 36;
         BrandMark.CornerRadius = new CornerRadius(compact ? 12 : 18);
-        BrandingPanel.Margin = new Thickness(0, 0, compact ? 12 : 24, compact ? 4 : 10);
+        BrandingPanel.Margin = new Thickness(0, compact ? 0 : 2, compact ? 12 : 24, compact ? 0 : 4);
         BrandingTitle.FontSize = compact || narrow ? 17 : 21;
-        BrandingSubtitle.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        // Narrow windows leave the term to the search card, which always shows it, so the header never clips.
+        TermLabel.FontSize = compact ? 15 : 18;
+        TermLabel.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+        BrandingSubtitle.Visibility = compact || narrow ? Visibility.Collapsed : Visibility.Visible;
         DemoLabel.FontSize = compact ? 11 : 11.5;
-        QuitButton.MinHeight = compact ? 20 : 24;
+        foreach (var link in new[] { KoreanLanguage, EnglishLanguage, QuitButton }) link.MinHeight = compact ? 20 : 24;
         FooterBand.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         foreach (var navigation in new[] { FindNavigation, WatchesNavigation, AlertsNavigation, SettingsNavigation })
         {
@@ -148,8 +162,19 @@ public partial class StudentWindow : Window, IDisposable
     private void ModelChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (_model is null) return;
-        // A quick fade marks a page change; pages never slide (top-level transitions stay calm).
-        if (args.PropertyName == nameof(StudentShellViewModel.SelectedPage)) Presentation.Motion.FadeInPage(PageContent);
+        // A quick fade marks an actual page change; pages never slide (top-level transitions stay calm). The shell
+        // re-announces its page with every status refresh (every two seconds), so compare with the page on screen.
+        if (args.PropertyName == nameof(StudentShellViewModel.SelectedPage) && _model.SelectedPage != _shownPage)
+        {
+            _shownPage = _model.SelectedPage;
+            Presentation.Motion.FadeInPage(PageContent);
+        }
+        // Local startup has finished: the course page may now read the site's current term.
+        if (!_startupSeen && _model.State.IsLoaded)
+        {
+            _startupSeen = true;
+            FindDescendant<Views.FindCoursesView>(PageContent)?.EnsureCurrentTerm();
+        }
         _syncingNavigation = true;
         try
         {

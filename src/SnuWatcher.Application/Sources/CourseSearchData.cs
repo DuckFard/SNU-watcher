@@ -37,12 +37,34 @@ public sealed record CourseSearchRow
     public int? TotalRegistered { get; }
     public string? QuotaLabel { get; }
     public DateTimeOffset ObservedAtUtc { get; }
+
+    private readonly string? classification;
+    private readonly decimal? credits;
+
+    /// <summary>The source's own program and course-type tags (for example "[학사] [전선]"); display only.</summary>
+    public string? Classification
+    {
+        get => classification;
+        init => classification = SourceValidation.OptionalDisplay(value, SourceLimits.MaxShortDisplay, nameof(Classification));
+    }
+
+    /// <summary>Source-reported credits, when the row states them.</summary>
+    public decimal? Credits
+    {
+        get => credits;
+        init => credits = value is null or (>= 0 and <= SourceLimits.MaxCredits) ? value
+            : throw new ArgumentOutOfRangeException(nameof(Credits), "Credits must be null or between zero and 100.");
+    }
 }
 
-/// <summary>Verified fetched-page data. A complete empty search still fetched at least one page.</summary>
+/// <summary>
+/// Verified fetched-page data. A complete empty search still fetched at least one page. A paged query also
+/// carries the source's total result count and last page when the response states them.
+/// </summary>
 public sealed record CourseSearchData
 {
-    public CourseSearchData(CourseSearchQuery query, IEnumerable<CourseSearchRow> rows, int pagesFetched)
+    public CourseSearchData(CourseSearchQuery query, IEnumerable<CourseSearchRow> rows, int pagesFetched,
+        int? totalCount = null, int? lastPage = null)
     {
         ArgumentNullException.ThrowIfNull(query);
         Query = query;
@@ -50,10 +72,18 @@ public sealed record CourseSearchData
         if (pagesFetched is < 1 or > SourceLimits.MaxPages) throw new ArgumentOutOfRangeException(nameof(pagesFetched));
         if (Rows.DistinctBy(row => row.Key).Count() != Rows.Length)
             throw new ArgumentException("Resolve repeated identities before publishing source rows.", nameof(rows));
+        if (totalCount is < 0 or > SourceLimits.MaxBrowsePage * 100) throw new ArgumentOutOfRangeException(nameof(totalCount));
+        if (lastPage is < 1 or > SourceLimits.MaxBrowsePage) throw new ArgumentOutOfRangeException(nameof(lastPage));
         PagesFetched = pagesFetched;
+        TotalCount = totalCount;
+        LastPage = lastPage;
     }
 
     public CourseSearchQuery Query { get; }
     public ImmutableArray<CourseSearchRow> Rows { get; }
     public int PagesFetched { get; }
+    /// <summary>Source-reported number of matching courses, when stated.</summary>
+    public int? TotalCount { get; }
+    /// <summary>Source-reported last result page, when stated.</summary>
+    public int? LastPage { get; }
 }

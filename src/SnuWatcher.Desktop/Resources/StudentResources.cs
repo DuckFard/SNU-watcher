@@ -34,6 +34,9 @@ internal sealed class StudentResources
         {
             Source = new Uri("/SnuWatcher.Desktop;component/Resources/StudentTheme.xaml", UriKind.Relative),
         });
+        // The bundled registration-site typeface, with Windows fonts as fallback for any missing glyph.
+        replacement.Add("Student.Font", new System.Windows.Media.FontFamily(
+            new Uri("pack://application:,,,/SnuWatcher.Desktop;component/"), "./Fonts/#Noto Sans KR, Segoe UI, Malgun Gothic"));
         replacement.Add(marker, true);
         application.Resources = replacement;
         // Styles read every color dynamically, so swapping the palette restyles open windows in place.

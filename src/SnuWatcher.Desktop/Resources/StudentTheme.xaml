@@ -46,7 +46,7 @@
     <Setter Property="MinHeight" Value="36"/>
     <Setter Property="Margin" Value="0,0,8,8"/>
     <Setter Property="FontSize" Value="14"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontWeight" Value="Medium"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="Background" Value="{DynamicResource Snu.Blue}"/>
@@ -81,41 +81,37 @@
     <Setter Property="ui:Paint.Radius" Value="16"/>
   </Style>
 
-  <!-- Navy action panel: a filled blue pill and a white outline pill that fills white on hover. -->
-  <Style x:Key="Student.PanelButton" TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}">
-    <Setter Property="Margin" Value="0,0,0,8"/>
-    <Setter Property="Padding" Value="12,8"/>
-    <Setter Property="ui:Paint.Radius" Value="18"/>
-    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.BlueLight}"/>
-    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.BlueLight}"/>
-    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.OnNavy}"/>
-  </Style>
-  <Style x:Key="Student.PanelOutlineButton" TargetType="Button" BasedOn="{StaticResource Student.PanelButton}">
-    <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.OnNavyMuted}"/>
-    <Style.Triggers>
-      <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.Navy}"/></Trigger>
-    </Style.Triggers>
-  </Style>
-
-  <!-- Text buttons in the navy utility strip. -->
+  <!-- Small gray text links in the header's top-right corner, like the registration site's "공지사항 | FAQ | ENGLISH". -->
   <Style x:Key="Student.UtilityButton" TargetType="Button" BasedOn="{StaticResource Student.PrimaryButton}">
     <Setter Property="MinHeight" Value="24"/>
-    <Setter Property="Padding" Value="8,2"/>
+    <Setter Property="Padding" Value="6,2"/>
     <Setter Property="Margin" Value="0"/>
-    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontSize" Value="12.5"/>
     <Setter Property="FontWeight" Value="Normal"/>
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="Foreground" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
     <Setter Property="ui:Paint.Radius" Value="4"/>
-    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.NavyHover}"/>
-    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.BluePressed}"/>
-    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.OnNavy}"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.ActionHover}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.ActionPressed}"/>
+    <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.Focus}"/>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.NavHoverText}"/></Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Result paging, after the registration site: plain numbers, the current page blue and underlined. -->
+  <Style x:Key="Student.PageButton" TargetType="Button" BasedOn="{StaticResource Student.UtilityButton}">
+    <Setter Property="MinWidth" Value="32"/>
+    <Setter Property="MinHeight" Value="30"/>
+    <Setter Property="Padding" Value="8,3"/>
+    <Setter Property="Margin" Value="1,0"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
+  </Style>
+  <Style x:Key="Student.PageArrow" TargetType="Button" BasedOn="{StaticResource Student.PageButton}">
+    <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+    <Setter Property="FontSize" Value="11"/>
   </Style>
 
   <!-- Square icon button (secondary colors). Its glyph turns on hover, after the registration site's reset icon. -->
@@ -126,24 +122,32 @@
     <Setter Property="FontSize" Value="15"/>
   </Style>
 
-  <!-- "Advanced search" toggle: navy, with a glyph that turns while hovered or open. -->
+  <!-- "Advanced search" toggle: a light outline button that turns blue-tinted while its panel is open. -->
   <Style x:Key="Student.FilterToggle" TargetType="ToggleButton">
     <Setter Property="Padding" Value="12,7"/>
-    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="MinHeight" Value="40"/>
     <Setter Property="Margin" Value="0,0,0,0"/>
     <Setter Property="FontSize" Value="13.5"/>
     <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="Background" Value="{DynamicResource Snu.Navy}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Snu.Navy}"/>
+    <Setter Property="Background" Value="{DynamicResource Snu.Surface}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Snu.FieldBorder}"/>
     <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="Foreground" Value="{DynamicResource Snu.OnNavy}"/>
-    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.NavyHover}"/>
-    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.NavyHover}"/>
-    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.BluePressed}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Snu.Ink}"/>
+    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.ActionHover}"/>
+    <Setter Property="ui:Paint.HoverBorder" Value="{DynamicResource Snu.FieldBorderHover}"/>
+    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.ActionPressed}"/>
     <Setter Property="ui:Paint.Focus" Value="{DynamicResource Snu.Focus}"/>
+    <Setter Property="ui:Paint.Radius" Value="8"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="Template" Value="{StaticResource Student.ButtonTemplate}"/>
+    <Style.Triggers>
+      <Trigger Property="IsChecked" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Snu.Selected}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Snu.Blue}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedAccent}"/>
+      </Trigger>
+    </Style.Triggers>
   </Style>
 
   <!-- Inputs: borders meet 3:1 (WCAG 1.4.11), darken on hover and take a 2px blue ring while focused. -->
@@ -208,7 +212,7 @@
           <Trigger Property="IsSelected" Value="True">
             <Setter TargetName="Row" Property="Background" Value="{DynamicResource Snu.Selected}"/>
             <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedText}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontWeight" Value="Medium"/>
           </Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Snu.DisabledText}"/></Trigger>
         </ControlTemplate.Triggers>
@@ -353,13 +357,13 @@
     <Setter Property="FontSize" Value="12.5"/>
   </Style>
   <Style x:Key="Student.Title" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
-    <Setter Property="FontSize" Value="21"/>
-    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="FontSize" Value="22"/>
+    <Setter Property="FontWeight" Value="Medium"/>
     <Setter Property="Margin" Value="0,0,0,12"/>
   </Style>
   <Style x:Key="Student.SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
     <Setter Property="FontSize" Value="17"/>
-    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="FontWeight" Value="Medium"/>
   </Style>
 
   <!-- Surfaces: white cards on the light gray page, as on mySNU. -->
@@ -379,12 +383,6 @@
     <Setter Property="Padding" Value="14,10"/>
     <Setter Property="Margin" Value="0,0,0,10"/>
   </Style>
-  <Style x:Key="Student.NavyPanel" TargetType="Border">
-    <Setter Property="Background" Value="{DynamicResource Snu.Navy}"/>
-    <Setter Property="CornerRadius" Value="12"/>
-    <Setter Property="Padding" Value="14,14,14,8"/>
-    <Setter Property="Margin" Value="0,0,0,12"/>
-  </Style>
   <Style x:Key="Student.Badge" TargetType="Border">
     <Setter Property="CornerRadius" Value="4"/>
     <Setter Property="Padding" Value="8,2"/>
@@ -397,7 +395,7 @@
     <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Snu.Divider}"/>
     <Setter Property="FontSize" Value="13"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontWeight" Value="Medium"/>
     <Setter Property="Padding" Value="8,4"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="Template">
@@ -479,14 +477,14 @@
     <Setter Property="EnableColumnVirtualization" Value="False"/>
   </Style>
 
-  <!-- Main navigation: large bold labels; hover turns blue and grows a light underline, the page in view keeps a
-       full navy underline (mySNU / registration-site menu). High contrast fills the selected item instead. -->
+  <!-- Main navigation, after the registration site's menu: 17px regular labels; hover turns blue and grows a light
+       underline, the page in view stays blue with a full underline. High contrast fills the selected item instead. -->
   <Style x:Key="Student.Navigation" TargetType="RadioButton">
     <Setter Property="MinHeight" Value="42"/>
     <Setter Property="Margin" Value="0,0,28,0"/>
     <Setter Property="Padding" Value="2,10"/>
     <Setter Property="FontSize" Value="16"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontWeight" Value="Normal"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.NavText}"/>
@@ -501,7 +499,7 @@
                   ui:Motion.ExpandX="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}">
             <Border.RenderTransform><ScaleTransform ScaleX="0"/></Border.RenderTransform>
           </Border>
-          <Border Height="3" VerticalAlignment="Bottom" Background="{DynamicResource Snu.Navy}" RenderTransformOrigin="0.5,0.5"
+          <Border Height="2" VerticalAlignment="Bottom" Background="{DynamicResource Snu.Navy}" RenderTransformOrigin="0.5,0.5"
                   ui:Motion.ExpandX="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}">
             <Border.RenderTransform><ScaleTransform ScaleX="0"/></Border.RenderTransform>
           </Border>
@@ -510,6 +508,7 @@
           <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Snu.NavHoverText}"/></Trigger>
           <Trigger Property="IsChecked" Value="True">
             <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/>
           </Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
@@ -545,7 +544,7 @@
           <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderText" Property="TextElement.Foreground" Value="{DynamicResource Snu.NavHoverText}"/></Trigger>
           <Trigger Property="IsSelected" Value="True">
             <Setter TargetName="HeaderText" Property="TextElement.Foreground" Value="{DynamicResource Snu.NavSelectedText}"/>
-            <Setter TargetName="HeaderText" Property="TextElement.FontWeight" Value="SemiBold"/>
+            <Setter TargetName="HeaderText" Property="TextElement.FontWeight" Value="Medium"/>
             <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/>
           </Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
@@ -682,6 +681,7 @@
   <Style TargetType="ToolTip">
     <Setter Property="Background" Value="{DynamicResource Snu.TooltipBackground}"/>
     <Setter Property="Foreground" Value="{DynamicResource Snu.TooltipText}"/>
+    <Setter Property="FontFamily" Value="{DynamicResource Student.Font}"/>
     <Setter Property="FontSize" Value="12.5"/>
     <Setter Property="MaxWidth" Value="320"/>
     <Setter Property="Template">

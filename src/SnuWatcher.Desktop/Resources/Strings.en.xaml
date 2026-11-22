@@ -166,7 +166,7 @@
   <sys:String x:Key="Ui.WatchConflict">This watch changed. Reload its current state and try again.</sys:String>
   <sys:String x:Key="Ui.CommandFailed">The action could not be completed. Check the current status before retrying.</sys:String>
   <sys:String x:Key="Ui.FiltersInvalid">Enter a valid year and at least one search filter.</sys:String>
-  <sys:String x:Key="Ui.TermUnconfirmed">Load and select a term from SNU before searching.</sys:String>
+  <sys:String x:Key="Ui.TermUnconfirmed">The current term is not known yet. Try again in a moment.</sys:String>
   <sys:String x:Key="Ui.SectionNotFound">That exact section was not found in the returned results.</sys:String>
   <sys:String x:Key="Ui.InvalidSection">Use a three-digit section number, including leading zeros.</sys:String>
   <sys:String x:Key="Ui.WatchSaved">Your watch was saved.</sys:String>
@@ -206,7 +206,7 @@
   <sys:String x:Key="Ui.SelectSections">Select sections to watch</sys:String>
   <sys:String x:Key="Ui.ObservedAt">Availability observed at</sys:String>
   <sys:String x:Key="Ui.SearchCompleted">Search completed at</sys:String>
-  <sys:String x:Key="Ui.SearchHint">Choose a term and enter a course code, name, instructor or department, then select Search.</sys:String>
+  <sys:String x:Key="Ui.SearchHint">Leave every field empty and select Search to list every course in the term, as on the registration site.</sys:String>
   <sys:String x:Key="Ui.LoadCatalog">Load terms and departments</sys:String>
   <sys:String x:Key="Ui.WatchSelectionEmpty">Select a returned section to create a watch.</sys:String>
   <sys:String x:Key="Ui.ExpiryInclusive">Includes the selected date, through midnight in Korea.</sys:String>
@@ -245,4 +245,27 @@
   <sys:String x:Key="Ui.CooldownUntil">Source retry after</sys:String>
   <sys:String x:Key="Ui.BrowserFailed">The default browser could not be opened. Use the official SNU registration website.</sys:String>
   <sys:String x:Key="Ui.MemberCountShort">Sections</sys:String>
+  <sys:String x:Key="Ui.SearchPlaceholder">Course name or keyword. Leave empty and select Search to see every course.</sys:String>
+  <sys:String x:Key="Ui.TermSearchSuffix">course search</sys:String>
+  <sys:String x:Key="Ui.StartTitle">Find a course to watch</sys:String>
+  <sys:String x:Key="Ui.BrowseAll">Show every course</sys:String>
+  <sys:String x:Key="Ui.TermLoading">Checking the current term on the registration site…</sys:String>
+  <sys:String x:Key="Ui.CurrentTermUnavailable">The current term could not be read from the registration site.</sys:String>
+  <sys:String x:Key="Ui.TryAgain">Try again</sys:String>
+  <sys:String x:Key="Ui.Grade">Grade</sys:String>
+  <sys:String x:Key="Ui.AllGrades">All grades</sys:String>
+  <sys:String x:Key="Ui.Grade1">1st year</sys:String>
+  <sys:String x:Key="Ui.Grade2">2nd year</sys:String>
+  <sys:String x:Key="Ui.Grade3">3rd year</sys:String>
+  <sys:String x:Key="Ui.Grade4">4th year</sys:String>
+  <sys:String x:Key="Ui.Grade5">5th year</sys:String>
+  <sys:String x:Key="Ui.Program">Degree program</sys:String>
+  <sys:String x:Key="Ui.AllPrograms">All programs</sys:String>
+  <sys:String x:Key="Ui.ProgramBachelor">Undergraduate</sys:String>
+  <sys:String x:Key="Ui.ProgramMaster">Master's</sys:String>
+  <sys:String x:Key="Ui.ProgramDoctor">Doctoral</sys:String>
+  <sys:String x:Key="Ui.ProgramIntegrated">Integrated master's and doctoral</sys:String>
+  <sys:String x:Key="Ui.PreviousPage">Previous page</sys:String>
+  <sys:String x:Key="Ui.NextPage">Next page</sys:String>
+  <sys:String x:Key="Ui.LastPage">Last page</sys:String>
 </ResourceDictionary>

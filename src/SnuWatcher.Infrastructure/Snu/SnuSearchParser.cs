@@ -7,9 +7,16 @@ namespace SnuWatcher.Infrastructure.Snu;
 
 internal static class SnuSearchParser
 {
-    internal sealed record Page(IReadOnlyList<SourceSection> Sections, IReadOnlyList<int> Pages);
+    internal sealed record Page(IReadOnlyList<SourceSection> Sections, IReadOnlyList<int> Pages)
+    {
+        /// <summary>The stated result count ("N건의 교과목이 검색되었습니다"), when present.</summary>
+        public int? TotalCount { get; init; }
+    }
     private static readonly Regex PageLink = new(@"fnGotoPage\(\s*['" + "\"" + @"]?(\d+)['" + "\"" + @"]?\s*\)", RegexOptions.CultureInvariant);
     private static readonly Regex Ratio = new(@"^\s*(\d+)\s*/\s*(\d+)(?:\s*\(\s*\d+\s*\))?\s*$", RegexOptions.CultureInvariant);
+    private static readonly Regex Total = new(@"(?<!\d)(\d{1,7})\s*건의\s*교과목이\s*검색되었습니다", RegexOptions.CultureInvariant);
+    private static readonly Regex Tags = new(@"\A(?:\[[^\[\]]{1,40}\]\s*){1,6}", RegexOptions.CultureInvariant);
+    private static readonly Regex CreditText = new(@"\A(?:학점|Credits?)\s*([0-9]{1,3}(?:\.[0-9]{1,2})?)\z", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     internal static Page Parse(string html, SourceTerm term)
     {
@@ -26,7 +33,9 @@ internal static class SnuSearchParser
             throw Changed("SNU result rows could not be identified.");
         var sections = cards.Select(card => ParseCard(card, term)).ToArray();
         var pages = PageLink.Matches(html).Select(match => int.TryParse(match.Groups[1].Value, out var number) ? number : int.MaxValue).Distinct().ToArray();
-        return new(Array.AsReadOnly(sections), Array.AsReadOnly(pages));
+        var total = Total.Match(bodyText);
+        return new(Array.AsReadOnly(sections), Array.AsReadOnly(pages))
+            { TotalCount = total.Success ? int.Parse(total.Groups[1].Value, CultureInfo.InvariantCulture) : null };
     }
 
     private static SourceSection ParseCard(IElement card, SourceTerm term)
@@ -55,9 +64,17 @@ internal static class SnuSearchParser
         var total = Regex.Match(Clean(card.TextContent), @"(?:총수강인원|Total Enrollment)\s*(\d+)", RegexOptions.IgnoreCase);
         var schedule = card.QuerySelectorAll("li.txt span").Select(span => Clean(span.TextContent))
             .LastOrDefault(text => Regex.IsMatch(text, @"\d{1,2}:\d{2}"));
+        // Optional display facts: tags before the name ("[학사] [전선]") and the "학점 3" credits span.
+        var tags = Tags.Match(Clean(card.QuerySelector(".course-name")?.TextContent ?? ""));
+        var credits = card.QuerySelectorAll("li.txt span").Select(span => CreditText.Match(Clean(span.TextContent)))
+            .FirstOrDefault(match => match.Success);
         return new(identity, Clean(name), metadata.ElementAtOrDefault(0), metadata.ElementAtOrDefault(1), schedule,
             registered, capacity, total.Success ? Number(total.Groups[1].Value) : null,
-            countText?.Contains("Enrollment", StringComparison.OrdinalIgnoreCase) == true ? "Enrollment/Quota" : "수강신청인원/정원(재학생)");
+            countText?.Contains("Enrollment", StringComparison.OrdinalIgnoreCase) == true ? "Enrollment/Quota" : "수강신청인원/정원(재학생)")
+        {
+            Classification = tags.Success ? tags.Value.Trim() : null,
+            Credits = credits is null ? null : decimal.Parse(credits.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture),
+        };
     }
 
     private static int? Number(string value) => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number <= 100_000 ? number : null;

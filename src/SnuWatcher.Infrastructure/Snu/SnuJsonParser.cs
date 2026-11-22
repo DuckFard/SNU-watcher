@@ -38,10 +38,15 @@ internal static class SnuJsonParser
         }
         var semester = UniqueOptionalText(root, "currShtmFg");
         var detail = UniqueOptionalText(root, "currDetaShtmFg");
-        var reportedDefault = SourceSectionIdentity.Valid(semester) && SourceSectionIdentity.Valid(detail)
-            ? parsedTerms.SingleOrDefault(term => term.Selector == semester + detail)?.Selector : null;
+        var currentSelector = SourceSectionIdentity.Valid(semester) && SourceSectionIdentity.Valid(detail) ? semester + detail : null;
+        var reportedDefault = currentSelector is null ? null
+            : parsedTerms.SingleOrDefault(term => term.Selector == currentSelector)?.Selector;
         if (year != requestedYear && reportedDefault is null) throw Changed();
-        return new(new(year, Array.AsReadOnly(parsedTerms), departments.AsReadOnly()), currentYear, reportedDefault);
+        // The site's current term (shown beside its logo, for example "2026 - 겨울학기"). Selectors are the
+        // site's own year-independent term codes, so the current one is reported with its own year.
+        var catalog = new SourceCatalog(year, Array.AsReadOnly(parsedTerms), departments.AsReadOnly())
+            { CurrentYear = currentSelector is null ? null : currentYear, CurrentSelector = currentSelector };
+        return new(catalog, currentYear, reportedDefault);
     }
 
     internal static SourceDetails Details(string json, SourceSectionIdentity requested)

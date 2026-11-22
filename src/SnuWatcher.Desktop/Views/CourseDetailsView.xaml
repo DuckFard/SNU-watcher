@@ -6,7 +6,7 @@
              FontSize="14">
   <UserControl.Resources>
     <Style x:Key="Detail.Caption" TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
-      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="FontSize" Value="12.5"/>
       <Setter Property="Foreground" Value="{DynamicResource Snu.InkSecondary}"/>
       <Setter Property="Margin" Value="0,12,0,3"/>
@@ -79,7 +79,7 @@
               </Style.Triggers>
             </Style>
           </StackPanel.Style>
-          <TextBlock TextWrapping="Wrap" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Snu.Heading}">
+          <TextBlock TextWrapping="Wrap" FontSize="18" FontWeight="Medium" Foreground="{DynamicResource Snu.Heading}">
             <TextBlock.Text>
               <MultiBinding StringFormat="{}{0} ({1})">
                 <Binding Path="Model.State.Key.CourseCode"/><Binding Path="Model.State.Key.Section"/>
@@ -103,7 +103,7 @@
           </Expander>
 
           <TextBlock Text="{DynamicResource Ui.CourseName}" Style="{StaticResource Detail.Caption}"/>
-          <TextBlock DataContext="{Binding Model.State.Read.Data.Name}" Style="{StaticResource Detail.Value}" FontWeight="SemiBold"/>
+          <TextBlock DataContext="{Binding Model.State.Read.Data.Name}" Style="{StaticResource Detail.Value}" FontWeight="Medium"/>
           <TextBlock DataContext="{Binding Model.State.Read.Data.EnglishName}" Style="{StaticResource Detail.Optional}"/>
           <TextBlock Text="{DynamicResource Ui.Instructor}" Style="{StaticResource Detail.Caption}"/>
           <TextBlock DataContext="{Binding Model.State.Read.Data.Instructor}" Style="{StaticResource Detail.Value}"/>

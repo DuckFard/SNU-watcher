@@ -98,8 +98,12 @@ public sealed partial class SnuCourseSource : IDisposable, IAsyncDisposable
         ValidateCode(query.UpDepartment);
         ValidateCode(query.Department);
         ValidateCode(query.Major);
+        ValidateCode(query.Grade);
+        ValidateCode(query.Level);
         ValidateText(query.Name);
         ValidateText(query.Instructor);
+        if (query.Page is < 1 or > SourceLimits.MaxBrowsePage) throw new ArgumentOutOfRangeException(nameof(query));
+        if (query.Page is { } single) return await SearchPageAsync(query, single, purpose, cancellationToken).ConfigureAwait(false);
         var pending = new SortedSet<int> { 1 };
         var fetched = new HashSet<int>();
         var sections = new Dictionary<SourceSectionIdentity, SourceSection>();
@@ -134,6 +138,27 @@ public sealed partial class SnuCourseSource : IDisposable, IAsyncDisposable
         { CompletedAtUtc = timeProvider.GetUtcNow().ToUniversalTime() };
     }
 
+    /// <summary>
+    /// Reads exactly one result page, the way a student pages through the site: one request, no link following.
+    /// The page's stated total and its highest page link (the "last" arrow) describe the rest of the listing.
+    /// </summary>
+    private async Task<SourceSearchResult> SearchPageAsync(SourceSearchQuery query, int page, SourceRequestPurpose purpose,
+        CancellationToken cancellationToken)
+    {
+        var html = await PostAsync("cc100InterfaceSrch.action", SearchForm(query, page), json: false, purpose,
+            text => SnuSearchParser.Parse(text, query.Term), cancellationToken).ConfigureAwait(false);
+        var parsed = html.Data;
+        var sections = new Dictionary<SourceSectionIdentity, SourceSection>();
+        foreach (var section in parsed.Sections) sections[section.Identity] = section with { ObservedAtUtc = html.BodyReceivedAtUtc };
+        var links = parsed.Pages.Where(number => number is >= 1 and <= SourceLimits.MaxBrowsePage).ToArray();
+        return new(Array.AsReadOnly(sections.Values.ToArray()), true, Array.Empty<SourceFailure>(), 1)
+        {
+            CompletedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
+            TotalCount = parsed.TotalCount,
+            LastPage = Math.Max(page, links.DefaultIfEmpty(page).Max()),
+        };
+    }
+
     /// <summary>Returns public details only when every raw identity field agrees with the requested section.</summary>
     public Task<SourceDetails> GetDetailsAsync(SourceSectionIdentity identity, CancellationToken cancellationToken = default) =>
         GetDetailsAsync(identity, SourceRequestPurpose.Interactive, cancellationToken);
@@ -151,14 +176,21 @@ public sealed partial class SnuCourseSource : IDisposable, IAsyncDisposable
         return text.Data;
     }
 
-    private static Dictionary<string, string> SearchForm(SourceSearchQuery query, int page) => new()
+    private static Dictionary<string, string> SearchForm(SourceSearchQuery query, int page)
     {
-        ["workType"] = "S", ["pageNo"] = page.ToString(CultureInfo.InvariantCulture),
-        ["srchCurrPage"] = page.ToString(CultureInfo.InvariantCulture), ["srchPageSize"] = "10",
-        ["srchOpenSchyy"] = query.Term.Year.ToString(CultureInfo.InvariantCulture), ["srchOpenShtm"] = query.Term.Selector,
-        ["srchSbjtCd"] = query.CourseCode ?? "", ["srchSbjtNm"] = query.Name ?? "", ["srchProfNm"] = query.Instructor ?? "",
-        ["srchOpenUpDeptCd"] = query.UpDepartment ?? "", ["srchOpenDeptCd"] = query.Department ?? "", ["srchOpenMjCd"] = query.Major ?? ""
-    };
+        var form = new Dictionary<string, string>
+        {
+            ["workType"] = "S", ["pageNo"] = page.ToString(CultureInfo.InvariantCulture),
+            ["srchCurrPage"] = page.ToString(CultureInfo.InvariantCulture), ["srchPageSize"] = "10",
+            ["srchOpenSchyy"] = query.Term.Year.ToString(CultureInfo.InvariantCulture), ["srchOpenShtm"] = query.Term.Selector,
+            ["srchSbjtCd"] = query.CourseCode ?? "", ["srchSbjtNm"] = query.Name ?? "", ["srchProfNm"] = query.Instructor ?? "",
+            ["srchOpenUpDeptCd"] = query.UpDepartment ?? "", ["srchOpenDeptCd"] = query.Department ?? "", ["srchOpenMjCd"] = query.Major ?? ""
+        };
+        // The site's own grade (학년) and degree-program (이수과정) fields, sent only when chosen.
+        if (query.Grade is not null) form["srchOpenShyr"] = query.Grade;
+        if (query.Level is not null) form["srchCptnCorsFg"] = query.Level;
+        return form;
+    }
 
     private sealed record ResponsePayload<T>(T Data, DateTimeOffset BodyReceivedAtUtc);
 

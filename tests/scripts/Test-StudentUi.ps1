@@ -219,8 +219,8 @@ function Assert-UiResult($Result, [string]$RunId, [int]$OwnedProcessId) {
     $null = Assert-UiInteger $Result 'pendingAlertsPreserved' 1 100
     if ((Get-UiField $Result 'keyboardScope') -cne 'in-process WPF focus and routed events') { throw 'The keyboard proof scope is missing.' }
     $journey = Get-UiField $Result 'journey'
-    foreach ($name in @('onboarding','englishKorean','leadingZeroLookup','detailsQuotaSeparated','groupWatch','autoRoutedWatch',
-            'pauseResume','rename','expiry','profileApplied','fullVsUnknown','interactiveUnavailable','invalidYearBlocked',
+    foreach ($name in @('languageLinks','englishKorean','leadingZeroLookup','detailsQuotaSeparated','groupWatch','autoRoutedWatch',
+            'pauseResume','rename','expiry','profileApplied','fullVsUnknown','interactiveUnavailable','browseAllPaged',
             'tabTraversal','enterSearch','fixedActionIntents','terminalStoppingVisible','savedSoundMute','simulatedNativeStatus',
             'simulatedNativeTest','simulatedFeedbackScoped','savedAlertHistory','originalAlertIdentitySeats','boundedAlertDetails')) { Assert-UiTrue $journey $name }
     if ((Get-UiField $Result 'noSimulatedAcceptanceScope') -cne 'durable-production-delivery-only') {
@@ -247,7 +247,7 @@ function Assert-UiResult($Result, [string]$RunId, [int]$OwnedProcessId) {
 function Copy-UiCaptures($Result, [string]$ProfileRoot, [string]$RunRoot) {
     $captures = @(Get-UiField $Result 'captures')
     if ($captures.Count -ne 17) { throw 'Unexpected number of private UI captures.' }
-    $allowed = @('ui-onboarding-en.png','ui-search-en-normal.png','ui-search-ko-normal.png','ui-search-ko-narrow.png',
+    $allowed = @('ui-start-en.png','ui-search-en-normal.png','ui-search-ko-normal.png','ui-search-ko-narrow.png',
         'ui-watches-en-normal.png','ui-watches-ko-narrow.png','ui-settings-en-normal.png','ui-expired-ko.png',
         'ui-actual-search.png','ui-actual-watches-list.png','ui-actual-watches-details.png','ui-actual-settings.png',
         'ui-simulated-native-en.png','ui-simulated-native-ko-narrow.png','ui-alerts-en-normal.png',

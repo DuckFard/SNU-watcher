@@ -127,6 +127,24 @@ function Write-DistributionMetadata([string] $RepositoryPath, [string] $PublishP
         else { $component.licenses = @(@{ license = @{ name = ('See installed licenses/' + $p.name + '/' + $p.version) } }) }
         $components += $component
     }
+    # The bundled Noto Sans KR font (embedded in SnuWatcher.Desktop.dll) is not a NuGet package; its SIL Open Font
+    # License text must travel with every redistribution, so it is added from the reviewed copy in docs/third-party.
+    $fontNotice = Join-Path $RepositoryPath 'docs/third-party/NotoSansKR-LICENSE.txt'
+    if (!(Test-Path -LiteralPath $fontNotice -PathType Leaf) -or [string]::IsNullOrWhiteSpace((Get-Content -LiteralPath $fontNotice -Raw))) {
+        throw 'The bundled font license is missing.'
+    }
+    $fontRelative = 'Noto-Sans-KR/2.004/LICENSE.txt'
+    $fontDestination = Assert-ReleaseChildPath $legalRoot (Join-Path $legalRoot $fontRelative)
+    New-Item -ItemType Directory -Path (Split-Path $fontDestination -Parent) -Force | Out-Null
+    Copy-Item -LiteralPath $fontNotice -Destination $fontDestination
+    $noticeParts += ('===== ' + $fontRelative + ' ====='), (Get-Content -LiteralPath $fontNotice -Raw)
+    $fontHashes = foreach ($weight in 'Regular', 'Medium', 'Bold') {
+        $file = Join-Path $RepositoryPath ('src/SnuWatcher.Desktop/Fonts/NotoSansKR-' + $weight + '.otf')
+        if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw ('A bundled font file is missing: ' + $weight) }
+        @{ name = 'snu:font:' + $weight + ':sha256'; value = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() }
+    }
+    $components += [ordered]@{ type = 'library'; 'bom-ref' = 'font:Noto-Sans-KR@2.004'; name = 'Noto Sans KR'; version = '2.004';
+        licenses = @(@{ expression = 'OFL-1.1' }); properties = @(@{ name = 'snu:inventory:scope'; value = 'bundled-font' }) + @($fontHashes) }
     [IO.File]::WriteAllText((Join-Path $PublishPath 'DISTRIBUTION-LICENSES.txt'), ($noticeParts -join "`r`n`r`n"), [Text.UTF8Encoding]::new($false))
     $appRef = 'pkg:generic/DuckFard/SNU-Watcher@' + $Configuration.version
     $sbom = [ordered]@{ bomFormat = 'CycloneDX'; specVersion = '1.6'; serialNumber = ('urn:uuid:' + [Guid]::NewGuid()); version = 1;
