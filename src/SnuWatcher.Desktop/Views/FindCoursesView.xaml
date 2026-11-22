@@ -70,12 +70,24 @@
           <Setter Property="FontSize" Value="13"/>
           <Setter Property="Foreground" Value="{DynamicResource Snu.UnknownText}"/>
         </DataTrigger>
+        <!-- A selected row is painted with the selection fill (Highlight in high contrast), so every seat state switches
+             to its Selected* color there; these come last so they win over the unselected colors above. -->
+        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridCell}}" Value="True">
+          <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedOpenText}"/>
+        </DataTrigger>
         <MultiDataTrigger>
           <MultiDataTrigger.Conditions>
             <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridCell}}" Value="True"/>
             <Condition Binding="{Binding ApparentSeats}" Value="0"/>
           </MultiDataTrigger.Conditions>
           <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedFullText}"/>
+        </MultiDataTrigger>
+        <MultiDataTrigger>
+          <MultiDataTrigger.Conditions>
+            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridCell}}" Value="True"/>
+            <Condition Binding="{Binding ApparentSeats}" Value="{x:Null}"/>
+          </MultiDataTrigger.Conditions>
+          <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedMuted}"/>
         </MultiDataTrigger>
       </Style.Triggers>
     </Style>
@@ -96,7 +108,7 @@
       <StackPanel>
         <WrapPanel x:Name="SearchTitle" Margin="0,0,0,8">
           <!-- "2026 - 겨울학기 강좌 검색": the term every search uses, read from the registration site. -->
-          <TextBlock x:Name="SearchTermText" FontSize="15" FontWeight="Medium" Foreground="{DynamicResource Snu.Blue}" VerticalAlignment="Center">
+          <TextBlock x:Name="SearchTermText" FontSize="15" FontWeight="Medium" Foreground="{DynamicResource Snu.Accent}" VerticalAlignment="Center">
             <TextBlock.Text>
               <MultiBinding Converter="{StaticResource Find.TermLabel}">
                 <Binding Path="Model.State.SelectedTerm"/>
@@ -129,6 +141,13 @@
                   </MultiDataTrigger.Conditions>
                   <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.TermLoading}"/>
                 </MultiDataTrigger>
+                <MultiDataTrigger>
+                  <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Model.State.SelectedTerm}" Value="{x:Null}"/>
+                    <Condition Binding="{Binding Model.State.CatalogState}" Value="{x:Static search:CourseUiLoadState.Canceled}"/>
+                  </MultiDataTrigger.Conditions>
+                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.Canceled}"/>
+                </MultiDataTrigger>
               </Style.Triggers>
             </Style></TextBlock.Style>
           </TextBlock>
@@ -141,7 +160,14 @@
                     <Condition Binding="{Binding Model.State.SelectedTerm}" Value="{x:Null}"/>
                     <Condition Binding="{Binding Model.State.CatalogState}" Value="{x:Static search:CourseUiLoadState.Failed}"/>
                   </MultiDataTrigger.Conditions>
-                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Foreground" Value="{DynamicResource Snu.Blue}"/>
+                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Foreground" Value="{DynamicResource Snu.Accent}"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                  <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Model.State.SelectedTerm}" Value="{x:Null}"/>
+                    <Condition Binding="{Binding Model.State.CatalogState}" Value="{x:Static search:CourseUiLoadState.Canceled}"/>
+                  </MultiDataTrigger.Conditions>
+                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Foreground" Value="{DynamicResource Snu.Accent}"/>
                 </MultiDataTrigger>
               </Style.Triggers>
             </Style></Button.Style>
@@ -434,7 +460,7 @@
                           <Setter Property="Foreground" Value="{DynamicResource Snu.BorderStrong}"/>
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                              <Setter Property="Foreground" Value="{DynamicResource Snu.Blue}"/>
+                              <Setter Property="Foreground" Value="{DynamicResource Snu.Accent}"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
                               <Setter Property="Foreground" Value="{DynamicResource Snu.SelectedMuted}"/>
@@ -459,7 +485,7 @@
               </Style.Triggers>
             </Style></StackPanel.Style>
             <Border Width="56" Height="56" CornerRadius="28" Background="{DynamicResource Snu.Selected}" HorizontalAlignment="Center" Margin="0,0,0,12">
-              <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="22" Foreground="{DynamicResource Snu.Blue}"
+              <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="22" Foreground="{DynamicResource Snu.SelectedAccent}"
                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <TextBlock Text="{DynamicResource Ui.StartTitle}" FontSize="17" FontWeight="Medium" Foreground="{DynamicResource Snu.Heading}"
@@ -488,7 +514,7 @@
                   <Button Click="OnPageNumber" Tag="{Binding Number}" AutomationProperties.Name="{Binding Number}">
                     <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.PageButton}"><Style.Triggers>
                       <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                        <Setter Property="Foreground" Value="{DynamicResource Snu.Blue}"/><Setter Property="FontWeight" Value="Medium"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Snu.Accent}"/><Setter Property="FontWeight" Value="Medium"/>
                       </DataTrigger>
                     </Style.Triggers></Style></Button.Style>
                     <TextBlock Text="{Binding Number}">

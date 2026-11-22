@@ -57,8 +57,9 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
             () => !closed && diagnostics is not null && !DiagnosticsModel.State.IsBusy);
         ExportDiagnosticsCommand = new(token => RunDiagnosticsAsync(true, token), dispatcher, this.reportError,
             () => !closed && diagnostics is not null && diagnosticsExport is not null && !DiagnosticsModel.State.IsBusy);
+        LanguageCommand = CreateLanguageCommand();
         commands = [ReloadCommand, SaveCommand, RetryApplyCommand, DiscardChangesCommand, NativeTestCommand, RefreshNativeStatusCommand,
-            RefreshDiagnosticsCommand, ExportDiagnosticsCommand];
+            RefreshDiagnosticsCommand, ExportDiagnosticsCommand, LanguageCommand];
         DiagnosticsModel.PropertyChanged += DiagnosticsChanged;
         Model.PropertyChanged += ModelChanged;
     }

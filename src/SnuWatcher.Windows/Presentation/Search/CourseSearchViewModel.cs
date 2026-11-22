@@ -40,7 +40,8 @@ public sealed partial class CourseSearchViewModel : INotifyPropertyChanged, IAsy
             dispatcher, this.reportError);
         CancelCommand = new(_ => dispatcher.InvokeAsync(() =>
         {
-            generation++; CancelReads();
+            // Cancel also stops the automatic current-term read; editing filters (CancelReads alone) never does.
+            generation++; CancelReads(); LoadCurrentTermCommand.Cancel();
             Model.Replace(Model.State with { SearchState = CourseUiLoadState.Canceled, CatalogState = CourseUiLoadState.Canceled });
         }), dispatcher, this.reportError);
     }

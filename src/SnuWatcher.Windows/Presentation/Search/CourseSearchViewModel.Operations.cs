@@ -80,7 +80,8 @@ public sealed partial class CourseSearchViewModel
             var selected = false;
             await dispatcher.InvokeAsync(() =>
             {
-                if (disposed) return;
+                // A read canceled after its response arrived must not overwrite the canceled state.
+                if (disposed || cancellationToken.IsCancellationRequested) return;
                 var state = Model.State;
                 if (state.SelectedTerm is not null) { selected = true; return; }
                 if (catalog is null || term is null)
@@ -97,6 +98,7 @@ public sealed partial class CourseSearchViewModel
                     IssueKey = state.IssueKey == "Ui.CurrentTermUnavailable" ? null : state.IssueKey,
                 });
             }).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             return selected;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

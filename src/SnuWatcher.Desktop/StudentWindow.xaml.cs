@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Desktop.Resources;
 using SnuWatcher.Windows;
+using SnuWatcher.Windows.Presentation.Common;
 using SnuWatcher.Windows.Presentation.Shell;
 using Forms = System.Windows.Forms;
 
@@ -196,15 +197,18 @@ public partial class StudentWindow : Window, IDisposable
     private void OnEnglish(object sender, RoutedEventArgs args) => SaveLanguage(UiLanguage.English);
     private void OnKorean(object sender, RoutedEventArgs args) => SaveLanguage(UiLanguage.Korean);
 
-    private void SaveLanguage(UiLanguage language)
+    /// <summary>"KR | EN" saves only the language; unsaved Settings edits are never saved along with it.</summary>
+    private async void SaveLanguage(UiLanguage language)
     {
         if (_model is null) return;
         try
         {
-            if (!_model.Settings.SaveCommand.CanExecute(null)) { ShowStatusKey("Ui.SettingsPending"); return; }
-            _model.Settings.Language = language; _model.Settings.SaveCommand.Execute(null);
+            var outcome = await _model.Settings.SaveLanguageAsync(language);
+            if (outcome is UiCommandOutcome.Busy or UiCommandOutcome.Unavailable) ShowStatusKey("Ui.SettingsPending");
+            else if (outcome == UiCommandOutcome.Failed)
+                ShowStatusKey(_model.Settings.Model.State.SaveUncertain ? "Ui.SettingsSaveUncertain" : "Ui.SettingsPending");
         }
-        catch (InvalidOperationException) { ShowStatusKey("Ui.SettingsSaveUncertain"); }
+        catch (ObjectDisposedException) { /* Closing the shell closes settings admission. */ }
     }
 
     private void OnQuit(object sender, RoutedEventArgs args) => _requestQuit();

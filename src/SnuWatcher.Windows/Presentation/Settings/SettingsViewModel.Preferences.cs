@@ -4,7 +4,7 @@ namespace SnuWatcher.Windows.Presentation.Settings;
 
 public sealed partial class SettingsViewModel
 {
-    private enum WriteOrigin { Editor, Hint, Onboarding }
+    private enum WriteOrigin { Editor, Hint, Onboarding, Language }
     private sealed record PendingWrite(SaveUiPreferencesCommand Command, WriteOrigin Origin, long EditVersion);
     private PendingWrite? pendingWrite;
 

@@ -51,7 +51,7 @@
               <Button x:Name="KoreanLanguage" Content="KR" Click="OnKorean" AutomationProperties.Name="한국어" ToolTip="한국어">
                 <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.UtilityButton}"><Style.Triggers>
                   <DataTrigger Binding="{Binding State.Language}" Value="{x:Static prefs:UiLanguage.Korean}">
-                    <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/><Setter Property="FontWeight" Value="Medium"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/><Setter Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/><Setter Property="FontWeight" Value="Medium"/>
                   </DataTrigger>
                 </Style.Triggers></Style></Button.Style>
               </Button>
@@ -59,7 +59,7 @@
               <Button x:Name="EnglishLanguage" Content="EN" Click="OnEnglish" AutomationProperties.Name="English" ToolTip="English">
                 <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.UtilityButton}"><Style.Triggers>
                   <DataTrigger Binding="{Binding State.Language}" Value="{x:Static prefs:UiLanguage.English}">
-                    <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/><Setter Property="FontWeight" Value="Medium"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/><Setter Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/><Setter Property="FontWeight" Value="Medium"/>
                   </DataTrigger>
                 </Style.Triggers></Style></Button.Style>
               </Button>
@@ -76,7 +76,7 @@
                 <WrapPanel>
                   <TextBlock x:Name="BrandingTitle" Text="SNU Watcher" FontWeight="Bold" FontSize="21" Foreground="{DynamicResource Snu.Heading}" VerticalAlignment="Bottom"/>
                   <!-- The term every search uses, as the registration site shows "2026 - 겨울학기" beside its logo. -->
-                  <TextBlock x:Name="TermLabel" FontSize="18" Foreground="{DynamicResource Snu.Blue}" VerticalAlignment="Bottom" Margin="9,0,0,1"
+                  <TextBlock x:Name="TermLabel" FontSize="18" Foreground="{DynamicResource Snu.Accent}" VerticalAlignment="Bottom" Margin="9,0,0,1"
                              AutomationProperties.LiveSetting="Polite">
                     <TextBlock.Text>
                       <MultiBinding Converter="{StaticResource Student.TermLabel}">

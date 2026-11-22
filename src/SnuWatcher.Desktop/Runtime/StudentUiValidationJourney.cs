@@ -68,8 +68,15 @@ internal static partial class StudentUiValidation
         Require(source.InteractiveSearchCalls == 0 && source.DetailsCalls == 0, "ui_start_ran_search");
         await PumpUiAsync(window);
         captures.Add(await CaptureAsync(profile, window, "ui-start-en.png", false, ct));
+        // The language links save only the language: an unsaved Settings edit stays unsaved and unsent.
+        var muted = graph.Settings.Model.State.Stored!.Values.NotificationSoundMuted;
+        graph.Settings.NotificationSoundMuted = !muted;
         await ClickLanguageAsync(window, graph, UiLanguage.Korean, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "설정", "ui_korean_resources_missing");
+        Require(graph.Settings.Model.State.Stored!.Values.NotificationSoundMuted == muted && graph.Settings.Model.State.IsDirty
+            && graph.Settings.NotificationSoundMuted == !muted && graph.Settings.Language == UiLanguage.Korean, "ui_language_link_saved_other_settings");
+        Require(await graph.Settings.DiscardChangesCommand.ExecuteAsync(ct) == SnuWatcher.Windows.Presentation.Common.UiCommandOutcome.Completed, "ui_language_link_edit_not_discarded");
+        Require(!graph.Settings.Model.State.IsDirty, "ui_language_link_edit_not_discarded");
         Require(Named<TextBlock>(window, "TermLabel").Text == "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
         await ClickLanguageAsync(window, graph, UiLanguage.English, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "Settings", "ui_english_resources_missing");
@@ -312,7 +319,7 @@ internal static partial class StudentUiValidation
     private static async Task ClickLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)
     {
         InvokeButton(Named<Button>(window, language == UiLanguage.Korean ? "KoreanLanguage" : "EnglishLanguage"));
-        await EventuallyAsync(() => graph.Settings.Model.State.Stored?.Values.Language == language && !graph.Settings.SaveCommand.IsExecuting, ct);
+        await EventuallyAsync(() => graph.Settings.Model.State.Stored?.Values.Language == language && !graph.Settings.LanguageCommand.IsExecuting, ct);
         await PumpUiAsync(window);
     }
 

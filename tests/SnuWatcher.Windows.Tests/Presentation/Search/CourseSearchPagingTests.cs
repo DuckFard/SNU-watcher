@@ -95,6 +95,31 @@ public sealed class CourseSearchPagingTests
         Assert.Empty(queries.Searches);
     }
 
+    /// <summary>Cancel stops the automatic term read; a response arriving after Cancel never selects a term.</summary>
+    [Fact]
+    public async Task CancelStopsTheCurrentTermReadAndALateResponseCannotOverwriteIt()
+    {
+        await using var dispatcher = new DedicatedUiDispatcher();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<SourceRead<CourseCatalogData>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var queries = new SearchQueries { CatalogHandler = (_, _) => { entered.TrySetResult(); return release.Task; } };
+        await using var view = new CourseSearchViewModel(queries, new SearchWatches(), dispatcher, new SearchClock());
+        var loading = view.LoadCurrentTermCommand.ExecuteAsync();
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await view.CancelCommand.ExecuteAsync();
+        // The fake ignores cancellation, as a slow source might: its answer still arrives after Cancel.
+        release.SetResult(Catalog(new(2026), 2026));
+        Assert.Equal(UiCommandOutcome.Canceled, await loading);
+        Assert.Null(view.Model.State.SelectedTerm);
+        Assert.Equal(CourseUiLoadState.Canceled, view.Model.State.CatalogState);
+
+        // Editing a filter never cancels the term read; only Cancel does.
+        queries.CatalogHandler = (query, _) => Task.FromResult(Catalog(query, 2026));
+        await dispatcher.InvokeAsync(() => view.CourseName = "통계");
+        Assert.Equal(UiCommandOutcome.Completed, await view.LoadCurrentTermCommand.ExecuteAsync());
+        Assert.NotNull(view.Model.State.SelectedTerm);
+    }
+
     /// <summary>An empty search lists the term one page at a time; paging keeps the searched filters.</summary>
     [Fact]
     public async Task AnEmptySearchListsEveryCoursePageByPageAndPagingKeepsTheSearchedFilters()
