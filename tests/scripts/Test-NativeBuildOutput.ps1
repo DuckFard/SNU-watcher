@@ -1,6 +1,8 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+# Version expectations follow the real release.json that the fixture copies, so a version bump needs no test edit.
+$release = Get-Content -LiteralPath (Join-Path $repoRoot 'release.json') -Raw | ConvertFrom-Json
 $fixtureRoot = Join-Path $repoRoot ('artifacts/native-build-output-tests/' + [Guid]::NewGuid().ToString('N'))
 $fixtureRepo = Join-Path $fixtureRoot 'repository with spaces'
 $toolsRoot = Join-Path $fixtureRoot 'tools with spaces'
@@ -30,7 +32,7 @@ throw 'Unexpected fixture Git command.'
 $stagePath = Join-Path $toolsRoot 'stage.txt'
 
 # Emulate publish's overlay behavior: an existing output directory is never cleaned.
-Set-Content -LiteralPath $fakeDotNet -Value @'
+Set-Content -LiteralPath $fakeDotNet -Value (@'
 $ErrorActionPreference = 'Stop'
 $stage = (Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'stage.txt')).Trim()
 if ($args[0] -eq '--version') {
@@ -51,8 +53,8 @@ $outputIndex = [Array]::IndexOf($args, '-o')
 if ($args[0] -ne 'publish' -or $outputIndex -lt 0 -or !(Test-Path -LiteralPath $args[1])) {
     throw 'Fake dotnet received an invalid publish command.'
 }
-if ($args -notcontains '--no-restore' -or $args -notcontains '-p:Version=0.1.0-preview.1' -or
-    $args -notcontains '-p:FileVersion=0.1.0.0' -or $args -notcontains '-p:ContinuousIntegrationBuild=true' -or
+if ($args -notcontains '--no-restore' -or $args -notcontains '-p:Version=__RELEASE_VERSION__' -or
+    $args -notcontains '-p:FileVersion=__INSTALLER_VERSION__' -or $args -notcontains '-p:ContinuousIntegrationBuild=true' -or
     $args -notcontains '-p:IncludeSourceRevisionInInformationalVersion=false' -or
     @($args | Where-Object { $_ -like '-p:RuntimeFrameworkVersion=*' }).Count -gt 0) { throw 'Publish lost release identity or mapped build paths.' }
 $outputPath = [IO.Path]::GetFullPath($args[$outputIndex + 1])
@@ -79,10 +81,10 @@ $configuredVersion = if ($stage -eq 'wrong-runtime-config') { '10.0.15' } elseif
     @{ name = 'Microsoft.WindowsDesktop.App'; version = '10.0.14' }
 ) } } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $outputPath 'SnuWatcher.Desktop.runtimeconfig.json')
 exit 0
-'@
+'@).Replace('__RELEASE_VERSION__', $release.version).Replace('__INSTALLER_VERSION__', $release.installerVersion)
 
 # Emulate packaging the complete supplied source directory, recording its manifest.
-Set-Content -LiteralPath $fakeIscc -Value @'
+Set-Content -LiteralPath $fakeIscc -Value (@'
 $ErrorActionPreference = 'Stop'
 $stage = (Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'stage.txt')).Trim()
 $sourceArgument = @($args | Where-Object { $_.StartsWith('/DSourceDir=', [StringComparison]::Ordinal) })
@@ -90,7 +92,7 @@ $outputArgument = @($args | Where-Object { $_.StartsWith('/DOutputDir=', [String
 if ($sourceArgument.Count -ne 1 -or $outputArgument.Count -ne 1 -or !(Test-Path -LiteralPath $args[-1])) {
     throw 'Fake ISCC requires explicit source/output defines and an existing script.'
 }
-if ($args -notcontains '/DReleaseVersion=0.1.0-preview.1' -or $args -notcontains '/DInstallerVersion=0.1.0.0') { throw 'Installer lost product version defines.' }
+if ($args -notcontains '/DReleaseVersion=__RELEASE_VERSION__' -or $args -notcontains '/DInstallerVersion=__INSTALLER_VERSION__') { throw 'Installer lost product version defines.' }
 $sourcePath = [IO.Path]::GetFullPath($sourceArgument[0].Substring('/DSourceDir='.Length))
 $outputPath = [IO.Path]::GetFullPath($outputArgument[0].Substring('/DOutputDir='.Length))
 $fixturePrefix = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent)) + [IO.Path]::DirectorySeparatorChar
@@ -106,12 +108,12 @@ $manifest | ConvertTo-Json -Depth 3 |
     Set-Content -LiteralPath (Join-Path $PSScriptRoot ('iscc-' + $stage + '.json'))
 if ($stage -eq 'fail-installer') { exit 11 }
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
-$installerName = 'SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe'
+$installerName = 'SnuCourseWatcher-__RELEASE_VERSION__-windows-x64-Setup.exe'
 Set-Content -LiteralPath (Join-Path $outputPath $installerName) 'Fixture installer bytes.'
 $manifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $outputPath 'packaged-manifest.json')
 Write-Output 'Compiler engine version: Inno Setup 6.7.3'
 exit 0
-'@
+'@).Replace('__RELEASE_VERSION__', $release.version).Replace('__INSTALLER_VERSION__', $release.installerVersion)
 
 function Assert-Condition([bool] $Condition, [string] $Message) {
     if (!$Condition) { throw $Message }
@@ -146,7 +148,7 @@ foreach ($required in 'DISTRIBUTION-LICENSES.txt', 'sbom.cdx.json') {
 }
 $buildManifest = Get-Content -LiteralPath (Join-Path (Split-Path $second.SourceDirectory -Parent) 'build-manifest.json') -Raw | ConvertFrom-Json
 Assert-Condition ($buildManifest.source.dirty -and $buildManifest.source.revision -eq ('a' * 40)) 'Development source identity was not recorded honestly.'
-Assert-Condition ($buildManifest.version -eq '0.1.0-preview.1' -and $buildManifest.signing -eq 'unsigned') 'Build manifest lost its preview identity.'
+Assert-Condition ($buildManifest.version -eq $release.version -and $buildManifest.signing -eq 'unsigned') 'Build manifest lost its preview identity.'
 Assert-Condition (@($buildManifest.payload).Count -eq $second.Files.Count) 'Manifest did not hash the final complete payload.'
 foreach ($build in @($first, $second)) {
     Assert-Condition ((Split-Path $build.SourceDirectory -Parent) -eq (Split-Path $build.OutputDirectory -Parent)) 'One build must share a dedicated publish/installer root.'
