@@ -5,7 +5,8 @@ namespace SnuWatcher.Windows.Presentation.Settings;
 
 public sealed partial class SettingsViewModel
 {
-    private int requestedLanguage;
+    private sealed record LanguageRequest(UiLanguage Language);
+    private LanguageRequest? requestedLanguage;
 
     /// <summary>The header's "KR | EN" save; see <see cref="SaveLanguageAsync"/>.</summary>
     public UiAsyncCommand LanguageCommand { get; private set; } = null!;
@@ -20,12 +21,24 @@ public sealed partial class SettingsViewModel
     {
         ValidateEnum(language);
         ThrowIfClosed();
-        Volatile.Write(ref requestedLanguage, (int)language);
-        return LanguageCommand.ExecuteAsync(cancellationToken);
+        if (cancellationToken.IsCancellationRequested) return Task.FromResult(UiCommandOutcome.Canceled);
+        var request = new LanguageRequest(language);
+        if (Interlocked.CompareExchange(ref requestedLanguage, request, null) is not null)
+            return Task.FromResult(UiCommandOutcome.Busy);
+        return ExecuteLanguageRequestAsync(request, cancellationToken);
+    }
+
+    private async Task<UiCommandOutcome> ExecuteLanguageRequestAsync(LanguageRequest request, CancellationToken token)
+    {
+        // Keep this immutable payload until the actual command and its final publication have completed.
+        // Busy, unavailable, or already-canceled callers must never replace an admitted request's language.
+        try { return await LanguageCommand.ExecuteAsync(token).ConfigureAwait(false); }
+        finally { Interlocked.CompareExchange(ref requestedLanguage, null, request); }
     }
 
     private UiAsyncCommand CreateLanguageCommand() => Command(
-        token => SaveLanguageCoreAsync((UiLanguage)Volatile.Read(ref requestedLanguage), token),
+        token => SaveLanguageCoreAsync((Volatile.Read(ref requestedLanguage)
+            ?? throw new InvalidOperationException("settings_language_request_missing")).Language, token),
         () => !Model.State.IsBusy && (!Model.State.SaveUncertain || pendingWrite is { Origin: WriteOrigin.Language }));
 
     private async Task SaveLanguageCoreAsync(UiLanguage language, CancellationToken token)

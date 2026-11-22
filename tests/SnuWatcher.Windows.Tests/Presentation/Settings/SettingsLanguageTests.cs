@@ -8,6 +8,42 @@ namespace SnuWatcher.Windows.Tests.Presentation.Settings;
 /// <summary>The header's "KR | EN" links save only the language.</summary>
 public sealed class SettingsLanguageTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ARejectedSecondLanguageRequestCannotReplaceTheAdmittedLanguage(bool secondAlreadyCanceled)
+    {
+        await using var fixture = new SettingsFixture();
+        await fixture.ViewModel.LoadAsync();
+        using var release = new ManualResetEventSlim();
+        var deadline = TimeSpan.FromSeconds(30);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var blocked = 0;
+        fixture.ViewModel.LanguageCommand.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName != nameof(UiAsyncCommand.IsExecuting)
+                || !fixture.ViewModel.LanguageCommand.IsExecuting || Interlocked.Exchange(ref blocked, 1) != 0) return;
+            entered.TrySetResult();
+            if (!release.Wait(deadline)) throw new TimeoutException("Release the language publication fixture.");
+        };
+        // Hold the admitted command before its callback captures the language, without blocking the caller.
+        var first = fixture.ViewModel.SaveLanguageAsync(UiLanguage.Korean);
+        try
+        {
+            await entered.Task.WaitAsync(deadline);
+            using var canceled = new CancellationTokenSource();
+            if (secondAlreadyCanceled) canceled.Cancel();
+            var second = await fixture.ViewModel.SaveLanguageAsync(UiLanguage.English, canceled.Token);
+            Assert.Equal(secondAlreadyCanceled ? UiCommandOutcome.Canceled : UiCommandOutcome.Busy, second);
+        }
+        finally { release.Set(); }
+
+        Assert.Equal(UiCommandOutcome.Completed, await first.WaitAsync(deadline));
+        Assert.Equal(UiLanguage.Korean, Assert.Single(fixture.Store.Commands).Values.Language);
+        Assert.Equal(UiLanguage.Korean, fixture.ViewModel.Model.State.Stored!.Values.Language);
+        Assert.Empty(fixture.Errors);
+    }
+
     [Fact]
     public async Task TheLanguageLinkSavesOnlyTheLanguageAndUnsavedEditsStayUnsavedWithTheNewLanguage()
     {

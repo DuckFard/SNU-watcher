@@ -48,10 +48,13 @@
                 <TextBlock x:Name="DemoLabel" Text="{DynamicResource Ui.Demo}" FontWeight="Medium" FontSize="11.5" Foreground="{DynamicResource Snu.DemoText}"/>
               </Border>
               <!-- One tap switches the language; the language in use is blue. -->
+              <!-- Keep selected hover/press layers on the same fill, including Highlight/HighlightText in high contrast. -->
               <Button x:Name="KoreanLanguage" Content="KR" Click="OnKorean" AutomationProperties.Name="한국어" ToolTip="한국어">
                 <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.UtilityButton}"><Style.Triggers>
                   <DataTrigger Binding="{Binding State.Language}" Value="{x:Static prefs:UiLanguage.Korean}">
                     <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/><Setter Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/><Setter Property="FontWeight" Value="Medium"/>
+                    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.NavSelectedBackground}"/>
+                    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.NavSelectedBackground}"/>
                   </DataTrigger>
                 </Style.Triggers></Style></Button.Style>
               </Button>
@@ -60,6 +63,8 @@
                 <Button.Style><Style TargetType="Button" BasedOn="{StaticResource Student.UtilityButton}"><Style.Triggers>
                   <DataTrigger Binding="{Binding State.Language}" Value="{x:Static prefs:UiLanguage.English}">
                     <Setter Property="Foreground" Value="{DynamicResource Snu.NavSelectedText}"/><Setter Property="Background" Value="{DynamicResource Snu.NavSelectedBackground}"/><Setter Property="FontWeight" Value="Medium"/>
+                    <Setter Property="ui:Paint.Hover" Value="{DynamicResource Snu.NavSelectedBackground}"/>
+                    <Setter Property="ui:Paint.Pressed" Value="{DynamicResource Snu.NavSelectedBackground}"/>
                   </DataTrigger>
                 </Style.Triggers></Style></Button.Style>
               </Button>
