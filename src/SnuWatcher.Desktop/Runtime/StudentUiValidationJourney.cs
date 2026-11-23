@@ -75,6 +75,8 @@ internal static partial class StudentUiValidation
         Require((window.TryFindResource("Ui.Settings") as string) == "설정", "ui_korean_resources_missing");
         Require(graph.Settings.Model.State.Stored!.Values.NotificationSoundMuted == muted && graph.Settings.Model.State.IsDirty
             && graph.Settings.NotificationSoundMuted == !muted && graph.Settings.Language == UiLanguage.Korean, "ui_language_link_saved_other_settings");
+        // As a student would, wait until Discard is offered (a background settings operation may still be finishing).
+        await EventuallyAsync(() => graph.Settings.DiscardChangesCommand.CanExecute(null), ct);
         Require(await graph.Settings.DiscardChangesCommand.ExecuteAsync(ct) == SnuWatcher.Windows.Presentation.Common.UiCommandOutcome.Completed, "ui_language_link_edit_not_discarded");
         Require(!graph.Settings.Model.State.IsDirty, "ui_language_link_edit_not_discarded");
         Require(Named<TextBlock>(window, "TermLabel").Text == "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
@@ -194,7 +196,7 @@ internal static partial class StudentUiValidation
         proof = proof with { PauseResume = true, Rename = true };
 
         _stage = "profile_save";
-        await NavigateAsync(window, graph, StudentPage.Settings);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         SetSetting(window, graph, "DesiredProfile", WatchMonitorProfile.Faster);
         await InvokeCommandAsync(window, graph.Settings.SaveCommand, ct);
         Require(graph.Settings.Model.State.Applied?.Profile == WatchMonitorProfile.Faster
@@ -303,7 +305,8 @@ internal static partial class StudentUiValidation
         await PumpUiAsync(window);
     }
 
-    private static async Task NavigateAsync(StudentWindow window, StudentDesktopSession graph, StudentPage page)
+    private static async Task NavigateAsync(StudentWindow window, StudentDesktopSession graph, StudentPage page,
+        CancellationToken ct = default)
     {
         var name = page switch
         {
@@ -314,6 +317,13 @@ internal static partial class StudentUiValidation
         Named<RadioButton>(window, name).SetCurrentValue(ToggleButton.IsCheckedProperty, true);
         await PumpUiAsync(window);
         Require(graph.Shell.SelectedPage == page, "ui_navigation_binding_failed");
+        // Opening Settings reloads the saved values and briefly disables its buttons. Like a student, wait until they are
+        // offered again: a click queued before the reload publishes "busy" would otherwise be ignored on a slow PC.
+        if (page == StudentPage.Settings)
+        {
+            await EventuallyAsync(() => !graph.Settings.Model.State.IsBusy && !graph.Settings.ReloadCommand.IsExecuting, ct);
+            await PumpUiAsync(window);
+        }
     }
 
     private static async Task ClickLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)
@@ -325,7 +335,7 @@ internal static partial class StudentUiValidation
 
     private static async Task SaveLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)
     {
-        await NavigateAsync(window, graph, StudentPage.Settings);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         SetSetting(window, graph, "Language", language);
         await InvokeCommandAsync(window, graph.Settings.SaveCommand, ct);
         Require(graph.Settings.Model.State.Stored?.Values.Language == language, "ui_language_not_saved");

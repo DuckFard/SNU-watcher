@@ -15,7 +15,8 @@ public sealed partial class SettingsViewModel
     /// Saves only the language over the current stored values, as the header's "KR | EN" links do. Unsaved Settings
     /// edits (sound, close behavior, monitoring profile) stay unsaved; their language follows the saved choice so a later
     /// Settings save cannot undo it. An unknown write retries its own stable command; any other unresolved write must be
-    /// resolved on the Settings page first.
+    /// resolved on the Settings page first. A click while another settings operation runs (such as the background
+    /// term save at startup) waits for it instead of being dropped.
     /// </summary>
     public Task<UiCommandOutcome> SaveLanguageAsync(UiLanguage language, CancellationToken cancellationToken = default)
     {
@@ -36,10 +37,19 @@ public sealed partial class SettingsViewModel
         finally { Interlocked.CompareExchange(ref requestedLanguage, null, request); }
     }
 
+    /// <summary>
+    /// The header status for a language-link outcome, or null when there is nothing new to report: a completed
+    /// or canceled request, or a duplicate click while an earlier language request is still running.
+    /// </summary>
+    public string? LanguageLinkIssueKey(UiCommandOutcome outcome) => outcome is UiCommandOutcome.Failed or UiCommandOutcome.Unavailable
+        ? Model.State.SaveUncertain ? "Ui.SettingsSaveUncertain" : Model.State.HasConflict ? "Ui.SettingsConflict" : "Ui.CommandFailed"
+        : null;
+
+    // Not gated on IsBusy: the operation lane serializes the request behind any running settings operation.
     private UiAsyncCommand CreateLanguageCommand() => Command(
         token => SaveLanguageCoreAsync((Volatile.Read(ref requestedLanguage)
             ?? throw new InvalidOperationException("settings_language_request_missing")).Language, token),
-        () => !Model.State.IsBusy && (!Model.State.SaveUncertain || pendingWrite is { Origin: WriteOrigin.Language }));
+        () => !Model.State.SaveUncertain || pendingWrite is { Origin: WriteOrigin.Language });
 
     private async Task SaveLanguageCoreAsync(UiLanguage language, CancellationToken token)
     {

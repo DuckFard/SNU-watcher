@@ -116,8 +116,7 @@ internal static partial class StudentUiValidation
         captures.Add(await CaptureActualAsync(profile, window, "ui-actual-watches-details.png", ct));
 
         _stage = "actual_work_area_settings";
-        await NavigateAsync(window, graph, StudentPage.Settings);
-        await EventuallyAsync(() => !graph.Settings.Model.State.IsBusy && !graph.Settings.ReloadCommand.IsExecuting, ct);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         foreach (var field in Visuals<ComboBox>(window).Where(field => field.IsVisible && ReferenceEquals(field.DataContext, graph.Settings)).ToArray())
             await RequireReachableAsync(field, window, "ui_actual_settings_control_unreachable");
         await RequireReachableAsync(BoundButton(window, graph.Settings.SaveCommand), window, "ui_actual_settings_save_unreachable");
