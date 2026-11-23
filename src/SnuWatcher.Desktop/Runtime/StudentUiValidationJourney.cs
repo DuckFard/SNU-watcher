@@ -75,12 +75,14 @@ internal static partial class StudentUiValidation
         Require((window.TryFindResource("Ui.Settings") as string) == "설정", "ui_korean_resources_missing");
         Require(graph.Settings.Model.State.Stored!.Values.NotificationSoundMuted == muted && graph.Settings.Model.State.IsDirty
             && graph.Settings.NotificationSoundMuted == !muted && graph.Settings.Language == UiLanguage.Korean, "ui_language_link_saved_other_settings");
+        // As a student would, wait until Discard is offered (a background settings operation may still be finishing).
+        await EventuallyAsync(() => graph.Settings.DiscardChangesCommand.CanExecute(null), ct);
         Require(await graph.Settings.DiscardChangesCommand.ExecuteAsync(ct) == SnuWatcher.Windows.Presentation.Common.UiCommandOutcome.Completed, "ui_language_link_edit_not_discarded");
         Require(!graph.Settings.Model.State.IsDirty, "ui_language_link_edit_not_discarded");
-        Require(Named<TextBlock>(window, "TermLabel").Text == "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
+        RequireShownTerm(window, "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
         await ClickLanguageAsync(window, graph, UiLanguage.English, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "Settings", "ui_english_resources_missing");
-        Require(Named<TextBlock>(window, "TermLabel").Text == "2026 Winter Semester (Demo)", "ui_english_term_label_missing");
+        RequireShownTerm(window, "2026 Winter Semester (Demo)", "ui_english_term_label_missing");
         proof = proof with { LanguageLinks = true, EnglishKorean = true };
 
         // An empty search lists every course in the current term one source page at a time, as the registration site does.
@@ -141,6 +143,10 @@ internal static partial class StudentUiValidation
         await NavigateAsync(window, graph, StudentPage.FindCourses);
         captures.Add(await CaptureAsync(profile, window, "ui-search-ko-normal.png", false, ct));
         captures.Add(await CaptureAsync(profile, window, "ui-search-ko-narrow.png", true, ct));
+        // A narrow window leaves the term out of the header; the search card must still show it.
+        Require(window.ActualWidth < NarrowWidth && !Visuals<TextBlock>(window).Single(block => block.Name == "TermLabel").IsVisible,
+            "ui_narrow_header_term_shown");
+        RequireShownTerm(window, "2026 - 겨울학기 (Demo)", "ui_narrow_term_missing");
         await SaveLanguageAsync(window, graph, UiLanguage.English, ct);
         await VerifyEmptyWatchColumnsAsync(window, graph, ct);
         await NavigateAsync(window, graph, StudentPage.FindCourses);
@@ -194,7 +200,7 @@ internal static partial class StudentUiValidation
         proof = proof with { PauseResume = true, Rename = true };
 
         _stage = "profile_save";
-        await NavigateAsync(window, graph, StudentPage.Settings);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         SetSetting(window, graph, "DesiredProfile", WatchMonitorProfile.Faster);
         await InvokeCommandAsync(window, graph.Settings.SaveCommand, ct);
         Require(graph.Settings.Model.State.Applied?.Profile == WatchMonitorProfile.Faster
@@ -303,7 +309,8 @@ internal static partial class StudentUiValidation
         await PumpUiAsync(window);
     }
 
-    private static async Task NavigateAsync(StudentWindow window, StudentDesktopSession graph, StudentPage page)
+    private static async Task NavigateAsync(StudentWindow window, StudentDesktopSession graph, StudentPage page,
+        CancellationToken ct = default)
     {
         var name = page switch
         {
@@ -314,6 +321,26 @@ internal static partial class StudentUiValidation
         Named<RadioButton>(window, name).SetCurrentValue(ToggleButton.IsCheckedProperty, true);
         await PumpUiAsync(window);
         Require(graph.Shell.SelectedPage == page, "ui_navigation_binding_failed");
+        // Opening Settings reloads the saved values and briefly disables its buttons. Like a student, wait until they are
+        // offered again: a click queued before the reload publishes "busy" would otherwise be ignored on a slow PC.
+        if (page == StudentPage.Settings)
+        {
+            await EventuallyAsync(() => !graph.Settings.Model.State.IsBusy && !graph.Settings.ReloadCommand.IsExecuting, ct);
+            await PumpUiAsync(window);
+        }
+    }
+
+    private const double NarrowWidth = StudentWindow.NarrowWidth;
+
+    /// <summary>
+    /// The current term is always shown on the course page: in the search card's title, and also in the header when the
+    /// window is wide enough. Windows caps the window to the screen, so at 200% on 1280x800 the window is always narrow.
+    /// </summary>
+    private static void RequireShownTerm(Window window, string expected, string code)
+    {
+        Require(Named<TextBlock>(window, "SearchTermText").Text == expected, code);
+        var header = Visuals<TextBlock>(window).Single(block => block.Name == "TermLabel");
+        if (window.ActualWidth >= NarrowWidth) Require(header.IsVisible && header.Text == expected, code);
     }
 
     private static async Task ClickLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)
@@ -325,7 +352,7 @@ internal static partial class StudentUiValidation
 
     private static async Task SaveLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)
     {
-        await NavigateAsync(window, graph, StudentPage.Settings);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         SetSetting(window, graph, "Language", language);
         await InvokeCommandAsync(window, graph.Settings.SaveCommand, ct);
         Require(graph.Settings.Model.State.Stored?.Values.Language == language, "ui_language_not_saved");

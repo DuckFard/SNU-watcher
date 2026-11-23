@@ -1,6 +1,7 @@
 using SnuWatcher.Application.Monitoring.Scheduling;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Windows.Presentation.Common;
+using SnuWatcher.Windows.Presentation.Settings;
 using Xunit;
 
 namespace SnuWatcher.Windows.Tests.Presentation.Settings;
@@ -122,6 +123,71 @@ public sealed class SettingsLanguageTests
         Assert.Equal(UiCommandOutcome.Failed, await conflicted.ViewModel.SaveLanguageAsync(UiLanguage.Korean));
         Assert.True(conflicted.ViewModel.Model.State.HasConflict);
         Assert.Equal(UiLanguage.English, conflicted.Store.Current.Values.Language);
+    }
+
+    [Fact]
+    public async Task ALanguageClickDuringTheBackgroundTermSaveWaitsForItAndThenSaves()
+    {
+        await using var fixture = new SettingsFixture();
+        await fixture.ViewModel.LoadAsync();
+        var deadline = TimeSpan.FromSeconds(30);
+        var applying = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        // A slow monitor holds the startup term save in its profile application, keeping Settings busy.
+        fixture.Profile.Handler = async (profile, revision, token) =>
+        {
+            applying.TrySetResult();
+            await release.Task.WaitAsync(token);
+            return SettingsProfile.Snapshot(profile, revision);
+        };
+        var hint = fixture.ViewModel.PersistTermHintAsync(2026, "21");
+        Task<UiCommandOutcome> language;
+        try
+        {
+            await applying.Task.WaitAsync(deadline);
+            Assert.True(fixture.ViewModel.Model.State.IsBusy);
+            Assert.True(fixture.ViewModel.LanguageCommand.CanExecute(null));
+            language = fixture.ViewModel.SaveLanguageAsync(UiLanguage.Korean);
+            Assert.False(language.IsCompleted);
+        }
+        finally { fixture.Profile.Handler = null; release.TrySetResult(); }
+
+        Assert.Equal(UiCommandOutcome.Completed, await language.WaitAsync(deadline));
+        Assert.Equal(SettingsHintStatus.Saved, (await hint.WaitAsync(deadline)).Status);
+        // The click was kept, and its language save kept the term the background save had just written.
+        Assert.Equal((UiLanguage.Korean, 2026), (fixture.Store.Current.Values.Language, fixture.Store.Current.Values.SelectedYear));
+        Assert.Equal(2, fixture.Store.Commands.Length);
+        Assert.Equal(UiLanguage.Korean, fixture.ViewModel.Language);
+        Assert.Null(fixture.ViewModel.LanguageLinkIssueKey(UiCommandOutcome.Completed));
+        Assert.Empty(fixture.Errors);
+    }
+
+    [Fact]
+    public async Task TheHeaderReportsTheActualCauseOfAnUnsuccessfulLanguageClick()
+    {
+        await using var fixture = new SettingsFixture();
+        await fixture.ViewModel.LoadAsync();
+        foreach (var quiet in new[] { UiCommandOutcome.Completed, UiCommandOutcome.Canceled, UiCommandOutcome.Busy })
+            Assert.Null(fixture.ViewModel.LanguageLinkIssueKey(quiet));
+        Assert.Equal("Ui.CommandFailed", fixture.ViewModel.LanguageLinkIssueKey(UiCommandOutcome.Failed));
+
+        await fixture.EditAsync();
+        fixture.Store.SaveHandler = (_, _) => throw new IOException("uncertain edit save");
+        await fixture.ViewModel.SaveCommand.ExecuteAsync();
+        var blocked = await fixture.ViewModel.SaveLanguageAsync(UiLanguage.Korean);
+        Assert.Equal(UiCommandOutcome.Unavailable, blocked);
+        Assert.Equal("Ui.SettingsSaveUncertain", fixture.ViewModel.LanguageLinkIssueKey(blocked));
+
+        await using var conflicted = new SettingsFixture();
+        await conflicted.ViewModel.LoadAsync();
+        conflicted.Store.SaveHandler = (command, _) =>
+        {
+            conflicted.Store.ExternalSave(new UiPreferencesValues(UiLanguage.English, null, null, WatchMonitorProfile.LowActivity, UiCloseBehavior.MinimizeToTray, 0));
+            return Task.FromResult(conflicted.Store.Commit(command));
+        };
+        var failed = await conflicted.ViewModel.SaveLanguageAsync(UiLanguage.Korean);
+        Assert.Equal(UiCommandOutcome.Failed, failed);
+        Assert.Equal("Ui.SettingsConflict", conflicted.ViewModel.LanguageLinkIssueKey(failed));
     }
 
     [Fact]

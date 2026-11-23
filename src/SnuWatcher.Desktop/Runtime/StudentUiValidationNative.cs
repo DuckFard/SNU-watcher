@@ -54,7 +54,7 @@ internal static partial class StudentUiValidation
         List<StudentUiCapture> captures, CancellationToken ct)
     {
         _stage = "simulated_native_status";
-        await NavigateAsync(window, graph, StudentPage.Settings);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         Require(graph.Settings.Model.State.NativeStatus?.Readiness == BatchChannelReadiness.Disabled
             && !BoundButton(window, graph.Settings.NativeTestCommand).IsEnabled && simulated.SimulatedTests == 0,
             "ui_simulated_disabled_status_incorrect");

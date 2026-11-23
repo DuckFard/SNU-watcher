@@ -116,8 +116,7 @@ internal static partial class StudentUiValidation
         captures.Add(await CaptureActualAsync(profile, window, "ui-actual-watches-details.png", ct));
 
         _stage = "actual_work_area_settings";
-        await NavigateAsync(window, graph, StudentPage.Settings);
-        await EventuallyAsync(() => !graph.Settings.Model.State.IsBusy && !graph.Settings.ReloadCommand.IsExecuting, ct);
+        await NavigateAsync(window, graph, StudentPage.Settings, ct);
         foreach (var field in Visuals<ComboBox>(window).Where(field => field.IsVisible && ReferenceEquals(field.DataContext, graph.Settings)).ToArray())
             await RequireReachableAsync(field, window, "ui_actual_settings_control_unreachable");
         await RequireReachableAsync(BoundButton(window, graph.Settings.SaveCommand), window, "ui_actual_settings_save_unreachable");
@@ -150,6 +149,12 @@ internal static partial class StudentUiValidation
         RequireVisibleRow(Named<DataGrid>(window, "ResultsGrid"), window,
             item => item is CourseSearchItem row && row.Row.Key == StudentUiValidationSource.Key012,
             "ui_small_search_row_unreachable", requireIdentifier: true);
+        // Even at 640x352 the course page names the term every search uses, and it can be scrolled into view.
+        var korean = (window.TryFindResource("Ui.Settings") as string) == "설정";
+        RequireShownTerm(window, korean ? "2026 - 겨울학기 (Demo)" : "2026 Winter Semester (Demo)", "ui_small_term_missing");
+        var term = Named<TextBlock>(window, "SearchTermText");
+        term.BringIntoView(); await PumpUiAsync(window);
+        Require(IsRenderedTextVisible(term, window), "ui_small_term_unreachable");
         await NavigateAsync(window, graph, StudentPage.MyWatches);
         await EventuallyAsync(() => !graph.Watches.State.IsLoading && !graph.Watches.State.SelectionPending, ct);
         await ShowCompactPaneAsync(window, "ListNavigation", required: true);

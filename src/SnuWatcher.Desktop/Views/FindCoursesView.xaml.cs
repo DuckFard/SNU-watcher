@@ -149,7 +149,10 @@ public partial class FindCoursesView : UserControl
         ResultTiming.Visibility = args.NewSize.Height < 540 ? Visibility.Collapsed : Visibility.Visible;
         StartPanel.Margin = new Thickness(12, 0, 12, args.NewSize.Height < 520 ? 0 : 24);
         ResultFooter.Visibility = args.NewSize.Height < 600 ? Visibility.Collapsed : Visibility.Visible;
-        SearchTitle.Visibility = args.NewSize.Height < 360 ? Visibility.Collapsed : Visibility.Visible;
+        // The term stays in view at every size (a narrow header leaves it to this card); very short views only tighten it.
+        var veryShort = args.NewSize.Height < 360;
+        SearchTitle.Margin = new Thickness(0, 0, 0, veryShort ? 2 : 8);
+        SearchTermText.FontSize = SearchTermSuffix.FontSize = veryShort ? 13 : 15;
         // At very short work areas the pane selector already supplies the Results heading;
         // confirmation remains reachable through Details / Watch, keeping a real row viewport.
         ResultHeader.Visibility = args.NewSize.Height < 320 ? Visibility.Collapsed : Visibility.Visible;

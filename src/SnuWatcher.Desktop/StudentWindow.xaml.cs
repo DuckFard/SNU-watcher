@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Desktop.Resources;
 using SnuWatcher.Windows;
-using SnuWatcher.Windows.Presentation.Common;
 using SnuWatcher.Windows.Presentation.Shell;
 using Forms = System.Windows.Forms;
 
@@ -120,11 +119,14 @@ public partial class StudentWindow : Window, IDisposable
 
     private string Text(string key) => TryFindResource(key) as string ?? "SNU Watcher";
 
+    /// <summary>Below this width the header drops the term and subtitle; the course page's search card keeps the term.</summary>
+    internal const double NarrowWidth = 860;
+
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs args)
     {
         if (RootLayout is null || ChromeScrollViewer is null) return;
         var compact = ActualHeight < 560;
-        var narrow = ActualWidth < 860;
+        var narrow = ActualWidth < NarrowWidth;
         var gutter = compact ? 8 : 20;
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
         ChromeScrollViewer.MaxHeight = compact ? Math.Max(56, RootLayout.ActualHeight - 250) : double.PositiveInfinity;
@@ -197,16 +199,17 @@ public partial class StudentWindow : Window, IDisposable
     private void OnEnglish(object sender, RoutedEventArgs args) => SaveLanguage(UiLanguage.English);
     private void OnKorean(object sender, RoutedEventArgs args) => SaveLanguage(UiLanguage.Korean);
 
-    /// <summary>"KR | EN" saves only the language; unsaved Settings edits are never saved along with it.</summary>
+    /// <summary>
+    /// "KR | EN" saves only the language; unsaved Settings edits are never saved along with it. A click during
+    /// another settings operation waits for it; a failure reports its actual cause, never "waiting to be applied".
+    /// </summary>
     private async void SaveLanguage(UiLanguage language)
     {
         if (_model is null) return;
         try
         {
             var outcome = await _model.Settings.SaveLanguageAsync(language);
-            if (outcome is UiCommandOutcome.Busy or UiCommandOutcome.Unavailable) ShowStatusKey("Ui.SettingsPending");
-            else if (outcome == UiCommandOutcome.Failed)
-                ShowStatusKey(_model.Settings.Model.State.SaveUncertain ? "Ui.SettingsSaveUncertain" : "Ui.SettingsPending");
+            if (_model.Settings.LanguageLinkIssueKey(outcome) is { } key) ShowStatusKey(key);
         }
         catch (ObjectDisposedException) { /* Closing the shell closes settings admission. */ }
     }
