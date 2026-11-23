@@ -79,10 +79,10 @@ internal static partial class StudentUiValidation
         await EventuallyAsync(() => graph.Settings.DiscardChangesCommand.CanExecute(null), ct);
         Require(await graph.Settings.DiscardChangesCommand.ExecuteAsync(ct) == SnuWatcher.Windows.Presentation.Common.UiCommandOutcome.Completed, "ui_language_link_edit_not_discarded");
         Require(!graph.Settings.Model.State.IsDirty, "ui_language_link_edit_not_discarded");
-        Require(Named<TextBlock>(window, "TermLabel").Text == "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
+        RequireShownTerm(window, "2026 - 겨울학기 (Demo)", "ui_korean_term_label_missing");
         await ClickLanguageAsync(window, graph, UiLanguage.English, ct);
         Require((window.TryFindResource("Ui.Settings") as string) == "Settings", "ui_english_resources_missing");
-        Require(Named<TextBlock>(window, "TermLabel").Text == "2026 Winter Semester (Demo)", "ui_english_term_label_missing");
+        RequireShownTerm(window, "2026 Winter Semester (Demo)", "ui_english_term_label_missing");
         proof = proof with { LanguageLinks = true, EnglishKorean = true };
 
         // An empty search lists every course in the current term one source page at a time, as the registration site does.
@@ -143,6 +143,10 @@ internal static partial class StudentUiValidation
         await NavigateAsync(window, graph, StudentPage.FindCourses);
         captures.Add(await CaptureAsync(profile, window, "ui-search-ko-normal.png", false, ct));
         captures.Add(await CaptureAsync(profile, window, "ui-search-ko-narrow.png", true, ct));
+        // A narrow window leaves the term out of the header; the search card must still show it.
+        Require(window.ActualWidth < NarrowWidth && !Visuals<TextBlock>(window).Single(block => block.Name == "TermLabel").IsVisible,
+            "ui_narrow_header_term_shown");
+        RequireShownTerm(window, "2026 - 겨울학기 (Demo)", "ui_narrow_term_missing");
         await SaveLanguageAsync(window, graph, UiLanguage.English, ct);
         await VerifyEmptyWatchColumnsAsync(window, graph, ct);
         await NavigateAsync(window, graph, StudentPage.FindCourses);
@@ -324,6 +328,19 @@ internal static partial class StudentUiValidation
             await EventuallyAsync(() => !graph.Settings.Model.State.IsBusy && !graph.Settings.ReloadCommand.IsExecuting, ct);
             await PumpUiAsync(window);
         }
+    }
+
+    private const double NarrowWidth = StudentWindow.NarrowWidth;
+
+    /// <summary>
+    /// The current term is always shown on the course page: in the search card's title, and also in the header when the
+    /// window is wide enough. Windows caps the window to the screen, so at 200% on 1280x800 the window is always narrow.
+    /// </summary>
+    private static void RequireShownTerm(Window window, string expected, string code)
+    {
+        Require(Named<TextBlock>(window, "SearchTermText").Text == expected, code);
+        var header = Visuals<TextBlock>(window).Single(block => block.Name == "TermLabel");
+        if (window.ActualWidth >= NarrowWidth) Require(header.IsVisible && header.Text == expected, code);
     }
 
     private static async Task ClickLanguageAsync(StudentWindow window, StudentDesktopSession graph, UiLanguage language, CancellationToken ct)

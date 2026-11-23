@@ -119,11 +119,14 @@ public partial class StudentWindow : Window, IDisposable
 
     private string Text(string key) => TryFindResource(key) as string ?? "SNU Watcher";
 
+    /// <summary>Below this width the header drops the term and subtitle; the course page's search card keeps the term.</summary>
+    internal const double NarrowWidth = 860;
+
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs args)
     {
         if (RootLayout is null || ChromeScrollViewer is null) return;
         var compact = ActualHeight < 560;
-        var narrow = ActualWidth < 860;
+        var narrow = ActualWidth < NarrowWidth;
         var gutter = compact ? 8 : 20;
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
         ChromeScrollViewer.MaxHeight = compact ? Math.Max(56, RootLayout.ActualHeight - 250) : double.PositiveInfinity;

@@ -116,7 +116,7 @@
               </MultiBinding>
             </TextBlock.Text>
           </TextBlock>
-          <TextBlock Text="{DynamicResource Ui.TermSearchSuffix}" FontSize="15" Foreground="{DynamicResource Snu.Heading}" VerticalAlignment="Center" Margin="5,0,0,0">
+          <TextBlock x:Name="SearchTermSuffix" Text="{DynamicResource Ui.TermSearchSuffix}" FontSize="15" Foreground="{DynamicResource Snu.Heading}" VerticalAlignment="Center" Margin="5,0,0,0">
             <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
               <DataTrigger Binding="{Binding Model.State.SelectedTerm}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
             </Style.Triggers></Style></TextBlock.Style>
