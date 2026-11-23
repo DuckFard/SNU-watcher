@@ -1,6 +1,6 @@
 # Unsigned Windows preview releases
 
-The owner authorized an **unsigned preview after all functional gates pass**. The first target is `0.1.0-preview.1`, tag `v0.1.0-preview.1`, with Windows numeric installer version `0.1.0.0`. This document is a procedure, not evidence that a release has passed or been published. Read the current [progress](PROGRESS.md) and candidate-specific native acceptance before publishing.
+The owner authorized an **unsigned preview after all functional gates pass**. The first target is `0.1.0-preview.1`, tag `v0.1.0-preview.1`, with Windows numeric installer version `0.1.0.0`. The second, `0.1.0-preview.2` (tag `v0.1.0-preview.2`, numeric version `0.1.0.1`), follows the same procedure with its own version in each asset name, tag and title. This document is a procedure, not evidence that a release has passed or been published. Read the current [progress](PROGRESS.md) and candidate-specific native acceptance before publishing.
 
 Original project code remains MIT licensed. Microsoft Windows App SDK, Windows SDK, WebView2, .NET, SQLite and other components retain their own applicable terms. The installer presents `DISTRIBUTION-LICENSES.txt`, containing the original project license and exact collected upstream terms/notices. Installed `licenses/` preserves the individual files. This collection is not a new project EULA and does not relabel third-party code as MIT.
 
