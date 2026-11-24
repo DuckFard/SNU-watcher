@@ -104,11 +104,11 @@ public class UnusedShellPort : DispatchProxy
 
 internal sealed class ShellFixture : IAsyncDisposable
 {
-    internal ShellFixture(bool demo = false, bool controls = true, bool history = false)
+    internal ShellFixture(bool demo = false, bool controls = true, bool history = false, StartupSettings? startup = null)
     {
         Search = new(Ports, Ports, Dispatcher, Clock);
         Watches = new(Ports, Ports, Dispatcher, Clock, () => Ports.AppliedRefreshProfile.TargetInterval);
-        Settings = new(Ports, Ports, Dispatcher, Clock);
+        Settings = new(Ports, Ports, Dispatcher, Clock, startup: startup);
         if (history) Alerts = new(History, Dispatcher, Clock);
         Shell = new(Search, Watches, Settings, Ports, Ports, Dispatcher, Clock, demo, controls ? Ports : null,
             alertHistory: Alerts);

@@ -28,6 +28,7 @@ public partial class App : System.Windows.Application
         if (await Runtime.StudentUiValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         if (await Runtime.MonitorRuntimeValidation.TryHandleAsync(e.Args, code => Shutdown(code))) return;
         _useStudentInterface = !e.Args.Contains("--native-validation", StringComparer.Ordinal);
+        _startInBackground = e.Args.Contains(RunKeyStartupRegistration.BackgroundArgument, StringComparer.Ordinal);
         try
         {
             _coldLaunch = ActivationRequest.IsNotificationLaunch(e.Args);
@@ -67,7 +68,9 @@ public partial class App : System.Windows.Application
                     Shutdown(2);
                     return;
                 }
-                await _instance.ForwardAsync(new ActivationRequest(ActivationAction.Show), CancellationToken.None);
+                // A sign-in start while the app is already running must not pop the existing window up.
+                if (!_startInBackground)
+                    await _instance.ForwardAsync(new ActivationRequest(ActivationAction.Show), CancellationToken.None);
                 Shutdown();
                 return;
             }

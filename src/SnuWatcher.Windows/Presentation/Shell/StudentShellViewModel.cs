@@ -108,7 +108,12 @@ public sealed partial class StudentShellViewModel : INotifyPropertyChanged, IAsy
         if (!Enum.IsDefined(page)) throw new ArgumentOutOfRangeException(nameof(page));
         Model.Replace(State with { SelectedPage = page });
         if (page == StudentPage.MyWatches) RequestWatchReload(force: true);
-        if (page == StudentPage.Settings) Settings.ReloadCommand.Execute(null);
+        if (page == StudentPage.Settings)
+        {
+            Settings.ReloadCommand.Execute(null);
+            // The user may have changed sign-in start in Windows' own Startup apps settings meanwhile.
+            Settings.Startup?.Refresh();
+        }
         if (page == StudentPage.Alerts) alertHistory?.ReloadCommand.Execute(null);
     }
 

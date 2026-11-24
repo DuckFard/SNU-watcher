@@ -28,8 +28,9 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
     public SettingsViewModel(IUiPreferencesStore preferences, IRuntimeRefreshProfile refreshProfile,
         IUiDispatcher dispatcher, TimeProvider clock, Action? requestNativeTest = null, Action<string>? reportError = null,
         INativeNotificationControls? nativeNotifications = null, IDiagnosticsReader? diagnostics = null,
-        IDiagnosticsExportAction? diagnosticsExport = null)
+        IDiagnosticsExportAction? diagnosticsExport = null, StartupSettings? startup = null)
     {
+        Startup = startup;
         ArgumentNullException.ThrowIfNull(preferences);
         ArgumentNullException.ThrowIfNull(refreshProfile);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -65,6 +66,8 @@ public sealed partial class SettingsViewModel : INotifyPropertyChanged, IAsyncDi
     }
     /// <summary>Dispatcher-published immutable settings state.</summary>
     public UiSnapshotModel<SettingsSnapshot> Model { get; }
+    /// <summary>The sign-in start switch, present only for the installed app's own profile.</summary>
+    public StartupSettings? Startup { get; }
     /// <summary>Reloads saved values while preserving unsaved edits and uncertain command identity.</summary>
     public UiAsyncCommand ReloadCommand { get; }
     /// <summary>Saves editable intent, or retries the identical unresolved write, before applying the saved profile.</summary>
