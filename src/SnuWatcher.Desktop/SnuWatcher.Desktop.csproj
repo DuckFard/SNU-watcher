@@ -27,6 +27,8 @@
     <Resource Include="Fonts\NotoSansKR-Regular.otf" />
     <Resource Include="Fonts\NotoSansKR-Medium.otf" />
     <Resource Include="Fonts\NotoSansKR-Bold.otf" />
+    <!-- The About card shows the application icon's largest frame. -->
+    <Resource Include="Assets\SnuWatcher.ico" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />

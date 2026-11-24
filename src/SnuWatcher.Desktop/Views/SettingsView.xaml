@@ -148,6 +148,34 @@
           <TextBlock Text="{DynamicResource Ui.DiagnosticsExportNote}" Style="{StaticResource Student.Label}" Margin="0,10,0,0"/>
         </StackPanel>
       </Border>
+      <Border Style="{StaticResource Student.Card}">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.About}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="Medium"/>
+          <Grid Margin="0,12,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Image Source="{x:Static presentation:AppAbout.Icon}" Width="48" Height="48" Margin="0,0,14,0"
+                   RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="SNU Watcher"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock Text="SNU Watcher" Style="{StaticResource Student.Label}" FontSize="16" FontWeight="Medium"/>
+              <WrapPanel>
+                <TextBlock Text="{DynamicResource Ui.AboutVersion}" Style="{StaticResource Student.Muted}"/>
+                <TextBlock Text="{x:Static presentation:AppAbout.Version}" Style="{StaticResource Student.Muted}"/>
+              </WrapPanel>
+            </StackPanel>
+          </Grid>
+          <TextBlock Text="{DynamicResource Ui.AboutSummary}" Style="{StaticResource Student.Label}" Margin="0,0,0,8"/>
+          <TextBlock Text="{DynamicResource Ui.AboutIndependent}" Style="{StaticResource Student.Label}" Margin="0,0,0,8"/>
+          <TextBlock Text="{DynamicResource Ui.AboutLicense}" Style="{StaticResource Student.Label}" Margin="0,0,0,12"/>
+          <WrapPanel>
+            <Button Content="{DynamicResource Ui.AboutProjectPage}" Click="OnOpenProjectPage" Style="{StaticResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.AboutReleaseNotes}" Click="OnOpenReleaseNotes" Style="{StaticResource Student.SecondaryButton}"/>
+            <Button Content="{DynamicResource Ui.AboutNotices}" Click="OnOpenNotices" Style="{StaticResource Student.SecondaryButton}"
+                    Visibility="{Binding Source={x:Static presentation:AppAbout.HasNotices}, Converter={StaticResource Settings.BooleanVisibility}}"/>
+          </WrapPanel>
+          <TextBlock x:Name="AboutIssue" Text="{DynamicResource Ui.AboutOpenFailed}" Style="{StaticResource Student.Label}"
+                     Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0"/>
+        </StackPanel>
+      </Border>
       <TextBlock Text="{DynamicResource Ui.AlertsInactive}" Style="{StaticResource Student.Label}"/>
     </StackPanel>
   </ScrollViewer>
