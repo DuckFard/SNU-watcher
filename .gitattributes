@@ -4,3 +4,5 @@ docs/third-party/Windows-SDK-LICENSE.txt -text -whitespace
 docs/third-party/NotoSansKR-LICENSE.txt -text -whitespace
 # Bundled font files are binary and kept byte-for-byte as published upstream.
 *.otf binary
+# The application icon is generated binary artwork (scripts/New-AppIcon.ps1).
+*.ico binary

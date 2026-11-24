@@ -27,7 +27,7 @@ public partial class MainWindow : Window, IDisposable
         _tray = new Forms.NotifyIcon
         {
             Text = "SNU Watcher - native feasibility",
-            Icon = System.Drawing.SystemIcons.Information,
+            Icon = AppIcon.CreateForTray(),
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -78,8 +78,10 @@ public partial class MainWindow : Window, IDisposable
 
     public void Dispose()
     {
+        var icon = _tray.Icon;
         _tray.Visible = false;
         _tray.ContextMenuStrip?.Dispose();
         _tray.Dispose();
+        icon?.Dispose();
     }
 }
