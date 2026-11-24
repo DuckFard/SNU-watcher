@@ -5,6 +5,15 @@
   <sys:String x:Key="Ui.MyWatches">My watches</sys:String>
   <sys:String x:Key="Ui.Alerts">Alerts</sys:String>
   <sys:String x:Key="Ui.Settings">Settings</sys:String>
+  <sys:String x:Key="Ui.About">About SNU Watcher</sys:String>
+  <sys:String x:Key="Ui.AboutVersion">Version</sys:String>
+  <sys:String x:Key="Ui.AboutSummary">Checks the course sections you choose and alerts you when a seat opens. You register yourself on the official SNU registration site.</sys:String>
+  <sys:String x:Key="Ui.AboutIndependent">An independent project, not affiliated with or endorsed by Seoul National University.</sys:String>
+  <sys:String x:Key="Ui.AboutLicense">Free and open source under the MIT License.</sys:String>
+  <sys:String x:Key="Ui.AboutProjectPage">Project page</sys:String>
+  <sys:String x:Key="Ui.AboutReleaseNotes">Release notes</sys:String>
+  <sys:String x:Key="Ui.AboutNotices">Third-party notices</sys:String>
+  <sys:String x:Key="Ui.AboutOpenFailed">Windows could not open this. Check your default browser or text editor.</sys:String>
   <sys:String x:Key="Ui.DiagnosticsTitle">Diagnostics and local storage</sys:String>
   <sys:String x:Key="Ui.DiagnosticsPrivacy">Review cached app status and file sizes. The JSON report excludes courses, labels, identifiers, paths, URLs, cookies and raw errors. Refreshing does not contact SNU or test Windows notifications.</sys:String>
   <sys:String x:Key="Ui.DiagnosticsRefresh">Refresh diagnostics</sys:String>
