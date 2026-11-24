@@ -123,8 +123,19 @@
               </StackPanel>
             </Border>
           </Expander>
-          <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
-                     Foreground="{DynamicResource Snu.Emphasis}"/>
+          <!-- High-contrast themes have no error colour, so a warning sign also marks the problem without colour. -->
+          <DockPanel>
+            <!-- A shape, not text: screen readers skip it and read only the message. -->
+            <Path DockPanel.Dock="Left" Width="14" Height="14" Margin="0,2,6,0" VerticalAlignment="Top" Stretch="Uniform"
+                  Fill="{DynamicResource Snu.Emphasis}"
+                  Data="F0 M8,1 L15.5,14.5 L0.5,14.5 Z M7.2,5 L8.8,5 L8.6,10 L7.4,10 Z M7.2,11.3 L8.8,11.3 L8.8,12.9 L7.2,12.9 Z">
+              <Path.Style><Style TargetType="Path"><Style.Triggers>
+                <DataTrigger Binding="{Binding State.IssueKey}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+              </Style.Triggers></Style></Path.Style>
+            </Path>
+            <TextBlock ui:ResourceText.Key="{Binding State.IssueKey}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                       Foreground="{DynamicResource Snu.Emphasis}"/>
+          </DockPanel>
           <TextBlock x:Name="LifecycleText" TextWrapping="Wrap" Visibility="Collapsed" AutomationProperties.LiveSetting="Assertive"
                      Foreground="{DynamicResource Snu.Ink}"/>
         </StackPanel>

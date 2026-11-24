@@ -63,12 +63,12 @@ public partial class StudentWindow : Window, IDisposable
         Closing += OnClosing;
     }
 
-    internal void ShowStatus(string message)
+    /// <summary>Shows an incidental notice, such as the window being brought to the front, in the student's language.</summary>
+    internal void ShowNoticeKey(string key)
     {
         Dispatcher.VerifyAccess();
-        if (_finishing) return; // Foreground/native-test notices cannot hide finalization guidance.
-        LifecycleText.Text = message;
-        LifecycleText.Visibility = Visibility.Visible;
+        if (_finishing) return; // Foreground notices cannot hide finalization guidance.
+        ShowStatusKey(key);
     }
 
     internal void ShowStatusKey(string key)

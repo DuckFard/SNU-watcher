@@ -212,7 +212,8 @@ public partial class App : System.Windows.Application
         UpdateStatus(request.Action == ActivationAction.ViewSection
             ? "Notification activation received. Section views arrive after the M2 gate."
             : activated ? "Existing instance brought to foreground."
-                : "Existing instance shown. Select SNU Watcher on the taskbar to focus it.");
+                : "Existing instance shown. Select SNU Watcher on the taskbar to focus it.",
+            activated ? "Ui.ExistingInstanceFront" : "Ui.ExistingInstanceTaskbar");
     }
 
     private bool ShowWindow()
@@ -246,11 +247,15 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private void UpdateStatus(string message)
+    /// <summary>
+    /// Records <paramref name="message"/> for the native-validation window. The student window speaks the student's
+    /// language, so it shows only <paramref name="studentKey"/>, never the raw English diagnostic.
+    /// </summary>
+    private void UpdateStatus(string message, string? studentKey = null)
     {
         _status = message;
         _window?.SetStatus(message);
-        _studentWindow?.ShowStatus(message);
+        if (studentKey is not null) _studentWindow?.ShowNoticeKey(studentKey);
     }
 
     private void Quit()
