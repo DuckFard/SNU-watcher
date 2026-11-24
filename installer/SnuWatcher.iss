@@ -45,6 +45,13 @@ LicenseFile={#SourceDir}\DISTRIBUTION-LICENSES.txt
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[Registry]
+; The app, not setup, creates the sign-in start entry (Settings > Start with Windows); ValueType none writes no value.
+; Uninstall removes it and Windows' record of the user's on/off switch for it. The name matches
+; RunKeyStartupRegistration.ValueName in src/SnuWatcher.Windows/StartupRegistration.cs.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "DuckFard.SnuWatcher"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: none; ValueName: "DuckFard.SnuWatcher"; Flags: uninsdeletevalue
+
 [Icons]
 Name: "{group}\SNU Watcher"; Filename: "{app}\{#AppExe}"; AppUserModelID: "DuckFard.SnuWatcher"
 

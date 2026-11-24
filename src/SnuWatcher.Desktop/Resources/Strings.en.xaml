@@ -5,6 +5,13 @@
   <sys:String x:Key="Ui.MyWatches">My watches</sys:String>
   <sys:String x:Key="Ui.Alerts">Alerts</sys:String>
   <sys:String x:Key="Ui.Settings">Settings</sys:String>
+  <sys:String x:Key="Ui.StartupTitle">Start with Windows</sys:String>
+  <sys:String x:Key="Ui.StartAtSignIn">Start SNU Watcher when I sign in to Windows</sys:String>
+  <sys:String x:Key="Ui.StartupNote">It starts in the tray, so your watches keep running after a restart. This applies immediately.</sys:String>
+  <sys:String x:Key="Ui.StartupDisabledInWindows">This is turned off in Windows' Startup apps settings. Turn SNU Watcher on there to start it when you sign in.</sys:String>
+  <sys:String x:Key="Ui.OpenStartupSettings">Open Windows startup settings</sys:String>
+  <sys:String x:Key="Ui.SignInStartFailed">Windows did not accept the change. Try again.</sys:String>
+  <sys:String x:Key="Ui.SignInStartUnavailable">Windows' startup setting could not be read.</sys:String>
   <sys:String x:Key="Ui.About">About SNU Watcher</sys:String>
   <sys:String x:Key="Ui.AboutVersion">Version</sys:String>
   <sys:String x:Key="Ui.AboutSummary">Checks the course sections you choose and alerts you when a seat opens. You register yourself on the official SNU registration site.</sys:String>

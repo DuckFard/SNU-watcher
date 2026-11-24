@@ -2,6 +2,7 @@ using SnuWatcher.Application.Monitoring.Hosting;
 using SnuWatcher.Application.Monitoring.SourcePolicy;
 using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Windows.Presentation.Common;
+using SnuWatcher.Windows.Presentation.Settings;
 using SnuWatcher.Windows.Presentation.Shell;
 using Xunit;
 
@@ -61,6 +62,21 @@ public sealed class StudentShellViewModelTests
         Assert.Same(fixture.Settings, fixture.Shell.PageContent);
         Assert.Equal(0, fixture.Ports.HttpCalls);
         Assert.Throws<InvalidOperationException>(() => fixture.Shell.Navigate(StudentPage.FindCourses));
+    }
+
+    [Fact]
+    public async Task OpeningSettingsRereadsSignInStartBecauseWindowsMayHaveChangedIt()
+    {
+        var registration = new SnuWatcher.Windows.Tests.Presentation.Settings.StartupSettingsTests.FakeRegistration();
+        var startup = new StartupSettings(registration, () => { });
+        await using var fixture = new ShellFixture(startup: startup);
+        await fixture.Shell.LoadInitialAsync();
+        Assert.Same(startup, fixture.Settings.Startup);
+        registration.State = StartupRegistrationState.DisabledInWindows;
+
+        await fixture.Dispatcher.InvokeAsync(() => fixture.Shell.Navigate(StudentPage.Settings));
+        Assert.True(startup.IsDisabledInWindows);
+        Assert.Equal(0, fixture.Ports.HttpCalls);
     }
 
     [Fact]

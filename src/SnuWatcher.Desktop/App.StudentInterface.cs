@@ -1,9 +1,14 @@
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using SnuWatcher.Desktop.Presentation;
+using SnuWatcher.Windows;
 using SnuWatcher.Windows.Hosting;
+using SnuWatcher.Windows.Presentation.Settings;
 
 namespace SnuWatcher.Desktop;
 
@@ -20,6 +25,27 @@ public partial class App
     private Task? _studentFailureObserver;
     private RetryableTeardown? _studentTeardown;
     private bool _useStudentInterface;
+    // Started by Windows at sign-in: stay in the tray instead of opening the window.
+    private bool _startInBackground;
+
+    /// <summary>
+    /// The sign-in start switch for this installed exe. A run through dotnet.exe (developer builds) gets none, so it
+    /// can never register another program to start at sign-in.
+    /// </summary>
+    private static StartupSettings? CreateStartupSettings()
+    {
+        var path = Environment.ProcessPath;
+        if (path is null || !string.Equals(Path.GetFileName(path), "SnuWatcher.Desktop.exe", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return new StartupSettings(new RunKeyStartupRegistration(path), OpenWindowsStartupSettings);
+    }
+
+    private static void OpenWindowsStartupSettings()
+    {
+        // A fixed Windows Settings page; nothing from the network or the user becomes part of this command.
+        try { using var _ = Process.Start(new ProcessStartInfo("ms-settings:startupapps") { UseShellExecute = true }); }
+        catch (Win32Exception) { /* Windows Settings is unavailable; the card still explains where the switch is. */ }
+    }
 
     private Task StartStudentInterfaceAsync()
     {
@@ -40,6 +66,8 @@ public partial class App
             _studentHost = opened.Host;
             if (_studentHost is null)
             {
+                // Another copy already owns the watches; a sign-in start has nothing to show.
+                if (_startInBackground) { Shutdown(); return; }
                 _studentWindow = new(null, Quit, enableTray: false);
                 MainWindow = _studentWindow;
                 _studentWindow.ShowStatusKey("Ui.AlreadyRunning");
@@ -48,11 +76,12 @@ public partial class App
             }
             var ui = new WpfUiDispatcher(Dispatcher);
             _studentSession = new(_studentHost, ui, TimeProvider.System, new DesktopStudentActions(ui), SendTestNotification,
-                nativeNotifications: _notifications);
+                nativeNotifications: _notifications, startup: CreateStartupSettings());
             AttachStudentNotifications();
             _studentWindow = new(_studentSession.Shell, Quit);
             MainWindow = _studentWindow;
-            _studentWindow.Show();
+            // The tray icon exists either way; a sign-in start opens the window only when the student asks.
+            if (!_startInBackground) _studentWindow.Show();
             _studentFailureObserver = ObserveStudentFailureAsync(_studentSession, _studentHost);
             await _studentSession.InitializeAsync(_studentStartupStop.Token);
         }

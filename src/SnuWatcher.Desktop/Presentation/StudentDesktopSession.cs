@@ -38,7 +38,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
 
     public StudentDesktopSession(WindowsMonitoringHost host, IUiDispatcher dispatcher, TimeProvider clock,
         IStudentActions actions, Action nativeTest, bool isDemo = false, bool observeSystemState = true,
-        INativeNotificationControls? nativeNotifications = null)
+        INativeNotificationControls? nativeNotifications = null, StartupSettings? startup = null)
     {
         ArgumentNullException.ThrowIfNull(host); ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(clock); ArgumentNullException.ThrowIfNull(actions);
@@ -58,7 +58,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
                 state?.Stored?.Values, state?.NativeStatus?.Readiness);
         }, typeof(StudentDesktopSession).Assembly.GetName().Version ?? new Version(0, 0), clock);
         Settings = settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report, nativeNotifications,
-            diagnostics, new DiagnosticsExportAction(dispatcher));
+            diagnostics, new DiagnosticsExportAction(dispatcher), isDemo ? null : startup);
         Alerts = new(host.Alerts, dispatcher, clock, Report, actions);
         Shell = new(Search, Watches, Settings, host.Dashboard, host.TermHints, dispatcher, clock,
             isDemo, new DesktopSourceControls(host), Report, Alerts);

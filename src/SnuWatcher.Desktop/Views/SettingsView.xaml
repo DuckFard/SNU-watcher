@@ -61,6 +61,30 @@
           </WrapPanel>
         </StackPanel>
       </Border>
+      <!-- Sign-in start is Windows' own setting, applied immediately; it is not one of the saved preferences above. -->
+      <Border DataContext="{Binding Startup}">
+        <Border.Style>
+          <Style TargetType="Border" BasedOn="{StaticResource Student.Card}">
+            <Style.Triggers><DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+          </Style>
+        </Border.Style>
+        <StackPanel>
+          <TextBlock Text="{DynamicResource Ui.StartupTitle}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="Medium"/>
+          <CheckBox x:Name="StartAtSignInField" Content="{DynamicResource Ui.StartAtSignIn}" Margin="0,10,0,6"
+                    IsChecked="{Binding StartAtSignIn, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    AutomationProperties.Name="{DynamicResource Ui.StartAtSignIn}"/>
+          <TextBlock Text="{DynamicResource Ui.StartupNote}" Style="{StaticResource Student.Label}"/>
+          <StackPanel Margin="0,10,0,0" Visibility="{Binding IsDisabledInWindows, Converter={StaticResource Settings.BooleanVisibility}}">
+            <TextBlock Text="{DynamicResource Ui.StartupDisabledInWindows}" Style="{StaticResource Student.Label}" Margin="0,0,0,8"
+                       AutomationProperties.LiveSetting="Polite"/>
+            <WrapPanel>
+              <Button Content="{DynamicResource Ui.OpenStartupSettings}" Click="OnOpenStartupSettings" Style="{StaticResource Student.SecondaryButton}"/>
+            </WrapPanel>
+          </StackPanel>
+          <TextBlock presentation:ResourceText.Key="{Binding IssueKey}" Style="{StaticResource Student.Label}" Margin="0,8,0,0"
+                     AutomationProperties.LiveSetting="Polite"/>
+        </StackPanel>
+      </Border>
       <Border Style="{StaticResource Student.Card}">
         <StackPanel>
           <TextBlock Text="{DynamicResource Ui.NativeTest}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="Medium"/>

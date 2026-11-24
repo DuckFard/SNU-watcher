@@ -14,6 +14,9 @@ public partial class SettingsView : UserControl
     /// <summary>Creates the settings surface after the shell installs its shared theme and language resources.</summary>
     public SettingsView() => InitializeComponent();
 
+    private void OnOpenStartupSettings(object sender, RoutedEventArgs args) =>
+        (DataContext as SettingsViewModel)?.Startup?.OpenWindowsStartupSettings();
+
     private void OnOpenProjectPage(object sender, RoutedEventArgs args) => OpenAbout(AppAbout.ProjectPage.AbsoluteUri);
 
     private void OnOpenReleaseNotes(object sender, RoutedEventArgs args) => OpenAbout(AppAbout.ReleaseNotes.AbsoluteUri);
