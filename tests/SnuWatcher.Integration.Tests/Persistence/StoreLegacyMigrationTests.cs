@@ -89,14 +89,21 @@ public sealed class StoreLegacyMigrationTests
             await firstBackedUp.Task.WaitAsync(TimeSpan.FromSeconds(10));
             secondTask = SqliteWatchStore.OpenAsync(fixture.Factory, faultInjector: stage =>
             {
-                if (stage == SqliteStoreWriteStage.SchemaValidated) secondValidated.TrySetResult();
+                if (stage != SqliteStoreWriteStage.SchemaValidated) return;
+                // The second opener has inspected V1 while the first still holds its write reservation,
+                // so the second can only reserve after the first commits V5. Release the first here, on
+                // the second's lane thread, before that thread blocks in its reservation wait (bounded by
+                // the 5 s busy timeout). A test continuation needs another free pool thread to release
+                // it, and under parallel-test load none may run before the second's wait times out.
+                secondValidated.TrySetResult();
+                releaseFirst.Set();
             });
-            try { await secondValidated.Task.WaitAsync(TimeSpan.FromSeconds(10)); }
-            finally { releaseFirst.Set(); }
+            await secondValidated.Task.WaitAsync(TimeSpan.FromSeconds(10));
             first = await firstTask.WaitAsync(TimeSpan.FromSeconds(10));
             second = await secondTask.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(5, fixture.Version);
-            Assert.Single(fixture.Backups());
+            Assert.Equal(Assert.Single(fixture.Backups()), first.MigrationBackupPath);
+            Assert.Null(second.MigrationBackupPath);
             await AssertSeedPreservedAsync(first);
             await AssertSeedPreservedAsync(second);
         }

@@ -178,7 +178,11 @@ public sealed class StoreBatchSchemaTests
             await AssertBoundaryReachedAsync(firstBackedUp.Task, firstTask);
             secondTask = SqliteWatchStore.OpenAsync(fixture.Factory, faultInjector: stage =>
             {
-                if (stage == SqliteStoreWriteStage.SchemaValidated) secondValidated.TrySetResult();
+                if (stage != SqliteStoreWriteStage.SchemaValidated) return;
+                // Release the first opener before this lane thread blocks in its reservation wait
+                // (bounded by the 5 s busy timeout), not from a test continuation that may not run in time.
+                secondValidated.TrySetResult();
+                releaseFirst.Set();
             });
             try { await AssertBoundaryReachedAsync(secondValidated.Task, secondTask); }
             finally { releaseFirst.Set(); }
