@@ -3,9 +3,10 @@ param(
     [string]$PreviewPath
 )
 
-# Draws the SNU Watcher application icon: a registration-blue tile holding a 3x3 seat map in which
-# one seat is lit ("a seat opened"). Every size is drawn from the same geometry with edges snapped
-# to whole pixels, so small sizes stay sharp instead of being downscaled from the large frame.
+# Draws the SNU Watcher application icon: the app's brand mark, a white bell on a registration-blue
+# circle, as shown in the window header (StudentWindow BrandMark). The bell is drawn here as an original
+# filled shape, not taken from the Segoe font glyph the header uses. Every size is drawn from the same
+# vector geometry rather than downscaled, with the clapper kept clear of the bell at small sizes.
 # Frames up to 64 px are 32-bit DIBs; the 256 px frame is PNG, as Windows expects.
 # Regenerate with: ./scripts/New-AppIcon.ps1 [-PreviewPath review.png]
 
@@ -15,28 +16,7 @@ $repoRoot = Split-Path $PSScriptRoot -Parent
 if (-not $OutputPath) { $OutputPath = Join-Path $repoRoot 'src/SnuWatcher.Desktop/Assets/SnuWatcher.ico' }
 
 $sizes = 16, 20, 24, 32, 40, 48, 64, 256
-$tileTop = [Drawing.Color]::FromArgb(255, 0x4A, 0x80, 0xDA)
-$tileBottom = [Drawing.Color]::FromArgb(255, 0x2F, 0x62, 0xB8)   # Snu.SelectedAccent
-
-function New-RoundedRectangle([single]$x, [single]$y, [single]$width, [single]$height, [single]$radius, [single]$bottomRadius = -1) {
-    $path = [Drawing.Drawing2D.GraphicsPath]::new()
-    if ($bottomRadius -lt 0) { $bottomRadius = $radius }
-    $top = [Math]::Min($radius * 2, [Math]::Min($width, $height))
-    $bottom = [Math]::Min($bottomRadius * 2, [Math]::Min($width, $height))
-    if ($top -le 0 -and $bottom -le 0) { $path.AddRectangle([Drawing.RectangleF]::new($x, $y, $width, $height)); return $path }
-    if ($top -gt 0) {
-        $path.AddArc($x, $y, $top, $top, 180, 90)
-        $path.AddArc($x + $width - $top, $y, $top, $top, 270, 90)
-    }
-    else { $path.AddLine($x, $y, $x + $width, $y) }
-    if ($bottom -gt 0) {
-        $path.AddArc($x + $width - $bottom, $y + $height - $bottom, $bottom, $bottom, 0, 90)
-        $path.AddArc($x, $y + $height - $bottom, $bottom, $bottom, 90, 90)
-    }
-    else { $path.AddLine($x + $width, $y + $height, $x, $y + $height) }
-    $path.CloseFigure()
-    return $path
-}
+$brand = [Drawing.Color]::FromArgb(255, 0x37, 0x6D, 0xC8)   # Snu.Navy, the header mark's background
 
 function New-IconBitmap([int]$size) {
     $u = $size / 256.0
@@ -47,34 +27,36 @@ function New-IconBitmap([int]$size) {
         $g.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::Half
         $g.Clear([Drawing.Color]::Transparent)
 
-        # Tile.
-        $inset = if ($size -le 16) { 0 } else { [Math]::Max(1, [Math]::Round(8 * $u)) }
-        $tileSize = $size - 2 * $inset
-        $tile = New-RoundedRectangle $inset $inset $tileSize $tileSize ([Math]::Max(3, 56 * $u))
-        $gradient = [Drawing.Drawing2D.LinearGradientBrush]::new(
-            [Drawing.PointF]::new(0, $inset), [Drawing.PointF]::new(0, $size - $inset), $tileTop, $tileBottom)
-        $g.FillPath($gradient, $tile)
-        $gradient.Dispose(); $tile.Dispose()
+        # The circle fills the frame at 16 px and keeps a small margin above that.
+        $inset = if ($size -le 16) { 0 } else { [Math]::Max(0.5, 6 * $u) }
+        $circle = [Drawing.SolidBrush]::new($brand)
+        $g.FillEllipse($circle, [single]$inset, [single]$inset, [single]($size - 2 * $inset), [single]($size - 2 * $inset))
+        $circle.Dispose()
 
-        # A 3x3 seat map. Seat size and gap are whole pixels with the canvas's parity, so the grid
-        # is centred exactly; taken seats are translucent and the open seat (top right) is lit.
-        $span = $size * 196 / 256.0
-        $seat = 2 * [Math]::Round(($span - 2 * 20 * $u) / 6)
-        $gap = [Math]::Max(1, [Math]::Round(($span - 3 * $seat) / 2))
-        $origin = ($size - (3 * $seat + 2 * $gap)) / 2
-        # From 32 px up, seats get rounder tops, like rows of seat backs.
-        $back = if ($seat -ge 6) { [Math]::Max(1, $seat * 0.38) } else { 0 }
-        $base = if ($seat -ge 6) { [Math]::Max(1, $seat * 0.14) } else { 0 }
-        $taken = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(97, 255, 255, 255))
-        $open = [Drawing.SolidBrush]::new([Drawing.Color]::White)
-        for ($row = 0; $row -lt 3; $row++) {
-            for ($column = 0; $column -lt 3; $column++) {
-                $shape = New-RoundedRectangle ($origin + $column * ($seat + $gap)) ($origin + $row * ($seat + $gap)) $seat $seat $back $base
-                $g.FillPath($(if ($row -eq 0 -and $column -eq 2) { $open } else { $taken }), $shape)
-                $shape.Dispose()
-            }
-        }
-        $taken.Dispose(); $open.Dispose()
+        # Bell, in 256-unit coordinates. Below 32 px the knob would be sub-pixel, so it is left out
+        # and the bell moves up to stay centred.
+        $knob = $size -ge 32
+        $dy = if ($knob) { 0 } else { -6 }
+        function P([double]$x, [double]$y) { [Drawing.PointF]::new([single]($x * $u), [single](($y + $dy) * $u)) }
+        $bell = [Drawing.Drawing2D.GraphicsPath]::new()
+        $bell.AddBezier((P 64 174), (P 78 164), (P 84 150), (P 84 130))
+        $bell.AddLine((P 84 130), (P 84 112))
+        $bell.AddBezier((P 84 112), (P 84 86), (P 104 68), (P 128 68))
+        $bell.AddBezier((P 128 68), (P 152 68), (P 172 86), (P 172 112))
+        $bell.AddLine((P 172 112), (P 172 130))
+        $bell.AddBezier((P 172 130), (P 172 150), (P 178 164), (P 192 174))
+        $bell.CloseFigure()
+        $white = [Drawing.SolidBrush]::new([Drawing.Color]::White)
+        $g.FillPath($white, $bell)
+        $bell.Dispose()
+        if ($knob) { $g.FillEllipse($white, [single](118 * $u), [single](50 * $u), [single](20 * $u), [single](20 * $u)) }
+
+        # Clapper: a half disc under the lip, always at least one pixel clear of it.
+        $lip = (174 + $dy) * $u
+        $radius = [Math]::Max(1.5, 20 * $u)
+        $top = $lip + [Math]::Max(1, 12 * $u)
+        $g.FillPie($white, [single](128 * $u - $radius), [single]($top - $radius), [single](2 * $radius), [single](2 * $radius), 0, 180)
+        $white.Dispose()
     }
     finally { $g.Dispose() }
     return $bitmap
