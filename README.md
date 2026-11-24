@@ -12,6 +12,8 @@
 <img src="https://img.shields.io/badge/Windows_11-x64-4A5568?style=for-the-badge" alt="Windows 11 x64">
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-4A5568?style=for-the-badge" alt="MIT License"></a>
 
+**English** · [한국어](README.ko.md)
+
 **[Download](#download)** · [How it works](#how-it-works) · [Screens](#a-look-inside) · [Privacy](docs/privacy.md) · [Develop](#develop-locally)
 
 </div>
