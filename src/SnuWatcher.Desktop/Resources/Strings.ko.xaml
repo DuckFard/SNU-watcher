@@ -255,6 +255,8 @@
   <sys:String x:Key="Ui.SavedStateError">로컬 저장 상태를 확인해야 합니다. 조회를 중지했습니다.</sys:String>
   <sys:String x:Key="Ui.RuntimeError">예상치 못하게 조회가 중지되었습니다. 앱을 종료한 후 다시 실행하세요.</sys:String>
   <sys:String x:Key="Ui.AlertsComingSoon">이 세션에서는 알림 기록을 볼 수 없습니다. 앱을 다시 시작하여 저장된 기록을 불러오세요.</sys:String>
+  <sys:String x:Key="Ui.ExistingInstanceFront">SNU Watcher가 이미 실행 중이어서 창을 앞으로 가져왔습니다.</sys:String>
+  <sys:String x:Key="Ui.ExistingInstanceTaskbar">SNU Watcher가 이미 실행 중입니다. 작업 표시줄에서 선택해 전환하세요.</sys:String>
   <sys:String x:Key="Ui.AlreadyRunning">다른 SNU Watcher가 관심 강좌 데이터를 사용 중입니다. 해당 앱을 닫은 후 다시 실행하세요.</sys:String>
   <sys:String x:Key="Ui.LastSourceSuccess">마지막 성공한 사이트 요청</sys:String>
   <sys:String x:Key="Ui.NextCheck">다음 예상 조회</sys:String>

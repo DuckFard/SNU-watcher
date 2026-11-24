@@ -255,6 +255,8 @@
   <sys:String x:Key="Ui.SavedStateError">Local saved state needs attention. Monitoring is stopped.</sys:String>
   <sys:String x:Key="Ui.RuntimeError">Monitoring stopped unexpectedly. Quit and restart the app.</sys:String>
   <sys:String x:Key="Ui.AlertsComingSoon">Alert history is unavailable in this session. Restart the app to reload its saved history.</sys:String>
+  <sys:String x:Key="Ui.ExistingInstanceFront">SNU Watcher was already running, so its window was brought to the front.</sys:String>
+  <sys:String x:Key="Ui.ExistingInstanceTaskbar">SNU Watcher is already running. Select it on the taskbar to switch to it.</sys:String>
   <sys:String x:Key="Ui.AlreadyRunning">Another SNU Watcher owns this watch database. Close that instance before starting another.</sys:String>
   <sys:String x:Key="Ui.LastSourceSuccess">Last successful source request</sys:String>
   <sys:String x:Key="Ui.NextCheck">Next estimated check</sys:String>
