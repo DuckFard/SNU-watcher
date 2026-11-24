@@ -4,13 +4,13 @@
 
 SNU Watcher is a Windows desktop app for Seoul National University students who are waiting for a place in a full class. It checks the sections you choose, alerts you when a seat becomes available, and takes you to the official SNU registration page so you can try to register.
 
-**Unsigned preview available:** [SNU Watcher 0.1.0-preview.1](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.1) is a Windows 11 x64 prerelease with course search, watchlists, native seat alerts, saved alert history and notification testing. Its exact installer passed installed Windows, notification and accessibility checks before publication. Read the release notes for known limitations, and the [development progress](docs/PROGRESS.md) for the evidence.
+**Unsigned preview available:** [SNU Watcher 0.1.0-preview.2](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2) is a Windows 11 x64 prerelease with course search, watchlists, native seat alerts, saved alert history and notification testing, in a look modeled on the course registration site. Its exact installer passed installed Windows, notification and accessibility checks before publication, and installing it from the release page was checked afterwards. Read the release notes for known limitations, and the [development progress](docs/PROGRESS.md) for the evidence.
 
 ## Preview features
 
 | Feature | What it does |
 | --- | --- |
-| Find courses | Search by course code, name, department, instructor, or keyword using the SNU course catalog. |
+| Find courses | Search the current term by course name or keyword, or open Advanced search for code, section, instructor, college, department, grade or degree program. Search with nothing entered to list every course in the term, page by page. |
 | Compare sections | View instructors, schedules, locations, enrollment, capacity, and available seats. |
 | Build a watchlist | Watch one exact section or group several sections under a course, such as any selected section of College Writing. |
 | Get seat alerts | Receive a Windows popup identifying the course and section, with a shortcut to official SNU registration. |
@@ -22,7 +22,7 @@ SNU Watcher is a Windows desktop app for Seoul National University students who 
 
 ## How it works
 
-1. Select the academic term and find the course you want.
+1. Find the course you want. SNU Watcher reads the current term from the registration site and shows it beside the search box, so there is no term to select. Use "KR | EN" at the top right to switch language.
 2. Add a section, or a group of acceptable sections, to your watchlist.
 3. Keep SNU Watcher running while it checks for availability changes.
 4. When a seat opens, click the notification to open the [official SNU registration site](https://sugang.snu.ac.kr/sugang/co/co010.action) and register yourself.
@@ -33,13 +33,15 @@ SNU Watcher is an independent project and is not affiliated with or endorsed by 
 
 ## Downloads and platform
 
-The first preview targets **Windows 11 x64**. Download `SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe` and `SHA256SUMS.txt` from the [0.1.0-preview.1 release](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.1). The installer includes its runtimes, so no development tools are needed. Before running it, check that its SHA-256 matches `SHA256SUMS.txt`:
+The preview targets **Windows 11 x64**. Download `SnuCourseWatcher-0.1.0-preview.2-windows-x64-Setup.exe` and `SHA256SUMS.txt` from the [0.1.0-preview.2 release](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2). The installer includes its runtimes, so no development tools are needed. Before running it, check that its SHA-256 matches `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.1-windows-x64-Setup.exe' -Algorithm SHA256
+Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.2-windows-x64-Setup.exe' -Algorithm SHA256
 ```
 
-The expected value is `83A9B7FA82EB39BE6A9EEE955755A4758588A29AE2B6218B5199C623F36C3533`.
+The expected value is `DFDD2C45F340108CBCD06E76F65F8463C2747ED3F0F214DFCAB48E7A15A0106A`.
+
+To upgrade from preview.1, quit SNU Watcher and run the new installer. It installs to the same per-user folder and keeps your watches, settings and alert history.
 
 This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer.
 
