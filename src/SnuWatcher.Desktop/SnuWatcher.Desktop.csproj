@@ -21,6 +21,9 @@
     <Company>DuckFard</Company>
     <Product>SNU Watcher</Product>
     <Version>0.1.0</Version>
+    <!-- Precompile at publish (ReadyToRun) so start-up spends less time compiling code. Measured locally at about
+         0.1 s faster to the first window for 2 MB more download; see the target below for what stays as IL. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
   <ItemGroup>
     <!-- Noto Sans KR 2.004 (SIL Open Font License 1.1), the registration site's typeface; see docs/third-party. -->
@@ -36,4 +39,18 @@
     <ProjectReference Include="../SnuWatcher.Infrastructure/SnuWatcher.Infrastructure.csproj" />
     <ProjectReference Include="../SnuWatcher.Windows/SnuWatcher.Windows.csproj" />
   </ItemGroup>
+  <!-- Keep Microsoft's Windows SDK and WinUI wrappers, the Windows App SDK projections and its AI runtime as IL.
+       Precompiling them adds about 9.5 MB to the installer (49 MB installed) for no measurable start-up gain;
+       this app's own assemblies and the libraries it uses at start-up are still precompiled. Matching by name
+       keeps projections that a Windows App SDK update adds out as well. -->
+  <Target Name="KeepWindowsWrappersAsIL" BeforeTargets="_PrepareForReadyToRunCompilation" Condition="'$(PublishReadyToRun)' == 'true'">
+    <ItemGroup>
+      <_SnuReadyToRunCandidate Include="@(ResolvedFileToPublish->WithMetadataValue('PostprocessAssembly', 'true')->'%(Filename)%(Extension)')" />
+      <PublishReadyToRunExclude Include="@(_SnuReadyToRunCandidate)"
+        Condition="$([System.String]::Copy('%(Filename)').EndsWith('.Projection')) Or '%(Filename)' == 'Microsoft.Windows.SDK.NET'
+          Or '%(Filename)' == 'Microsoft.WinUI' Or '%(Filename)' == 'Microsoft.ML.OnnxRuntime' Or '%(Filename)' == 'System.Numerics.Tensors'
+          Or '%(Filename)' == 'Microsoft.WindowsAppRuntime.Bootstrap.Net'" />
+    </ItemGroup>
+    <Message Importance="normal" Text="ReadyToRun keeps @(PublishReadyToRunExclude->Count()) Windows wrapper assemblies as IL." />
+  </Target>
 </Project>
