@@ -55,7 +55,7 @@ public partial class StudentWindow : Window, IDisposable
             menu.Items.Add(Text("Ui.Quit"), null, (_, _) => _requestQuit());
             _tray = new Forms.NotifyIcon
             {
-                Text = "SNU Watcher", Icon = System.Drawing.SystemIcons.Information,
+                Text = "SNU Watcher", Icon = AppIcon.CreateForTray(),
                 ContextMenuStrip = menu, Visible = true,
             };
             _tray.DoubleClick += (_, _) => ShowFromTray();
@@ -240,7 +240,9 @@ public partial class StudentWindow : Window, IDisposable
         }
         if (_tray is not null)
         {
+            var icon = _tray.Icon;
             _tray.Visible = false; _tray.ContextMenuStrip?.Dispose(); _tray.Dispose();
+            icon?.Dispose();
         }
     }
 }
