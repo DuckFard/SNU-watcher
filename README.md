@@ -126,7 +126,7 @@ The preview targets **Windows 11 x64**. The installer includes its runtimes, so 
 
 **Upgrading from preview.1?** Quit SNU Watcher and run the new installer. It installs to the same per-user folder and keeps your watches, settings and alert history.
 
-This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer.
+This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer. Signing is being set up; see the [code signing policy](docs/code-signing-policy.md).
 
 **Smart App Control:** on a PC where it is turned on (Windows Security > App & browser control), Windows blocks unsigned apps and offers no "Run anyway", so SNU Watcher cannot start there.
 
@@ -161,6 +161,7 @@ See [native validation](docs/native-validation.md) for instructions to build the
 - [Testing](docs/testing.md) — automated checks and coverage requirements.
 - [Privacy](docs/privacy.md) and [security policy](SECURITY.md) — local data, diagnostic sharing and vulnerability reporting.
 - [Preview releases](docs/releases.md) — unsigned packaging, verification, manual upgrade and recovery limits.
+- [Code signing policy](docs/code-signing-policy.md) — how releases will be signed, who approves them, and how to check a signature.
 
 ## License
 
