@@ -128,6 +128,8 @@ The preview targets **Windows 11 x64**. The installer includes its runtimes, so 
 
 This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer.
 
+**Smart App Control:** on a PC where it is turned on (Windows Security > App & browser control), Windows blocks unsigned apps and offers no "Run anyway", so SNU Watcher cannot start there.
+
 The preview uses manual upgrades from GitHub Releases. Automatic updates/startup, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
 
 The earlier command-line prototype is preserved in [legacy/python-watcher](legacy/python-watcher/), along with its setup instructions and known limitations.
