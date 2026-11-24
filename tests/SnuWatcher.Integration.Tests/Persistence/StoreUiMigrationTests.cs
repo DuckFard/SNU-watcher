@@ -129,7 +129,13 @@ public sealed class StoreUiMigrationTests
             var completed = await Task.WhenAny(backedUp.Task, first).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Same(backedUp.Task, completed);
             second = SqliteWatchStore.OpenAsync(fixture.Factory, faultInjector: stage =>
-            { if (stage == SqliteStoreWriteStage.SchemaValidated) inspected.TrySetResult(); });
+            {
+                if (stage != SqliteStoreWriteStage.SchemaValidated) return;
+                // Release the first opener before this lane thread blocks in its reservation wait
+                // (bounded by the 5 s busy timeout), not from a test continuation that may not run in time.
+                inspected.TrySetResult();
+                release.Set();
+            });
             await inspected.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
         finally { release.Set(); }
