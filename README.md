@@ -163,7 +163,7 @@ See [native validation](docs/native-validation.md) for instructions to build the
 - [Testing](docs/testing.md) — automated checks and coverage requirements.
 - [Privacy](docs/privacy.md) and [security policy](SECURITY.md) — local data, diagnostic sharing and vulnerability reporting.
 - [Preview releases](docs/releases.md) — unsigned packaging, verification, manual upgrade and recovery limits.
-- [Code signing policy](docs/code-signing-policy.md) — how releases will be signed, who approves them, and how to check a signature.
+- [Code signing policy](docs/code-signing-policy.md) — why releases are unsigned and how to check a download.
 
 ## License
 
