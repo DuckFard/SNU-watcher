@@ -7,7 +7,7 @@
 </picture>
 </p>
 
-<a href="https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2"><img src="https://img.shields.io/badge/Download-0.1.0--preview.2-376DC8?style=for-the-badge" alt="Download 0.1.0-preview.2"></a>
+<a href="https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.3"><img src="https://img.shields.io/badge/Download-0.1.0--preview.3-376DC8?style=for-the-badge" alt="Download 0.1.0-preview.3"></a>
 <a href="https://github.com/DuckFard/SNU-watcher/actions/workflows/foundation.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/DuckFard/SNU-watcher/foundation.yml?branch=main&style=for-the-badge&label=checks" alt="Windows foundation checks on main"></a>
 <img src="https://img.shields.io/badge/Windows_11-x64-4A5568?style=for-the-badge" alt="Windows 11 x64">
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-4A5568?style=for-the-badge" alt="MIT License"></a>
@@ -21,7 +21,7 @@
 SNU Watcher is a Windows desktop app for Seoul National University students who are waiting for a place in a full class. It checks the sections you choose, alerts you when a seat becomes available, and takes you to the official SNU registration page so you can try to register.
 
 > [!NOTE]
-> **[0.1.0-preview.2](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2) is an unsigned Windows 11 x64 prerelease** with course search, watchlists, native seat alerts, saved alert history and notification testing, in a look modeled on the course registration site. Its exact installer passed installed Windows, notification and accessibility checks before publication, and installing it from the release page was checked afterwards. Read the release notes for known limitations, and the [development progress](docs/PROGRESS.md) for the evidence.
+> **[0.1.0-preview.3](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.3) is an unsigned Windows 11 x64 prerelease** with course search, watchlists, native seat alerts, saved alert history, notification testing and an option to start when you sign in to Windows, in a look modeled on the course registration site. Its exact installer passed installed Windows, notification and accessibility checks before publication, and installing it from the release page was checked afterwards. Read the release notes for known limitations, and the [development progress](docs/PROGRESS.md) for the evidence.
 
 ## What it does
 
@@ -52,7 +52,7 @@ Receive a Windows popup identifying the course and section, with a shortcut to o
 <td valign="top">
 <img src="docs/assets/readme/icon-manage.svg" width="40" height="40" alt=""><br>
 <b>Manage your watches</b><br>
-Add, pause, resume, or remove watches, and choose when they expire.
+Add, pause, resume, or remove watches, choose when they expire, and let SNU Watcher start in the tray when you sign in to Windows.
 </td>
 <td valign="top">
 <img src="docs/assets/readme/icon-freshness.svg" width="40" height="40" alt=""><br>
@@ -104,7 +104,7 @@ Read cached notification/source status and storage sizes, and export a small pri
 
 1. **Find the course you want.** SNU Watcher reads the current term from the registration site and shows it above the search box, so there is no term to select. Use "KR | EN" at the top right to switch language.
 2. **Add a section, or a group of acceptable sections,** to your watchlist.
-3. **Keep SNU Watcher running** while it checks for availability changes.
+3. **Keep SNU Watcher running** while it checks for availability changes, or turn on Start with Windows in Settings.
 4. **When a seat opens,** click the notification to open the [official SNU registration site](https://sugang.snu.ac.kr/sugang/co/co010.action) and register yourself.
 
 > [!IMPORTANT]
@@ -116,23 +116,25 @@ SNU Watcher is an independent project and is not affiliated with or endorsed by 
 
 The preview targets **Windows 11 x64**. The installer includes its runtimes, so no development tools are needed.
 
-1. Download `SnuCourseWatcher-0.1.0-preview.2-windows-x64-Setup.exe` and `SHA256SUMS.txt` from the [0.1.0-preview.2 release](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2).
+1. Download `SnuCourseWatcher-0.1.0-preview.3-windows-x64-Setup.exe` and `SHA256SUMS.txt` from the [0.1.0-preview.3 release](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.3).
 2. Before running it, check that its SHA-256 matches `SHA256SUMS.txt`:
 
    ```powershell
-   Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.2-windows-x64-Setup.exe' -Algorithm SHA256
+   Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.3-windows-x64-Setup.exe' -Algorithm SHA256
    ```
 
-   The expected value is `DFDD2C45F340108CBCD06E76F65F8463C2747ED3F0F214DFCAB48E7A15A0106A`.
+   The expected value is `34D5BCD62A4496C0CDE6114035D51ACF187FD6BD948F4F8342145CEF9137929B`.
 3. Run the installer.
 
-**Upgrading from preview.1?** Quit SNU Watcher and run the new installer. It installs to the same per-user folder and keeps your watches, settings and alert history.
+**Upgrading from preview.1 or preview.2?** Quit SNU Watcher and run the new installer. It installs to the same per-user folder and keeps your watches, settings and alert history.
 
-This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer. Signing is being set up; see the [code signing policy](docs/code-signing-policy.md).
+**Start with Windows** is off until you turn it on in Settings. When it is on, SNU Watcher starts in the tray after you sign in, so your watches keep running after a restart.
+
+This is an **unsigned GitHub prerelease**, so Windows may show publisher or reputation warnings. Use only this repository's release assets. A checksum confirms the download matches the published file; it does not prove who published it. Dependency notices, a scoped SBOM and build metadata accompany the installer. See the [code signing policy](docs/code-signing-policy.md).
 
 **Smart App Control:** on a PC where it is turned on (Windows Security > App & browser control), Windows blocks unsigned apps and offers no "Run anyway", so SNU Watcher cannot start there.
 
-The preview uses manual upgrades from GitHub Releases. Automatic updates/startup, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
+The preview uses manual upgrades from GitHub Releases. Automatic updates, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
 
 The earlier command-line prototype is preserved in [legacy/python-watcher](legacy/python-watcher/), along with its setup instructions and known limitations.
 
