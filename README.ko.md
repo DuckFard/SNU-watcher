@@ -7,7 +7,7 @@
 </picture>
 </p>
 
-<a href="https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2"><img src="https://img.shields.io/badge/Download-0.1.0--preview.2-376DC8?style=for-the-badge" alt="0.1.0-preview.2 내려받기"></a>
+<a href="https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.3"><img src="https://img.shields.io/badge/Download-0.1.0--preview.3-376DC8?style=for-the-badge" alt="0.1.0-preview.3 내려받기"></a>
 <img src="https://img.shields.io/badge/Windows_11-x64-4A5568?style=for-the-badge" alt="Windows 11 x64">
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-4A5568?style=for-the-badge" alt="MIT 라이선스"></a>
 
@@ -20,7 +20,7 @@
 SNU Watcher는 정원이 찬 강좌에 자리가 나기를 기다리는 서울대학교 학생을 위한 Windows 데스크톱 앱입니다. 선택한 강좌의 분반을 확인하다가 잔여석이 생기면 알림을 보내고, 공식 수강신청 사이트로 바로 이동할 수 있게 해 줍니다. 수강신청은 공식 사이트에서 직접 하셔야 합니다.
 
 > [!NOTE]
-> **[0.1.0-preview.2](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2)는 서명되지 않은 Windows 11 x64 미리보기 버전입니다.** 강좌 검색, 관심 강좌, 잔여석 알림, 알림 기록, 알림 테스트를 제공하며, 수강신청 사이트와 비슷한 모습입니다. 알려진 제한 사항은 릴리스 노트를 확인하세요.
+> **[0.1.0-preview.3](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.3)는 서명되지 않은 Windows 11 x64 미리보기 버전입니다.** 강좌 검색, 관심 강좌, 잔여석 알림, 알림 기록, 알림 테스트, Windows 로그인 시 자동 시작을 제공하며, 수강신청 사이트와 비슷한 모습입니다. 알려진 제한 사항은 릴리스 노트를 확인하세요.
 
 > [!IMPORTANT]
 > **알림은 좌석을 예약하지 않습니다.** 다른 학생이 먼저 신청할 수 있고, 수강 제한도 그대로 적용됩니다. SNU Watcher는 서울대학교와 관련이 없거나 서울대학교의 승인을 받지 않은 독립 프로젝트입니다.
@@ -31,7 +31,7 @@ SNU Watcher는 정원이 찬 강좌에 자리가 나기를 기다리는 서울�
 - **분반 비교** — 교수, 시간, 강의실, 수강신청인원, 정원, 잔여석을 확인합니다.
 - **관심 강좌** — 한 분반만 지켜보거나, 한 강좌의 여러 분반을 묶어 그중 어디든 자리가 나면 알림을 받을 수 있습니다.
 - **잔여석 알림** — 강좌와 분반이 표시된 Windows 알림을 받고, 알림에서 공식 수강신청 사이트를 바로 엽니다.
-- **관리** — 관심 강좌를 추가, 일시 중지, 재개, 삭제하고 언제까지 지켜볼지 정합니다.
+- **관리** — 관심 강좌를 추가, 일시 중지, 재개, 삭제하고 언제까지 지켜볼지 정합니다. Windows에 로그인하면 SNU Watcher가 트레이에서 자동으로 시작되게 할 수도 있습니다.
 - **최신 정보 확인** — 마지막으로 성공한 조회 시각을 보여 주고, 정보가 늦어지거나 받을 수 없으면 그 이유를 알려 줍니다.
 - **알림 기록** — 잔여석이 생겼던 기록과 알림 전송 상태를 보고, Windows 알림을 테스트하며, 알림 소리를 끌 수 있습니다.
 
@@ -39,14 +39,14 @@ SNU Watcher는 정원이 찬 강좌에 자리가 나기를 기다리는 서울�
 
 **Windows 11 x64**가 필요합니다. 설치 프로그램에 필요한 실행 환경이 포함되어 있어 다른 프로그램을 설치하지 않아도 됩니다.
 
-1. [0.1.0-preview.2 릴리스](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.2)에서 `SnuCourseWatcher-0.1.0-preview.2-windows-x64-Setup.exe`와 `SHA256SUMS.txt`를 내려받습니다. 이 저장소의 릴리스 파일만 사용하세요.
+1. [0.1.0-preview.3 릴리스](https://github.com/DuckFard/SNU-watcher/releases/tag/v0.1.0-preview.3)에서 `SnuCourseWatcher-0.1.0-preview.3-windows-x64-Setup.exe`와 `SHA256SUMS.txt`를 내려받습니다. 이 저장소의 릴리스 파일만 사용하세요.
 2. (선택) 내려받은 파일이 게시된 파일과 같은지 PowerShell에서 확인합니다.
 
    ```powershell
-   Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.2-windows-x64-Setup.exe' -Algorithm SHA256
+   Get-FileHash '.\SnuCourseWatcher-0.1.0-preview.3-windows-x64-Setup.exe' -Algorithm SHA256
    ```
 
-   결과가 `DFDD2C45F340108CBCD06E76F65F8463C2747ED3F0F214DFCAB48E7A15A0106A`이면 같은 파일입니다.
+   결과가 `34D5BCD62A4496C0CDE6114035D51ACF187FD6BD948F4F8342145CEF9137929B`이면 같은 파일입니다.
 3. 설치 프로그램을 실행합니다.
 
 ### "Windows의 PC 보호" 창이 뜨는 경우
@@ -66,7 +66,7 @@ SNU Watcher는 정원이 찬 강좌에 자리가 나기를 기다리는 서울�
 
 1. **원하는 강좌를 찾습니다.** SNU Watcher가 수강신청 사이트에서 현재 학기를 읽어 검색창 위에 보여 주므로 학기를 따로 고를 필요가 없습니다. 오른쪽 위의 "KR | EN"으로 언어를 바꿀 수 있습니다.
 2. **분반이나, 괜찮은 분반 묶음을** 관심 강좌에 추가합니다.
-3. **SNU Watcher를 켜 둡니다.** 창을 닫으면 작업 표시줄 오른쪽의 트레이에서 계속 확인합니다(설정에서 바꿀 수 있습니다). PC가 꺼져 있거나 절전 모드이거나 앱을 종료하면 확인하지 않습니다.
+3. **SNU Watcher를 켜 둡니다.** 창을 닫으면 작업 표시줄 오른쪽의 트레이에서 계속 확인합니다(설정에서 바꿀 수 있습니다). 설정의 **Windows 시작 시 실행**에서 "Windows에 로그인하면 SNU Watcher 시작"을 켜면 PC를 다시 시작한 뒤 로그인할 때 트레이에서 자동으로 시작됩니다(기본값은 꺼짐). PC가 꺼져 있거나 절전 모드이거나 앱을 종료하면 확인하지 않습니다.
 4. **잔여석 알림이 오면** 알림을 눌러 [공식 수강신청 사이트](https://sugang.snu.ac.kr/sugang/co/co010.action)를 열고 직접 신청합니다.
 
 ## 자주 묻는 질문
