@@ -1,6 +1,7 @@
 using System.Globalization;
 using SnuWatcher.Application.Delivery.Batches;
 using SnuWatcher.Application.Persistence;
+using SnuWatcher.Application.Presentation;
 using SnuWatcher.Application.Presentation.Alerts;
 using SnuWatcher.Core;
 
@@ -26,6 +27,8 @@ public sealed record AlertHistoryRow
     /// <summary>Original opening reasons; an increase is not proof that somebody dropped.</summary>
     public string ReasonKey => Source.Trigger.HasInitialReason && Source.Trigger.HasIncreaseReason ? "Ui.AlertBothReasons"
         : Source.Trigger.HasInitialReason ? "Ui.AlertInitialReason" : "Ui.AlertIncreaseReason";
+    /// <summary>The row's accessible name: WPF names a grid row after its item, so this is what a screen reader says.</summary>
+    public override string ToString() => AccessibleName.Of(Identifier, ObservedAtText);
 }
 
 /// <summary>Original association identity with an optional explicitly current watch label.</summary>
@@ -39,6 +42,8 @@ public sealed record AlertRecipientRow
     public string WatchLabel => Source.CurrentWatchLabel ?? Source.SubscriptionId.ToString("N");
     /// <summary>Original reason for this association.</summary>
     public string ReasonKey => Source.Reason == OpeningReason.InitialAvailability ? "Ui.AlertInitialReason" : "Ui.AlertIncreaseReason";
+    /// <summary>The item's accessible name: WPF names a list item after its item, so this is what a screen reader says.</summary>
+    public override string ToString() => AccessibleName.Of(WatchLabel);
 }
 
 /// <summary>One source-bucket record, never automatically another banner or a chronological timeline.</summary>
@@ -68,6 +73,8 @@ public sealed record AlertRecordRow
     /// <summary>Historical whole-batch submitted counts, absent for event-result revisions.</summary>
     public string? BatchCountsText => Source.BatchAttempt is { } batch
         ? string.Create(CultureInfo.InvariantCulture, $"{batch.Content.CurrentCounts.Registered}/{batch.Content.CurrentCounts.Capacity}") : null;
+    /// <summary>The item's accessible name: WPF names a list item after its item, so this is what a screen reader says.</summary>
+    public override string ToString() => AccessibleName.Of(RecordedAtText);
 }
 
 internal static class AlertHistoryText

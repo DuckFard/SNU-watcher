@@ -63,6 +63,7 @@ internal static partial class StudentUiValidation
             && Visuals<ItemsControl>(window).Any(control => control.IsVisible && control.Items.Count == 0
                 && control.GetBindingExpression(ItemsControl.ItemsSourceProperty)?.ParentBinding.Path?.Path == "State.Attempts"),
             "ui_alert_detail_bindings_missing");
+        RequireReadableAutomationNames(window, "ui_alert_row_name_unreadable");
         captures.Add(await CaptureAsync(profile, window, "ui-alerts-en-normal.png", false, ct));
         await SaveLanguageAsync(window, graph, UiLanguage.Korean, ct);
         await NavigateAsync(window, graph, StudentPage.Alerts);

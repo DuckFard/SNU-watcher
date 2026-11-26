@@ -139,6 +139,7 @@ internal static partial class StudentUiValidation
         await InvokeCommandAsync(window, graph.Search.Details.CopyIdentifierCommand, ct);
         Require(actions.RegistrationIntents == 1 && actions.GenieIntents == 1 && actions.CopyIntents == 1, "ui_fixed_actions_failed");
         proof = proof with { DetailsQuotaSeparated = true, FixedActionIntents = true };
+        RequireReadableAutomationNames(window, "ui_search_row_name_unreadable");
         captures.Add(await CaptureAsync(profile, window, "ui-search-en-normal.png", false, ct));
         await SaveLanguageAsync(window, graph, UiLanguage.Korean, ct);
         await NavigateAsync(window, graph, StudentPage.FindCourses);
@@ -196,6 +197,7 @@ internal static partial class StudentUiValidation
         Require(graph.Watches.State.Rows.Length > 0 && graph.Watches.State.Rows.All(row => row.TermLabel is not null)
             && !Visuals<TextBlock>(window).Any(block => block.Text == unknownTerm && IsRenderedTextVisible(block, window)),
             "ui_watch_term_unnamed");
+        RequireReadableAutomationNames(window, "ui_watch_row_name_unreadable");
         captures.Add(await CaptureAsync(profile, window, "ui-watches-en-normal.png", false, ct));
         // A compact reference capture selects the list; lifecycle actions belong to the details pane.
         await ShowCompactPaneAsync(window, "DetailsNavigation", required: false);

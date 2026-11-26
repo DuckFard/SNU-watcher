@@ -65,4 +65,18 @@ public sealed class AlertProjectionTests
         Assert.Equal(AlertFixture.Id(2).ToString("N"), recipient.WatchLabel);
         Assert.Equal(initial ? "Ui.AlertInitialReason" : "Ui.AlertIncreaseReason", recipient.ReasonKey);
     }
+
+    [Fact]
+    public void RowsReadAsTheirSectionTimeOrWatchInsteadOfARecordDump()
+    {
+        // WPF names a list item after ToString(); this is what a screen reader announces for each row.
+        var row = new AlertHistoryRow(AlertFixture.Item());
+        Assert.Equal(row.Identifier + ", " + row.ObservedAtText, row.ToString());
+        var recipient = new AlertRecipientRow(new(AlertFixture.Id(2), 1, SnuWatcher.Core.OpeningReason.InitialAvailability, "Statistics"));
+        Assert.Equal("Statistics", recipient.ToString());
+        var record = new AlertRecordRow(new(row.EventId, null, new(2, DeliveryStatus.Pending, 0, AlertFixture.Now), true));
+        Assert.Equal(record.RecordedAtText, record.ToString());
+        foreach (var name in new[] { row.ToString(), recipient.ToString(), record.ToString() })
+            Assert.DoesNotContain(" = ", name, StringComparison.Ordinal);
+    }
 }

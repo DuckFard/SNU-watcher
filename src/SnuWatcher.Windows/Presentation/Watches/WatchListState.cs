@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using SnuWatcher.Application.Monitoring.Health;
 using SnuWatcher.Application.Persistence;
+using SnuWatcher.Application.Presentation;
 using SnuWatcher.Application.Presentation.Reads;
 using SnuWatcher.Core;
 
@@ -79,6 +80,8 @@ public sealed record WatchRow
     public string DataStateKey => Health is null ? "Ui.GroupUnmeasured" : WatchFormatting.DataState(Health.DataState);
     /// <summary>Original last successful observation, formatted in Korea time.</summary>
     public string LastSuccessText => WatchFormatting.Time(Health?.LastSuccessfulAtUtc);
+    /// <summary>The row's accessible name: WPF names a grid row after its item, so this is what a screen reader says.</summary>
+    public override string ToString() => AccessibleName.Of(Label, Health is null ? null : Identifier);
 }
 
 /// <summary>One selected membership with pure health derived from one evaluation instant.</summary>
@@ -127,6 +130,8 @@ public sealed record WatchMemberRow
     public string LastSuccessText => WatchFormatting.Time(Health.LastSuccessfulAtUtc);
     /// <summary>Latest completed attempt time in Korea time.</summary>
     public string LastCheckText => WatchFormatting.Time(Health.LastCompletedAttemptAtUtc);
+    /// <summary>The row's accessible name: WPF names a grid row after its item, so this is what a screen reader says.</summary>
+    public override string ToString() => AccessibleName.Of(Identifier);
     /// <summary>Age of the original successful observation; no false zero for missing/future facts.</summary>
     public string AgeText => Health.Age?.ToString("c", System.Globalization.CultureInfo.InvariantCulture) ?? "—";
 }

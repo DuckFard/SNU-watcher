@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using SnuWatcher.Application.Presentation;
 using SnuWatcher.Core;
 
 namespace SnuWatcher.Application.Sources;
@@ -15,6 +16,9 @@ public sealed record CourseMeeting
     public string Time { get; }
     public string? Type { get; }
     public string? Room { get; }
+
+    /// <summary>The meeting's accessible name in the section details list.</summary>
+    public override string ToString() => AccessibleName.Of(Time, Type, Room);
 }
 
 public sealed record CourseDetails
