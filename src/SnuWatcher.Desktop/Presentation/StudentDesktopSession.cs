@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using SnuWatcher.Application.Presentation.Preferences;
 using SnuWatcher.Windows.Hosting;
 using SnuWatcher.Windows.Notifications;
 using SnuWatcher.Windows.Presentation.Common;
@@ -46,8 +47,12 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
         if (!dispatcher.CheckAccess()) throw new InvalidOperationException("Create the student interface on its UI dispatcher.");
         _host = host; _dispatcher = dispatcher;
         Search = new(host.Courses, host.WatchCommands, dispatcher, clock, Report, actions);
+        StudentShellViewModel? shell = null;
+        // Rows are reprojected every few seconds, so a name read after the list first loads appears shortly after.
         Watches = new(host.Dashboard, host.WatchCommands, dispatcher, clock,
-            () => host.RefreshProfile.AppliedRefreshProfile.TargetInterval);
+            () => host.RefreshProfile.AppliedRefreshProfile.TargetInterval,
+            term => WatchTermLabels.Find(term, Search.Model.State.SelectedTerm, shell?.Model.State.TermHints,
+                shell?.Model.State.Language == UiLanguage.English));
         SettingsViewModel? settings = null;
         var diagnostics = new WindowsDiagnosticsReader(host.StorageDiagnostics, () =>
         {
@@ -60,7 +65,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
         Settings = settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report, nativeNotifications,
             diagnostics, new DiagnosticsExportAction(dispatcher), isDemo ? null : startup);
         Alerts = new(host.Alerts, dispatcher, clock, Report, actions);
-        Shell = new(Search, Watches, Settings, host.Dashboard, host.TermHints, dispatcher, clock,
+        Shell = shell = new(Search, Watches, Settings, host.Dashboard, host.TermHints, dispatcher, clock,
             isDemo, new DesktopSourceControls(host), Report, Alerts);
         _ageTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher.CurrentDispatcher)
             { Interval = TimeSpan.FromSeconds(2) };

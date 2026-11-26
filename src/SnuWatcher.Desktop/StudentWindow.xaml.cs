@@ -122,10 +122,15 @@ public partial class StudentWindow : Window, IDisposable
     /// <summary>Below this width the header drops the term and subtitle; the course page's search card keeps the term.</summary>
     internal const double NarrowWidth = 860;
 
+    /// <summary>Below this window height the header, navigation and footer take their compact sizes.</summary>
+    internal const double CompactHeight = 780;
+
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs args)
     {
         if (RootLayout is null || ChromeScrollViewer is null) return;
-        var compact = ActualHeight < 560;
+        // A common laptop window (about 1280x752 DIPs) is "compact": the full-size header and footer would leave the
+        // course list room for one or two rows there.
+        var compact = ActualHeight < CompactHeight;
         var narrow = ActualWidth < NarrowWidth;
         var gutter = compact ? 8 : 20;
         // Reserve usable page space; expanding source guidance cannot consume the result grid.
