@@ -109,6 +109,20 @@
       </Border>
       <Border x:Name="StatusBand" Padding="20,4,20,0">
         <StackPanel>
+          <!-- A newer published version; only the installed app checks, and only while its switch is on. -->
+          <Border x:Name="UpdateNotice" DataContext="{Binding Settings.Updates}" Background="{DynamicResource Snu.Selected}"
+                  CornerRadius="6" Padding="12,6" Margin="0,2,0,4">
+            <Border.Style><Style TargetType="Border"><Style.Triggers>
+              <DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+              <DataTrigger Binding="{Binding ShowNotice}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+            </Style.Triggers></Style></Border.Style>
+            <WrapPanel VerticalAlignment="Center">
+              <TextBlock Text="{DynamicResource Ui.UpdateAvailable}" Foreground="{DynamicResource Snu.Ink}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+              <TextBlock Text="{Binding AvailableVersion}" Foreground="{DynamicResource Snu.Ink}" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,12,0"/>
+              <Button x:Name="UpdateNoticeOpen" Content="{DynamicResource Ui.OpenReleasePage}" Click="OnOpenReleasePage" Style="{DynamicResource Student.SecondaryButton}" Margin="0,0,8,0"/>
+              <Button x:Name="UpdateNoticeDismiss" Content="{DynamicResource Ui.DismissUpdate}" Click="OnDismissUpdate" Style="{DynamicResource Student.QuietButton}" Margin="0"/>
+            </WrapPanel>
+          </Border>
           <Expander x:Name="SourceStatusExpander" Header="{DynamicResource Ui.SourceStatus}" Foreground="{DynamicResource Snu.InkSecondary}" FontSize="13">
             <Border Style="{DynamicResource Student.Card}" Margin="0,4,0,6" Padding="14,10">
               <StackPanel>

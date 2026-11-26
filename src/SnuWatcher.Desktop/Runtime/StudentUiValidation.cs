@@ -55,6 +55,7 @@ internal static partial class StudentUiValidation
         var channel = new StudentUiValidationChannel();
         var actions = new StudentUiValidationActions();
         var simulatedNative = new StudentUiSimulatedNativeControls(clock);
+        var updates = new StudentUiValidationUpdates(clock);
         var captures = new List<StudentUiCapture>();
         using var bindings = new StudentUiBindingProbe();
         var elapsed = Stopwatch.StartNew();
@@ -69,7 +70,7 @@ internal static partial class StudentUiValidation
             host = opened.Host ?? throw new InvalidOperationException("ui_validation_owner_already_owned");
             var dispatcher = new WpfUiDispatcher(System.Windows.Application.Current.Dispatcher);
             graph = new(host, dispatcher, clock, actions, actions.NativeTestGuard, isDemo: true, observeSystemState: false,
-                nativeNotifications: simulatedNative);
+                nativeNotifications: simulatedNative, updates: updates.Settings);
             graph.Settings.PreferencesChanged += simulatedNative.ApplyKnownPreferences;
             var quitRequested = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             // The search page reads the current term once local startup ends; hold that read until startup is checked.
@@ -100,6 +101,7 @@ internal static partial class StudentUiValidation
             _stage = "journey";
             var journey = await RunJourneyAsync(profile, window, graph, host, source, clock, actions, bindings,
                 simulatedNative, captures, deadline.Token);
+            await VerifyUpdateNoticeUiAsync(window, graph, updates, source, deadline.Token);
             workArea = await VerifyActualWorkAreaAsync(profile, captures, window, graph, source, journey, workArea,
                 progress => workArea = progress, deadline.Token);
             journey = journey with { PreferencesRevision = graph.Settings.Model.State.Stored!.Revision };

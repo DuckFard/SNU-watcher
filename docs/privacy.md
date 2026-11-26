@@ -6,7 +6,9 @@ SNU Watcher is an independent desktop companion. The preview does not ask for SN
 
 The app sends anonymous course-catalog, search and detail requests to the official SNU registration service. Requests include selected academic terms, course identifiers and search filters. SNU and the network provider can observe these requests and the connection's IP address. A fresh anonymous HTTP session can keep service-issued cookies in memory; the app does not import an authenticated browser session or retain those cookies as a login.
 
-The preview has no project-operated server, analytics or automatic crash reporting. It does not upload your watchlist or database. Manual links to GitHub Releases and SNU/Genie use your browser and those sites' normal network behavior. Automatic update checks are deferred in this preview.
+The preview has no project-operated server, analytics or automatic crash reporting. It does not upload your watchlist or database. Manual links to GitHub Releases and SNU/Genie use your browser and those sites' normal network behavior.
+
+The installed app also checks for a new version, about a minute after it starts and then at most once a day while it runs. It asks GitHub's public API for this repository's release list (`api.github.com/repos/DuckFard/SNU-watcher/releases`). The request has no account, cookies or watch data; it carries only GitHub's required User-Agent, `SnuWatcher/<version>`. GitHub sees the request and your IP address. When a newer release exists, the app shows a notice with a button that opens its release page; installing stays up to you. Turn the check off in Settings > New versions. The switch and the time and result of the last check are kept in `HKCU\Software\DuckFard\SnuWatcher`, which uninstall removes.
 
 ## Files on your computer
 

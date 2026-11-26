@@ -12,6 +12,13 @@
   <sys:String x:Key="Ui.OpenStartupSettings">Windows 시작 앱 설정 열기</sys:String>
   <sys:String x:Key="Ui.SignInStartFailed">Windows에서 변경 사항을 적용하지 못했습니다. 다시 시도하세요.</sys:String>
   <sys:String x:Key="Ui.SignInStartUnavailable">Windows 시작 설정을 읽을 수 없습니다.</sys:String>
+  <sys:String x:Key="Ui.UpdatesTitle">새 버전</sys:String>
+  <sys:String x:Key="Ui.CheckForUpdates">하루에 한 번 새 버전 확인</sys:String>
+  <sys:String x:Key="Ui.UpdatesNote">SNU Watcher가 게시되는 GitHub에 릴리스 목록을 요청합니다. 사용자나 관심 강좌에 관한 정보는 보내지 않으며, GitHub에는 IP 주소가 보입니다. 새 버전 설치는 직접 하시면 됩니다.</sys:String>
+  <sys:String x:Key="Ui.UpdateAvailable">SNU Watcher 새 버전이 나왔습니다:</sys:String>
+  <sys:String x:Key="Ui.OpenReleasePage">릴리스 페이지 열기</sys:String>
+  <sys:String x:Key="Ui.DismissUpdate">나중에</sys:String>
+  <sys:String x:Key="Ui.UpdateSettingFailed">설정을 바꾸지 못했습니다.</sys:String>
   <sys:String x:Key="Ui.About">SNU Watcher 정보</sys:String>
   <sys:String x:Key="Ui.AboutVersion">버전</sys:String>
   <sys:String x:Key="Ui.AboutSummary">선택한 강좌의 분반을 확인하고 잔여석이 생기면 알려 드립니다. 수강신청은 공식 수강신청 사이트에서 직접 하세요.</sys:String>
