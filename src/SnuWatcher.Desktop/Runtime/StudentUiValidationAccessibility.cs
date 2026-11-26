@@ -26,10 +26,20 @@ internal static partial class StudentUiValidation
         {
             var peer = pending.Pop();
             if (++visited > MaxAutomationPeers) throw new InvalidOperationException("ui_automation_tree_too_large");
-            var name = peer.GetName() ?? "";
-            Require(name.Length <= MaxAutomationName && !RecordDump().IsMatch(name), code);
-            foreach (var child in peer.GetChildren() ?? []) pending.Push(child);
+            // WPF's own item peer throws for an item whose row was virtualized away in a small window; such an item has
+            // no element on screen, so there is nothing to name until it scrolls into view.
+            if (!TryRead(peer.GetName, out var name)) continue;
+            Require((name ?? "").Length <= MaxAutomationName && !RecordDump().IsMatch(name ?? ""), code);
+            if (TryRead(peer.GetChildren, out var children)) foreach (var child in children ?? []) pending.Push(child);
         }
+    }
+
+    private static bool TryRead<T>(Func<T> read, out T? value)
+    {
+        try { value = read(); return true; }
+        catch (Exception error) when (error is NullReferenceException or InvalidOperationException
+            or System.Windows.Automation.ElementNotAvailableException)
+        { value = default; return false; }
     }
 
     [GeneratedRegex(@"\A\w+ \{ \w+ = ", RegexOptions.CultureInvariant)]
