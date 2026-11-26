@@ -1,6 +1,6 @@
 # Unsigned Windows preview releases
 
-The owner authorized an **unsigned preview after all functional gates pass**. The first target is `0.1.0-preview.1`, tag `v0.1.0-preview.1`, with Windows numeric installer version `0.1.0.0`. The second, `0.1.0-preview.2` (tag `v0.1.0-preview.2`, numeric version `0.1.0.1`), and the third, `0.1.0-preview.3` (tag `v0.1.0-preview.3`, numeric version `0.1.0.2`), follow the same procedure with their own version in each asset name, tag and title. This document is a procedure, not evidence that a release has passed or been published. Read the current [progress](PROGRESS.md) and candidate-specific native acceptance before publishing.
+The owner authorized an **unsigned preview after all functional gates pass**. The first target is `0.1.0-preview.1`, tag `v0.1.0-preview.1`, with Windows numeric installer version `0.1.0.0`. The second, `0.1.0-preview.2` (tag `v0.1.0-preview.2`, numeric version `0.1.0.1`), the third, `0.1.0-preview.3` (tag `v0.1.0-preview.3`, numeric version `0.1.0.2`), and the fourth, `0.1.0-preview.4` (tag `v0.1.0-preview.4`, numeric version `0.1.0.3`), follow the same procedure with their own version in each asset name, tag and title. This document is a procedure, not evidence that a release has passed or been published. Read the current [progress](PROGRESS.md) and candidate-specific native acceptance before publishing.
 
 Original project code remains MIT licensed. Microsoft Windows App SDK, Windows SDK, WebView2, .NET, SQLite and other components retain their own applicable terms. The installer presents `DISTRIBUTION-LICENSES.txt`, containing the original project license and exact collected upstream terms/notices. Installed `licenses/` preserves the individual files. This collection is not a new project EULA and does not relabel third-party code as MIT.
 
@@ -106,7 +106,7 @@ GitHub build attestations are free for public repositories, but optional here. T
 
 ## Manual upgrade and rollback
 
-Download a newer qualified installer from this repository's Releases page, verify its checksums/source identity, quit SNU Watcher, and install in the same per-user location. There is no automatic updater. Preserve the previous known-good installer and its acceptance evidence. A repair must use the exact supported installer and preserve user data.
+Download a newer qualified installer from this repository's Releases page, verify its checksums/source identity, quit SNU Watcher, and install in the same per-user location. From preview.4 the app announces a newer release once a day and opens its page on request, but it never downloads or installs anything itself. Preserve the previous known-good installer and its acceptance evidence. A repair must use the exact supported installer and preserve user data.
 
 If a preview is faulty, mark the release clearly as withdrawn and link the known-good release. Stop advertising the faulty download; do not rewrite its tag, checksum or binary. If removal is necessary, make that explicit in release notes and retain internal acceptance evidence. A replacement gets a new version/tag.
 
