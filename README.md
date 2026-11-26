@@ -134,7 +134,7 @@ This is an **unsigned GitHub prerelease**, so Windows may show publisher or repu
 
 **Smart App Control:** on a PC where it is turned on (Windows Security > App & browser control), Windows blocks unsigned apps and offers no "Run anyway", so SNU Watcher cannot start there.
 
-The preview uses manual upgrades from GitHub Releases. Automatic updates, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
+The app checks GitHub for a new version once a day and shows a notice with a link to its release page; installing it stays manual (turn the check off in Settings > New versions). Automatic installation of updates, watch backup/export and automatic history pruning are deferred. The local storage warning is set at 256 MiB and does not delete data or impose a hard limit. See [privacy and local data](docs/privacy.md) and [preview diagnostics](docs/diagnostics.md).
 
 The earlier command-line prototype is preserved in [legacy/python-watcher](legacy/python-watcher/), along with its setup instructions and known limitations.
 

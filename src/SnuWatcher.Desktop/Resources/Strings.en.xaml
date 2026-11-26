@@ -12,6 +12,13 @@
   <sys:String x:Key="Ui.OpenStartupSettings">Open Windows startup settings</sys:String>
   <sys:String x:Key="Ui.SignInStartFailed">Windows did not accept the change. Try again.</sys:String>
   <sys:String x:Key="Ui.SignInStartUnavailable">Windows' startup setting could not be read.</sys:String>
+  <sys:String x:Key="Ui.UpdatesTitle">New versions</sys:String>
+  <sys:String x:Key="Ui.CheckForUpdates">Check for a new version once a day</sys:String>
+  <sys:String x:Key="Ui.UpdatesNote">Asks GitHub, where SNU Watcher is published, for its list of releases. Nothing about you or your watches is sent; GitHub sees your IP address. Installing a new version stays up to you.</sys:String>
+  <sys:String x:Key="Ui.UpdateAvailable">A new version of SNU Watcher is available:</sys:String>
+  <sys:String x:Key="Ui.OpenReleasePage">Open release page</sys:String>
+  <sys:String x:Key="Ui.DismissUpdate">Not now</sys:String>
+  <sys:String x:Key="Ui.UpdateSettingFailed">The setting could not be changed.</sys:String>
   <sys:String x:Key="Ui.About">About SNU Watcher</sys:String>
   <sys:String x:Key="Ui.AboutVersion">Version</sys:String>
   <sys:String x:Key="Ui.AboutSummary">Checks the course sections you choose and alerts you when a seat opens. You register yourself on the official SNU registration site.</sys:String>

@@ -28,6 +28,8 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
     private readonly WindowsMonitoringHost _host;
     private readonly IUiDispatcher _dispatcher;
     private readonly DispatcherTimer _ageTimer;
+    private readonly DispatcherTimer? _updateTimer;
+    private Task _updateCheck = Task.CompletedTask; // UI thread only
     private readonly SystemStateBridge? _systemState;
     private readonly CancellationTokenSource _stop = new();
     private readonly TaskCompletionSource<string> _failure = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -39,7 +41,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
 
     public StudentDesktopSession(WindowsMonitoringHost host, IUiDispatcher dispatcher, TimeProvider clock,
         IStudentActions actions, Action nativeTest, bool isDemo = false, bool observeSystemState = true,
-        INativeNotificationControls? nativeNotifications = null, StartupSettings? startup = null)
+        INativeNotificationControls? nativeNotifications = null, StartupSettings? startup = null, UpdateSettings? updates = null)
     {
         ArgumentNullException.ThrowIfNull(host); ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(clock); ArgumentNullException.ThrowIfNull(actions);
@@ -63,14 +65,37 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
                 state?.Stored?.Values, state?.NativeStatus?.Readiness);
         }, typeof(StudentDesktopSession).Assembly.GetName().Version ?? new Version(0, 0), clock);
         Settings = settings = new(host.Preferences, host.RefreshProfile, dispatcher, clock, nativeTest, Report, nativeNotifications,
-            diagnostics, new DiagnosticsExportAction(dispatcher), isDemo ? null : startup);
+            diagnostics, new DiagnosticsExportAction(dispatcher), isDemo ? null : startup, updates);
         Alerts = new(host.Alerts, dispatcher, clock, Report, actions);
         Shell = shell = new(Search, Watches, Settings, host.Dashboard, host.TermHints, dispatcher, clock,
             isDemo, new DesktopSourceControls(host), Report, Alerts);
         _ageTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher.CurrentDispatcher)
             { Interval = TimeSpan.FromSeconds(2) };
         _ageTimer.Tick += RefreshAges;
+        // Demo mode never checks by itself; validation supplies an offline fixture and asks for each check.
+        if (Settings.Updates is not null && !isDemo)
+        {
+            // First a minute after start-up, then hourly; the check itself runs at most daily (UpdateSettings).
+            _updateTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher.CurrentDispatcher)
+                { Interval = TimeSpan.FromMinutes(1) };
+            _updateTimer.Tick += CheckForUpdate;
+        }
         if (observeSystemState && !isDemo) _systemState = new(host, Report);
+    }
+
+    private void CheckForUpdate(object? sender, EventArgs args)
+    {
+        if (_closing || Settings.Updates is not { } updates || _updateTimer is null) return;
+        _updateTimer.Interval = TimeSpan.FromHours(1);
+        if (!_updateCheck.IsCompleted) return;
+        _updateCheck = CheckForUpdateAsync(updates);
+    }
+
+    private async Task CheckForUpdateAsync(UpdateSettings updates)
+    {
+        // Expected failures are already silent; anything else must not disturb watching.
+        try { await updates.CheckIfDueAsync(_stop.Token); }
+        catch (Exception) { System.Diagnostics.Trace.WriteLine("desktop_update_check_failed"); }
     }
 
     public StudentShellViewModel Shell { get; }
@@ -120,7 +145,7 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
                     Shell.UpdateRuntime(_host.Session.LatestSnapshot, _host.Session.Failure);
                     var updatesReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                     _updates = ReadUpdatesAsync(updatesReady.Task);
-                    try { _ageTimer.Start(); _systemState?.Start(); }
+                    try { _ageTimer.Start(); _updateTimer?.Start(); _systemState?.Start(); }
                     finally { updatesReady.SetResult(); } // Partial OS startup must not strand the retained reader.
                 }
             }, _stop.Token).ConfigureAwait(false);
@@ -186,7 +211,18 @@ internal sealed class StudentDesktopSession : IAsyncDisposable
         var drains = new List<Task>
         {
             BeginDrain(() => _stop.CancelAsync()),
-            BeginDrain(() => _dispatcher.InvokeAsync(() => { _ageTimer.Stop(); _ageTimer.Tick -= RefreshAges; })),
+            BeginDrain(() => _dispatcher.InvokeAsync(() =>
+            {
+                _ageTimer.Stop(); _ageTimer.Tick -= RefreshAges;
+                if (_updateTimer is not null) { _updateTimer.Stop(); _updateTimer.Tick -= CheckForUpdate; }
+            })),
+            BeginDrain(async () =>
+            {
+                // Cancelled with _stop above; read on the UI thread, which owns the field.
+                var pending = Task.CompletedTask;
+                await _dispatcher.InvokeAsync(() => pending = _updateCheck).ConfigureAwait(false);
+                await pending.ConfigureAwait(false);
+            }),
         };
         // Shell routes can await child commands. Start EVERY disposal before awaiting any of them.
         drains.Add(BeginDrain(() => Shell.DisposeAsync().AsTask()));

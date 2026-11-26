@@ -51,6 +51,10 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 ; RunKeyStartupRegistration.ValueName in src/SnuWatcher.Windows/StartupRegistration.cs.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "DuckFard.SnuWatcher"; Flags: uninsdeletevalue
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: none; ValueName: "DuckFard.SnuWatcher"; Flags: uninsdeletevalue
+; The app keeps its new-version check (Settings > New versions) in its own key, RegistryUpdateCheckStore.KeyPath in
+; src/SnuWatcher.Windows/Updates/UpdateCheckStore.cs. Uninstall removes that key, and its parent if nothing else uses it.
+Root: HKCU; Subkey: "Software\DuckFard\SnuWatcher"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\DuckFard"; Flags: uninsdeletekeyifempty
 
 [Icons]
 Name: "{group}\SNU Watcher"; Filename: "{app}\{#AppExe}"; AppUserModelID: "DuckFard.SnuWatcher"

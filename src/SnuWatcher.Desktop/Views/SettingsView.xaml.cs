@@ -17,6 +17,9 @@ public partial class SettingsView : UserControl
     private void OnOpenStartupSettings(object sender, RoutedEventArgs args) =>
         (DataContext as SettingsViewModel)?.Startup?.OpenWindowsStartupSettings();
 
+    private void OnOpenReleasePage(object sender, RoutedEventArgs args) =>
+        (DataContext as SettingsViewModel)?.Updates?.OpenReleasePage();
+
     private void OnOpenProjectPage(object sender, RoutedEventArgs args) => OpenAbout(AppAbout.ProjectPage.AbsoluteUri);
 
     private void OnOpenReleaseNotes(object sender, RoutedEventArgs args) => OpenAbout(AppAbout.ReleaseNotes.AbsoluteUri);

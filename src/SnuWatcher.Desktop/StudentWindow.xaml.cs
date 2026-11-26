@@ -160,6 +160,12 @@ public partial class StudentWindow : Window, IDisposable
         }
     }
 
+    private void OnOpenReleasePage(object sender, RoutedEventArgs args) =>
+        (DataContext as StudentShellViewModel)?.Settings.Updates?.OpenReleasePage();
+
+    private void OnDismissUpdate(object sender, RoutedEventArgs args) =>
+        (DataContext as StudentShellViewModel)?.Settings.Updates?.Dismiss();
+
     private void OnNavigate(object sender, RoutedEventArgs args)
     {
         if (_syncingNavigation || DataContext is not StudentShellViewModel model

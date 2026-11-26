@@ -9,6 +9,7 @@ using SnuWatcher.Desktop.Presentation;
 using SnuWatcher.Windows;
 using SnuWatcher.Windows.Hosting;
 using SnuWatcher.Windows.Presentation.Settings;
+using SnuWatcher.Windows.Updates;
 
 namespace SnuWatcher.Desktop;
 
@@ -39,6 +40,30 @@ public partial class App
             return null;
         return new StartupSettings(new RunKeyStartupRegistration(path), OpenWindowsStartupSettings);
     }
+
+    /// <summary>
+    /// The new-version check for this installed exe, like the sign-in switch above: developer builds run through
+    /// dotnet.exe, and builds whose version is not a release version, get none.
+    /// </summary>
+    private static UpdateSettings? CreateUpdateSettings()
+    {
+        var path = Environment.ProcessPath;
+        if (path is null || !string.Equals(Path.GetFileName(path), "SnuWatcher.Desktop.exe", StringComparison.OrdinalIgnoreCase)
+            || !ReleaseVersion.TryParse(AppAbout.Version, out var current))
+            return null;
+        return new UpdateSettings(new RegistryUpdateCheckStore(), new GitHubUpdateSource(current!), current!, TimeProvider.System,
+            OpenReleasePage);
+    }
+
+    private static void OpenReleasePage(Uri page)
+    {
+        if (IsReleasePage(page)) AppAbout.TryOpen(page.AbsoluteUri);
+    }
+
+    /// <summary>Built by GitHubReleaseFeed.ReleasePage from a checked version; anything else is refused.</summary>
+    internal static bool IsReleasePage(Uri page) =>
+        page.Scheme == Uri.UriSchemeHttps && page.Host == "github.com"
+        && page.AbsolutePath.StartsWith("/DuckFard/SNU-watcher/releases/tag/v", StringComparison.Ordinal);
 
     private static void OpenWindowsStartupSettings()
     {
@@ -76,7 +101,7 @@ public partial class App
             }
             var ui = new WpfUiDispatcher(Dispatcher);
             _studentSession = new(_studentHost, ui, TimeProvider.System, new DesktopStudentActions(ui), SendTestNotification,
-                nativeNotifications: _notifications, startup: CreateStartupSettings());
+                nativeNotifications: _notifications, startup: CreateStartupSettings(), updates: CreateUpdateSettings());
             AttachStudentNotifications();
             _studentWindow = new(_studentSession.Shell, Quit);
             MainWindow = _studentWindow;
