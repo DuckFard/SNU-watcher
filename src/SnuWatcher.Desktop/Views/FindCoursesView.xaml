@@ -279,6 +279,16 @@
         </Expander>
         <!-- High-contrast themes have no error colour, so a warning sign also marks the problem without colour. -->
         <DockPanel Margin="0,0,0,6">
+          <!-- With no term at all, the title line above already reports the failed term read beside Try again. -->
+          <DockPanel.Style><Style TargetType="DockPanel"><Style.Triggers>
+            <MultiDataTrigger>
+              <MultiDataTrigger.Conditions>
+                <Condition Binding="{Binding Model.State.IssueKey}" Value="Ui.CurrentTermUnavailable"/>
+                <Condition Binding="{Binding Model.State.SelectedTerm}" Value="{x:Null}"/>
+              </MultiDataTrigger.Conditions>
+              <Setter Property="Visibility" Value="Collapsed"/>
+            </MultiDataTrigger>
+          </Style.Triggers></Style></DockPanel.Style>
           <!-- A shape, not text: screen readers skip it and read only the message. -->
           <Path DockPanel.Dock="Left" Width="14" Height="14" Margin="0,2,6,0" VerticalAlignment="Top" Stretch="Uniform"
                 Fill="{DynamicResource Snu.Emphasis}"
@@ -394,7 +404,7 @@
               <DataGridTemplateColumn Width="*" MinWidth="240">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                    <Grid Margin="0,12,6,12">
+                    <Grid Margin="0,8,6,8">
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -403,7 +413,7 @@
                         <ColumnDefinition Width="Auto"/>
                       </Grid.ColumnDefinitions>
                       <!-- Accent bar: grows in on hover and stays while the row is selected. -->
-                      <Border Width="3" Background="{DynamicResource Snu.Blue}" Margin="0,-12,0,-12" RenderTransformOrigin="0.5,0.5">
+                      <Border Width="3" Background="{DynamicResource Snu.Blue}" Margin="0,-8,0,-8" RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform><ScaleTransform ScaleY="0"/></Border.RenderTransform>
                         <ui:Motion.ExpandY>
                           <MultiBinding Converter="{StaticResource Student.AnyTrue}">
@@ -418,7 +428,7 @@
                                 AutomationProperties.Name="{DynamicResource Ui.WatchSelected}" AutomationProperties.HelpText="{Binding Row.Key}"/>
                       <StackPanel Grid.Column="2">
                         <!-- "[학사] [전선] 집중일본어 1", as on the registration site. -->
-                        <WrapPanel Margin="0,1,0,4">
+                        <WrapPanel Margin="0,0,0,2">
                           <TextBlock Text="{Binding Row.Classification}" FontSize="13.5" Margin="0,0,6,0">
                             <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Card.Meta}"><Style.Triggers>
                               <DataTrigger Binding="{Binding Row.Classification}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>

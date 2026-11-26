@@ -14,6 +14,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <TextBlock Text="{DynamicResource Ui.WatchSelected}" Style="{DynamicResource Student.Title}"/>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -103,28 +104,31 @@
           <TextBlock Text="{DynamicResource Ui.ExpiryInclusive}" Style="{DynamicResource Student.Label}" Margin="0,0,0,14"/>
         </StackPanel>
         <TextBlock Text="{DynamicResource Ui.NoReservation}" Style="{DynamicResource Student.Label}" Margin="0,0,0,10"/>
-        <TextBlock Text="{DynamicResource Ui.Eligibility}" Style="{DynamicResource Student.Label}" Margin="0,0,0,14"/>
-        <Button Command="{Binding SaveCommand}" Style="{DynamicResource Student.PrimaryButton}"
-                HorizontalContentAlignment="Left" AutomationProperties.Name="{DynamicResource Ui.ConfirmWatch}">
-          <TextBlock Text="{DynamicResource Ui.ConfirmWatch}" TextWrapping="Wrap"/>
-        </Button>
-        <TextBlock AutomationProperties.LiveSetting="Polite">
-          <TextBlock.Style>
-            <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
-              <Setter Property="Visibility" Value="Collapsed"/>
-              <Style.Triggers>
-                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saving}">
-                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.Loading}"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saved}">
-                  <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.WatchSaved}"/>
-                </DataTrigger>
-              </Style.Triggers>
-            </Style>
-          </TextBlock.Style>
-        </TextBlock>
-        <TextBlock ui:ResourceText.Key="{Binding Model.State.IssueKey}" Style="{DynamicResource Student.Label}" AutomationProperties.LiveSetting="Polite"/>
+        <TextBlock Text="{DynamicResource Ui.Eligibility}" Style="{DynamicResource Student.Label}" Margin="0,0,0,6"/>
       </StackPanel>
     </ScrollViewer>
+    <!-- Outside the scrolling form, so Confirm stays on screen however short the pane is. -->
+    <StackPanel Grid.Row="2" Margin="0,8,8,0">
+      <Button Command="{Binding SaveCommand}" Style="{DynamicResource Student.PrimaryButton}"
+              HorizontalContentAlignment="Left" AutomationProperties.Name="{DynamicResource Ui.ConfirmWatch}">
+        <TextBlock Text="{DynamicResource Ui.ConfirmWatch}" TextWrapping="Wrap"/>
+      </Button>
+      <TextBlock AutomationProperties.LiveSetting="Polite">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock" BasedOn="{StaticResource Student.Label}">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saving}">
+                <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.Loading}"/>
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Model.State.Status}" Value="{x:Static search:WatchSelectionStatus.Saved}">
+                <Setter Property="Visibility" Value="Visible"/><Setter Property="Text" Value="{DynamicResource Ui.WatchSaved}"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
+      <TextBlock ui:ResourceText.Key="{Binding Model.State.IssueKey}" Style="{DynamicResource Student.Label}" AutomationProperties.LiveSetting="Polite"/>
+    </StackPanel>
   </Grid>
 </UserControl>

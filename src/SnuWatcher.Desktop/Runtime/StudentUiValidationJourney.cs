@@ -98,6 +98,7 @@ internal static partial class StudentUiValidation
             "ui_browse_first_page_missing");
         Require(Named<FrameworkElement>(window, "PagingBar").IsVisible && !Named<Button>(window, "PreviousPageButton").IsEnabled
             && Named<Button>(window, "LastPageButton").IsEnabled, "ui_browse_paging_bar_invalid");
+        await RequireLaptopResultDensityAsync(window);
         await ObserveCommandAsync(graph.Search.PageCommand, () => InvokeButton(Named<Button>(window, "LastPageButton")), ct);
         await PumpUiAsync(window);
         listing = graph.Search.Model.State;
@@ -174,6 +175,11 @@ internal static partial class StudentUiValidation
         await PumpUiAsync(window);
         Require(graph.Search.WatchSelection.Model.State.Rows.Length == 2, "ui_explicit_group_selection_failed");
         SetText(window, "WatchLabelField", "Statistics choices (Demo)");
+        // Confirm stays on screen without scrolling the form; the live preview.3 trial needed five page-downs to reach it.
+        var confirm = Visuals<Button>(window).FirstOrDefault(button => button.IsVisible
+            && ReferenceEquals(button.Command, graph.Search.WatchSelection.SaveCommand)) ?? throw new InvalidOperationException("ui_confirm_watch_missing");
+        var confirmShown = VisibleBounds(confirm, window);
+        Require(!confirmShown.IsEmpty && confirmShown.Height >= confirm.ActualHeight - 1, "ui_confirm_watch_offscreen");
         await InvokeCommandAsync(window, graph.Search.WatchSelection.SaveCommand, ct);
         var created = graph.Search.WatchSelection.Model.State.Created ?? throw new InvalidOperationException("ui_group_receipt_missing");
         Require(created.Kind == SubscriptionKind.Group && created.Members.Length == 2, "ui_group_receipt_invalid");
@@ -185,6 +191,11 @@ internal static partial class StudentUiValidation
             "ui_full_member_not_current");
         proof = proof with { GroupWatch = true, AutoRoutedWatch = true, WatchId = created.Id };
         await PumpUiAsync(window);
+        // A watch in the term the course page has read is listed under that term's name, never "Unconfirmed term".
+        var unknownTerm = window.TryFindResource("Ui.TermUnknown") as string;
+        Require(graph.Watches.State.Rows.Length > 0 && graph.Watches.State.Rows.All(row => row.TermLabel is not null)
+            && !Visuals<TextBlock>(window).Any(block => block.Text == unknownTerm && IsRenderedTextVisible(block, window)),
+            "ui_watch_term_unnamed");
         captures.Add(await CaptureAsync(profile, window, "ui-watches-en-normal.png", false, ct));
         // A compact reference capture selects the list; lifecycle actions belong to the details pane.
         await ShowCompactPaneAsync(window, "DetailsNavigation", required: false);
@@ -300,6 +311,35 @@ internal static partial class StudentUiValidation
         var grid = Named<DataGrid>(window, "WatchRows");
         Require(grid.Columns.Count == 4 && grid.Columns.All(column => column.ActualWidth + 0.5
             >= (column.Width.IsAbsolute ? column.Width.Value : column.MinWidth)), "ui_watch_columns_collapsed");
+    }
+
+    /// <summary>A common laptop work area in DIPs: 1280x800 at 100%, or 1920x1080 at 150% with the taskbar.</summary>
+    private static readonly Size LaptopWorkArea = new(1280, 752);
+
+    /// <summary>
+    /// With a full result page loaded in a window filling a common laptop work area, at least three course rows must be
+    /// fully visible at once. The live 0.1.0-preview.3 trial on such a screen showed one. Where the actual work area is
+    /// smaller, the window cannot take this size and the small-work-area check covers reachability instead.
+    /// </summary>
+    private static async Task RequireLaptopResultDensityAsync(StudentWindow window)
+    {
+        var work = SystemParameters.WorkArea;
+        if (work.Width < LaptopWorkArea.Width || work.Height < LaptopWorkArea.Height) return;
+        var restore = new Rect(window.Left, window.Top, window.Width, window.Height);
+        window.Left = work.Left; window.Top = work.Top;
+        window.Width = LaptopWorkArea.Width; window.Height = LaptopWorkArea.Height;
+        await PumpUiAsync(window);
+        await ShowSearchPaneAsync(window, details: false);
+        var grid = Named<DataGrid>(window, "ResultsGrid");
+        grid.ScrollIntoView(grid.Items[0]); grid.UpdateLayout(); window.UpdateLayout();
+        var fullyVisible = Visuals<DataGridRow>(grid).Count(row =>
+        {
+            var visible = VisibleBounds(row, window);
+            return !visible.IsEmpty && visible.Height >= row.ActualHeight - 1;
+        });
+        window.Width = restore.Width; window.Height = restore.Height; window.Left = restore.Left; window.Top = restore.Top;
+        await PumpUiAsync(window);
+        Require(fullyVisible >= 3, "ui_laptop_result_rows_" + fullyVisible);
     }
 
     private static async Task ShowSearchPaneAsync(StudentWindow window, bool details)

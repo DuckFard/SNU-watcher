@@ -85,6 +85,8 @@
                      AutomationProperties.LiveSetting="Polite"/>
         </StackPanel>
       </Border>
+      <!-- Directly above the notification test it points to. -->
+      <TextBlock Text="{DynamicResource Ui.AlertsInactive}" Style="{StaticResource Student.Label}" Margin="0,0,0,8"/>
       <Border Style="{StaticResource Student.Card}">
         <StackPanel>
           <TextBlock Text="{DynamicResource Ui.NativeTest}" Style="{StaticResource Student.Label}" FontSize="18" FontWeight="Medium"/>
@@ -200,7 +202,6 @@
                      Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0"/>
         </StackPanel>
       </Border>
-      <TextBlock Text="{DynamicResource Ui.AlertsInactive}" Style="{StaticResource Student.Label}"/>
     </StackPanel>
   </ScrollViewer>
 </UserControl>
