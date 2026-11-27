@@ -7,10 +7,10 @@
 #endif
 #define AppExe "SnuWatcher.Desktop.exe"
 #ifndef ReleaseVersion
-  #define ReleaseVersion "0.1.0-preview.3"
+  #define ReleaseVersion "0.1.0-preview.4"
 #endif
 #ifndef InstallerVersion
-  #define InstallerVersion "0.1.0.2"
+  #define InstallerVersion "0.1.0.3"
 #endif
 
 [Setup]

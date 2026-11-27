@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using SnuWatcher.Application.Presentation;
 using SnuWatcher.Core;
 
 namespace SnuWatcher.Application.Sources;
@@ -37,6 +38,9 @@ public sealed record CourseSearchRow
     public int? TotalRegistered { get; }
     public string? QuotaLabel { get; }
     public DateTimeOffset ObservedAtUtc { get; }
+
+    /// <summary>The section's accessible name in result and watch-selection lists: code, section and course name.</summary>
+    public override string ToString() => AccessibleName.Of(Key.CourseCode + " " + Key.Section, Name);
 
     private readonly string? classification;
     private readonly decimal? credits;

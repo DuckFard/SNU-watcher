@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using SnuWatcher.Application.Presentation;
 
 namespace SnuWatcher.Application.Sources;
 
@@ -33,6 +34,9 @@ public sealed record DepartmentOption
     public string Name { get; }
     public string? EnglishName { get; }
     public string Level { get; }
+
+    /// <summary>The option's accessible name in the college and department lists.</summary>
+    public override string ToString() => AccessibleName.Of(Name);
 }
 
 public sealed record CourseCatalogData

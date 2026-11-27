@@ -49,6 +49,9 @@ public sealed class WatchListEdgeTests
         Assert.Equal("Ui.NotChecked", member.OutcomeKey);
         Assert.Equal("—", member.AgeText);
         Assert.Equal("F32.102 012", member.Identifier);
+        // Grid rows are named after ToString(): the watch's name and section, never a record dump.
+        Assert.Equal(uncheckedRow.Label + ", F32.102 012", uncheckedRow.ToString());
+        Assert.Equal("F32.102 012", member.ToString());
         await fixture.ViewModel.SelectWatchAsync(WatchPresentationFixture.Id(2));
         var future = fixture.ViewModel.State.Details!.Members[0];
         Assert.Equal("Ui.ClockChanged", future.DataStateKey);

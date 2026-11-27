@@ -52,6 +52,8 @@ public sealed record CourseSearchItem(CourseSearchRow Row, bool IsSelected)
     /// <summary>Apparent remaining quota, unknown when either source count is absent.</summary>
     public int? ApparentSeats => Row.Registered is { } registered && Row.Capacity is { } capacity
         && QuotaLabels.Map(Row.QuotaLabel) is not null ? new SeatCount(registered, capacity).ApparentSeats : null;
+    /// <summary>The row's accessible name: WPF names a grid row after its item, so this is what a screen reader says.</summary>
+    public override string ToString() => Row.ToString();
 }
 
 /// <summary>Every change replaces the full immutable filter/result snapshot on the UI dispatcher.</summary>
